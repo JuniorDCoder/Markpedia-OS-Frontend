@@ -107,9 +107,10 @@ export default function CashbookPage() {
 
   const stats = getFinancialStats();
 
-  const categories = [...new Set(entries.map(e => e.category))];
+    const categories = Array.from(new Set(entries.map(e => e.category)));
 
-  const canManage = user?.role === 'CEO' || user?.role === 'Admin';
+
+    const canManage = user?.role === 'CEO' || user?.role === 'Admin';
 
   if (loading) {
     return <TableSkeleton />;

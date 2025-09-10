@@ -38,10 +38,8 @@ const ChartContainer = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<'div'> & {
     config: ChartConfig;
-    children: React.ComponentProps<
-      typeof RechartsPrimitive.ResponsiveContainer
-    >['children'];
-  }
+    children: React.ReactElement;
+}
 >(({ id, className, children, config, ...props }, ref) => {
   const uniqueId = React.useId();
   const chartId = `chart-${id || uniqueId.replace(/:/g, '')}`;
@@ -111,6 +109,8 @@ const ChartTooltipContent = React.forwardRef<
       indicator?: 'line' | 'dot' | 'dashed';
       nameKey?: string;
       labelKey?: string;
+    } & {
+        payload?: any[];
     }
 >(
   (
