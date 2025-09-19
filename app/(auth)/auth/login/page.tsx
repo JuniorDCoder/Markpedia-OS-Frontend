@@ -132,14 +132,14 @@ export default function LoginPage() {
               </Link>
             </div>
 
-            <div className="mt-4 p-3 bg-muted rounded-lg text-xs text-muted-foreground">
-              <p className="font-medium mb-2">Demo Accounts:</p>
-              <div className="space-y-1">
-                <p>CEO: ceo@company.com / password123</p>
-                <p>Manager: manager@company.com / password123</p>
-                <p>Employee: employee@company.com / password123</p>
-              </div>
-            </div>
+            {/*<div className="mt-4 p-3 bg-muted rounded-lg text-xs text-muted-foreground">*/}
+            {/*  <p className="font-medium mb-2">Demo Accounts:</p>*/}
+            {/*  <div className="space-y-1">*/}
+            {/*    <p>CEO: ceo@company.com / password123</p>*/}
+            {/*    <p>Manager: manager@company.com / password123</p>*/}
+            {/*    <p>Employee: employee@company.com / password123</p>*/}
+            {/*  </div>*/}
+            {/*</div>*/}
           </CardFooter>
         </form>
       </Card>
