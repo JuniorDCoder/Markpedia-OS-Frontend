@@ -19,16 +19,23 @@ export interface AuthState {
 }
 
 export interface Project {
-  id: string;
-  name: string;
-  description: string;
-  status: 'Planning' | 'In Progress' | 'On Hold' | 'Completed';
-  priority: 'Low' | 'Medium' | 'High' | 'Critical';
-  startDate: string;
-  endDate: string;
-  assignedTo: string[];
-  createdBy: string;
-  progress: number;
+    id: string;
+    name: string;
+    description: string;
+    status: 'Planning' | 'In Progress' | 'On Hold' | 'Completed' | 'At Risk';
+    priority: 'Low' | 'Medium' | 'High' | 'Critical';
+    riskLevel?: 'Low' | 'Medium' | 'High';
+    department: string;
+    budget: number;
+    spent: number;
+    startDate: string;
+    endDate: string;
+    assignedTo: string[];
+    createdBy: string;
+    progress: number;
+    stakeholders?: string[];
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface Task {
