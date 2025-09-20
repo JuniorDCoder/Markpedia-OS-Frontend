@@ -58,27 +58,27 @@ const navigation = {
             name: 'Minutes',
             href: '/work/minutes',
             icon: Clock,
-            roles: ['CEO', 'Admin', 'Manager'],
+            roles: ['CEO', 'Admin', 'Manager', 'Employee'],
         },
         {
             name: 'Problems',
             href: '/work/problems',
             icon: Shield,
-            roles: ['CEO', 'Admin', 'Manager'],
+            roles: ['CEO', 'Admin', 'Manager', 'Employee'],
         },
         // Job Descriptions
         {
             name: 'Job Descriptions',
             href: '/work/job-descriptions',
             icon: FileText,
-            roles: ['CEO', 'Admin', 'Manager'],
+            roles: ['CEO', 'Admin', 'Manager', 'Employee'],
         },
         // Departmental Frameworks
         {
             name: 'Departmental Frameworks',
             href: '/work/departmental-frameworks',
             icon: Briefcase,
-            roles: ['CEO', 'Admin', 'Manager'],
+            roles: ['CEO', 'Admin', 'Manager', 'Employee'],
         }
     ],
     people: [

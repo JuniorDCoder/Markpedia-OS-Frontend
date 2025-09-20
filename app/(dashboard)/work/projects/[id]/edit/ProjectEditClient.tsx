@@ -59,12 +59,14 @@ export default function ProjectEditClient({ initialProject, projectId }: Project
                 priority: initialProject.priority,
                 status: initialProject.status,
                 riskLevel: initialProject.riskLevel || 'Low',
+                budget: initialProject.budget || 0,
+                spent: initialProject.spent || 0,
                 department: initialProject.department || '',
                 progress: initialProject.progress,
                 assignedTo: initialProject.assignedTo,
                 startDate: initialProject.startDate ? new Date(initialProject.startDate) : undefined,
                 endDate: initialProject.endDate ? new Date(initialProject.endDate) : undefined,
-                stakeholders: initialProject.stakeholders || [],
+                stakeholders: initialProject.stakeholders || []
             });
 
             if (initialProject.startDate) {

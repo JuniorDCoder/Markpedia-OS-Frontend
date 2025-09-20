@@ -607,13 +607,13 @@ export default function TasksPage() {
                                                                                 {task.priority}
                                                                             </Badge>
                                                                             {task.validatedBy && (
-                                                                                <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">
+                                                                                <Badge variant="outline" className="bg-green-50 text-green-700 text-[9.5px]">
                                                                                     ✓ Validated
                                                                                 </Badge>
                                                                             )}
                                                                             {task.reportSubmitted && (
                                                                                 <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs">
-                                                                                    📊 Reported
+                                                                                    📊
                                                                                 </Badge>
                                                                             )}
                                                                         </div>
