@@ -1,5 +1,15 @@
 import axios from 'axios';
-import { User, Project, Task, AttendanceRecord, LeaveRequest, CashbookEntry } from '@/types';
+import {
+    User,
+    Project,
+    Task,
+    AttendanceRecord,
+    LeaveRequest,
+    CashbookEntry,
+    Meeting,
+    OtterAIWebhookPayload,
+    Decision, ActionItem
+} from '@/types';
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || '/api',
@@ -402,6 +412,63 @@ export const taskService = {
     };
     return mockTasks[index];
     }
+};
+
+export const meetingService = {
+    getMeetings: async (): Promise<Meeting[]> => {
+        const response = await fetch('/api/meetings');
+        if (!response.ok) throw new Error('Failed to fetch meetings');
+        return response.json();
+    },
+
+    syncWithOtterAI: async (meetingId: string): Promise<Meeting> => {
+        const response = await fetch(`/api/meetings/${meetingId}/sync-otter`, {
+            method: 'POST',
+        });
+        if (!response.ok) throw new Error('Failed to sync with Otter AI');
+        return response.json();
+    },
+
+    createTasksFromActionItems: async (meetingId: string): Promise<void> => {
+        const response = await fetch(`/api/meetings/${meetingId}/create-tasks`, {
+            method: 'POST',
+        });
+        if (!response.ok) throw new Error('Failed to create tasks from action items');
+    },
+
+    // Webhook endpoint for Otter AI
+    handleOtterWebhook: async (payload: OtterAIWebhookPayload): Promise<void> => {
+        const response = await fetch('/api/webhooks/otter-ai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        if (!response.ok) throw new Error('Failed to process Otter AI webhook');
+    },
+    getMeeting: async (id: string): Promise<Meeting> => {
+        const response = await api.get(`/meetings/${id}`);
+        return response.data;
+    },
+
+    updateMeeting: async (id: string, data: Partial<Meeting>): Promise<Meeting> => {
+        const response = await api.put(`/meetings/${id}`, data);
+        return response.data;
+    },
+
+    addDecision: async (meetingId: string, decision: Decision): Promise<Meeting> => {
+        const response = await api.post(`/meetings/${meetingId}/decisions`, decision);
+        return response.data;
+    },
+
+    addActionItem: async (meetingId: string, actionItem: ActionItem): Promise<Meeting> => {
+        const response = await api.post(`/meetings/${meetingId}/action-items`, actionItem);
+        return response.data;
+    },
+
+    updateActionItemStatus: async (meetingId: string, itemId: string, status: string): Promise<Meeting> => {
+        const response = await api.patch(`/meetings/${meetingId}/action-items/${itemId}`, { status });
+        return response.data;
+    },
 };
 
 export default api;

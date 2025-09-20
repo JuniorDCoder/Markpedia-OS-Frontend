@@ -96,28 +96,59 @@ export interface KPI {
 }
 
 export interface Meeting {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  attendees: string[];
-  location?: string;
-  agenda: string[];
-  minutes?: string;
-  actionItems: ActionItem[];
-  createdBy: string;
-  status: 'Scheduled' | 'In Progress' | 'Completed' | 'Cancelled';
+    id: string;
+    title: string;
+    description: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    attendees: string[];
+    location: string;
+    agenda: string[];
+    minutes: string;
+    decisions: Decision[];
+    actionItems: ActionItem[];
+    createdBy: string;
+    status: 'Scheduled' | 'In Progress' | 'Completed' | 'Cancelled';
+    otterAIId?: string; // Otter AI meeting ID
+    transcript?: string; // Full transcript from Otter AI
+    summary?: string; // AI-generated summary
+}
+
+export interface Decision {
+    id: string;
+    description: string;
+    madeBy: string;
+    timestamp: string;
+    relatedAgendaItem: string;
 }
 
 export interface ActionItem {
-  id: string;
-  description: string;
-  assignedTo: string;
-  dueDate: string;
-  status: 'Pending' | 'In Progress' | 'Completed';
-  priority: 'Low' | 'Medium' | 'High';
+    id: string;
+    description: string;
+    assignedTo: string;
+    dueDate: string;
+    status: 'Pending' | 'In Progress' | 'Completed' | 'Cancelled';
+    priority: 'Low' | 'Medium' | 'High' | 'Critical';
+    relatedDecision?: string;
+    createdFromMeeting: boolean;
+}
+
+export interface OtterAIWebhookPayload {
+    meetingId: string;
+    transcript: string;
+    summary: string;
+    decisions: {
+        description: string;
+        timestamp: string;
+        speaker: string;
+    }[];
+    actionItems: {
+        description: string;
+        assignedTo?: string;
+        dueDate?: string;
+    }[];
+    attendees: string[];
 }
 
 export interface Problem {
