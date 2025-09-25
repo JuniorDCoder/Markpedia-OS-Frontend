@@ -11,7 +11,7 @@ import { TableSkeleton } from '@/components/ui/loading';
 import { useAppStore } from '@/store/app';
 import { useAuthStore } from '@/store/auth';
 import { CashbookEntry } from '@/types';
-import { Plus, Search, Filter, DollarSign, TrendingUp, TrendingDown, Download, Upload } from 'lucide-react';
+import { Plus, Search, Filter, DollarSign, TrendingUp, TrendingDown, Download, Upload, Calendar, Eye, Trash2, Edit } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function CashbookPage() {
@@ -235,79 +235,97 @@ export default function CashbookPage() {
         </CardContent>
       </Card>
 
-      {/* Entries List */}
-      {filteredEntries.length === 0 ? (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-12">
-              <DollarSign className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium text-muted-foreground mb-2">No entries found</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                {searchTerm || typeFilter !== 'all' || categoryFilter !== 'all'
-                  ? 'Try adjusting your search or filter criteria'
-                  : 'Start tracking your finances by adding your first entry'
-                }
-              </p>
-              {!searchTerm && typeFilter === 'all' && categoryFilter === 'all' && canManage && (
-                <Button asChild>
-                  <Link href="/money/cashbook/new">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Entry
-                  </Link>
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {filteredEntries.map(entry => (
-            <Card key={entry.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="pt-6">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2 flex-1">
-                    <div className="flex items-center gap-2">
-                      <Badge 
-                        variant="secondary" 
-                        className={entry.type === 'Income' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}
-                      >
-                        {entry.type}
-                      </Badge>
-                      <Badge variant="outline">{entry.category}</Badge>
-                      {entry.proofUrl && (
-                        <Badge variant="outline" className="bg-blue-100 text-blue-800">
-                          <Upload className="h-3 w-3 mr-1" />
-                          Proof
-                        </Badge>
-                      )}
+        {/* Entries List */}
+        {filteredEntries.length === 0 ? (
+            <Card>
+                <CardContent className="pt-6">
+                    <div className="text-center py-12">
+                        <DollarSign className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-medium text-muted-foreground mb-2">No entries found</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                            {searchTerm || typeFilter !== 'all' || categoryFilter !== 'all'
+                                ? 'Try adjusting your search or filter criteria'
+                                : 'Start tracking your finances by adding your first entry'
+                            }
+                        </p>
+                        {!searchTerm && typeFilter === 'all' && categoryFilter === 'all' && canManage && (
+                            <Button asChild>
+                                <Link href="/money/cashbook/new">
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Add Entry
+                                </Link>
+                            </Button>
+                        )}
                     </div>
-                    <h3 className="font-medium text-lg">{entry.description}</h3>
-                    <div className="text-sm text-muted-foreground">
-                      {new Date(entry.date).toLocaleDateString('en-US', { 
-                        weekday: 'long', 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                      })}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className={`text-2xl font-bold ${entry.type === 'Income' ? 'text-green-600' : 'text-red-600'}`}>
-                      {entry.type === 'Income' ? '+' : '-'}${entry.amount.toLocaleString()}
-                    </div>
-                    {entry.proofUrl && (
-                      <Button variant="outline" size="sm" className="mt-2">
-                        <Download className="h-4 w-4 mr-1" />
-                        View Proof
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
+                </CardContent>
             </Card>
-          ))}
-        </div>
-      )}
+        ) : (
+            <div className="space-y-3">
+                {filteredEntries.map((entry) => (
+                    <div
+                        key={entry.id}
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition"
+                    >
+                        {/* Left: Entry info */}
+                        <div>
+                            <div className="font-medium flex items-center gap-2">
+                                {entry.description}
+                                <Badge
+                                    variant="outline"
+                                    className={entry.type === "Income" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}
+                                >
+                                    {entry.type}
+                                </Badge>
+                                <Badge variant="outline">{entry.category}</Badge>
+                                {entry.proofUrl && (
+                                    <Badge className="bg-blue-100 text-blue-700">Proof</Badge>
+                                )}
+                            </div>
+                            <p className="text-sm text-muted-foreground flex gap-4">
+                                <span className="flex items-center">
+                                  <Calendar className="h-3 w-3 mr-1" />{" "}
+                                    {new Date(entry.date).toLocaleDateString()}
+                                </span>
+                            </p>
+                        </div>
+
+                        {/* Right: Amount + Actions */}
+                        <div className="flex items-center space-x-2">
+                            <Badge>
+                                {entry.type === "Income" ? `+${entry.amount}` : `-${entry.amount}`}
+                            </Badge>
+
+                            <Button variant="ghost" size="sm" asChild>
+                                <Link href={`/money/cashbook/${entry.id}`}>
+                                    <Eye className="h-4 w-4" />
+                                </Link>
+                            </Button>
+                            {canManage && (
+                                <>
+                                    <Button variant="ghost" size="sm" asChild>
+                                        <Link href={`/money/cashbook/${entry.id}/edit`}>
+                                            <Edit className="h-4 w-4" />
+                                        </Link>
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-destructive"
+                                        onClick={() => {
+                                            setEntries((prev) => prev.filter((e) => e.id !== entry.id));
+                                            toast.success("Entry deleted");
+                                        }}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        )}
+
     </div>
   );
 }

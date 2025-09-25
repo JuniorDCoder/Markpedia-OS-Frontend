@@ -1,6 +1,6 @@
 import { projectService } from '@/services/api';
 import { Project } from '@/types';
-import ProjectDetailClient from './ProjectDetailClient';
+import ProjectDetailClient from '../../../../../components/sections/ProjectDetailClient';
 
 export async function generateStaticParams() {
     try {

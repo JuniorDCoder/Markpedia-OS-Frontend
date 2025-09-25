@@ -101,11 +101,17 @@ const navigation = {
             roles: ['CEO', 'Admin', 'Manager'],
         },
         {
-            name: 'Team',
-            href: '/people/team',
-            icon: Users,
+            name: 'Warnings & PIPs',
+            href: '/people/warnings',
+            icon: Shield,
             roles: ['CEO', 'Admin', 'Manager'],
-        },
+        }
+        // {
+        //     name: 'Team',
+        //     href: '/people/team',
+        //     icon: Users,
+        //     roles: ['CEO', 'Admin', 'Manager'],
+        // },
     ],
     money: [
         {
@@ -246,7 +252,7 @@ export function Sidebar() {
                                 )}
                                 <div className="space-y-1">
                                     {filteredItems.map(item => {
-                                        const isActive = pathname === item.href;
+                                        const isActive = pathname.includes(item.href);
                                         return (
                                             <Link
                                                 key={item.name}

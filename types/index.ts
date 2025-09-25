@@ -10,12 +10,14 @@ export interface User {
   isActive: boolean;
   createdAt: string;
   lastLogin?: string;
+    permissions?: string[]; // e.g., ['view_reports', 'manage_users']
 }
 
 export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+    hasPermission: (permission: string) => boolean;
 }
 
 export interface Project {
@@ -52,26 +54,40 @@ export interface Task {
 }
 
 export interface AttendanceRecord {
-  id: string;
-  userId: string;
-  date: string;
-  checkIn?: string;
-  checkOut?: string;
-  status: 'Present' | 'Late' | 'Absent' | 'Holiday' | 'Leave';
-  notes?: string;
+    id: string;
+    userId: string;
+    userName?: string;
+    date: string;
+    checkIn?: string;
+    checkOut?: string;
+    status: 'Present' | 'Late' | 'Absent' | 'Leave' | 'Holiday';
+    notes?: string;
+    createdAt?: string;
+    updatedAt?: string;
+}
+export interface LeaveRequest {
+    id: string;
+    userId: string;
+    userName?: string; // Add this
+    type: 'Annual' | 'Sick' | 'Personal' | 'Maternity' | 'Emergency';
+    startDate: string;
+    endDate: string;
+    days: number;
+    reason: string;
+    status: 'Pending' | 'Approved' | 'Rejected';
+    approvedBy?: string;
+    approvedByName?: string;
+    createdAt: string;
+    updatedAt: string;
 }
 
-export interface LeaveRequest {
-  id: string;
-  userId: string;
-  type: 'Annual' | 'Sick' | 'Personal' | 'Maternity' | 'Emergency';
-  startDate: string;
-  endDate: string;
-  days: number;
-  reason: string;
-  status: 'Pending' | 'Approved' | 'Rejected';
-  approvedBy?: string;
-  createdAt: string;
+export interface CreateLeaveRequest {
+    userId: string;
+    type: 'Annual' | 'Sick' | 'Personal' | 'Maternity' | 'Emergency';
+    startDate: string;
+    endDate: string;
+    days: number;
+    reason: string;
 }
 
 export interface CashbookEntry {
@@ -151,20 +167,43 @@ export interface OtterAIWebhookPayload {
     attendees: string[];
 }
 
+export interface FiveWhysAnalysis {
+    problemStatement: string;
+    whys: string[];
+    rootCause: string;
+}
+
+export interface CorrectiveAction {
+    id: string;
+    description: string;
+    assignedTo: string;
+    dueDate: string;
+    status: 'Not Started' | 'In Progress' | 'Completed';
+}
+
+export interface PreventiveAction {
+    id: string;
+    description: string;
+    assignedTo: string;
+    dueDate: string;
+    status: 'Not Started' | 'In Progress' | 'Completed';
+}
+
 export interface Problem {
-  id: string;
-  title: string;
-  description: string;
-  category: 'Technical' | 'Process' | 'People' | 'Customer' | 'Financial';
-  severity: 'Low' | 'Medium' | 'High' | 'Critical';
-  status: 'Open' | 'Investigating' | 'Resolved' | 'Closed';
-  reportedBy: string;
-  assignedTo?: string;
-  reportedDate: string;
-  resolvedDate?: string;
-  rootCause?: string;
-  solution?: string;
-  preventiveMeasures?: string[];
+    id: string;
+    title: string;
+    description: string;
+    category: string;
+    severity: 'Low' | 'Medium' | 'High' | 'Critical';
+    status: 'Open' | 'Investigating' | 'Resolved' | 'Closed';
+    reportedBy: string;
+    assignedTo?: string;
+    reportedDate: string;
+    resolvedDate?: string;
+    updatedDate?: string;
+    fiveWhysAnalysis?: FiveWhysAnalysis;
+    correctiveActions?: CorrectiveAction[];
+    preventiveActions?: PreventiveAction[];
 }
 
 export interface JobDescription {
@@ -184,23 +223,57 @@ export interface JobDescription {
   updatedAt: string;
 }
 
+export interface Department {
+    id: string;
+    name: string;
+    color: string;
+    description: string;
+}
+
+export interface JobDescription {
+    id: string;
+    title: string;
+    department: string;
+    summary: string;
+    purpose: string;
+    vision: string;
+    mission: string;
+    reportsTo: string;
+    responsibilities: string[];
+    kpis: string[];
+    okrs: string[];
+    skills: string[];
+    tools: string[];
+    careerPath: string;
+    probationPeriod: string;
+    reviewCadence: string;
+    status: 'Draft' | 'Under Review' | 'Approved' | 'Archived';
+    version: string;
+    createdBy: string;
+    createdAt: string;
+    lastReviewed?: string;
+    nextReview?: string;
+}
+
 export interface Framework {
-  id: string;
-  name: string;
-  department: string;
-  description: string;
-  sections: FrameworkSection[];
-  version: number;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
+    id: string;
+    name: string;
+    department: string;
+    description: string;
+    sections: FrameworkSection[];
+    version: number;
+    status: 'Draft' | 'Under Review' | 'Approved' | 'Archived';
+    createdBy: string;
+    createdAt: string;
+    lastReviewed?: string;
+    nextReview?: string;
 }
 
 export interface FrameworkSection {
-  id: string;
-  title: string;
-  content: string;
-  order: number;
+    id: string;
+    title: string;
+    content: string;
+    order: number;
 }
 
 export interface MoneyRequest {
@@ -449,4 +522,7 @@ export interface AgendaItem {
   status: 'Pending' | 'In Progress' | 'Completed';
   category: 'Meeting' | 'Task' | 'Review' | 'Decision';
   createdBy: string;
+}
+
+export class Department {
 }

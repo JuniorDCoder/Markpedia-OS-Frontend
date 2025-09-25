@@ -1,6 +1,6 @@
 import { taskService } from '@/services/api';
 import { Task } from '@/types';
-import TaskDetailClient from './TaskDetailClient';
+import TaskDetailClient from '../../../../../components/sections/TaskDetailClient';
 
 // This function runs at build time to generate static paths
 export async function generateStaticParams() {

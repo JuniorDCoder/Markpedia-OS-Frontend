@@ -1,6 +1,6 @@
 import { taskService } from '@/services/api';
 import { Task } from '@/types';
-import TaskEditClient from './TaskEditClient';
+import TaskEditClient from '../../../../../../components/sections/TaskEditClient';
 
 export async function generateStaticParams() {
     try {

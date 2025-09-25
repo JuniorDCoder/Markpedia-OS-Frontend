@@ -40,8 +40,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import toast from 'react-hot-toast';
-import ReportModal from './ReportModal';
-import ReviewReportsModal from './ReviewReportsModal';
+import ReportModal from '../../../../components/sections/ReportModal';
+import ReviewReportsModal from '../../../../components/sections/ReviewReportsModal';
 
 // Enhanced task interface with weekly rhythm tracking
 interface EnhancedTask extends Task {

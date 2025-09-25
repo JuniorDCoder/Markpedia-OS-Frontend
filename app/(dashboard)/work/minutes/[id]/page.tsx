@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import MeetingDetailClient from './MeetingDetailClient';
+import MeetingDetailClient from '../../../../../components/sections/MeetingDetailClient';
 import { meetingService } from '@/services/api';
 
 interface PageProps {
