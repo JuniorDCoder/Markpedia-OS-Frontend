@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useAppStore } from '@/store/app';
-import { meetingConfigService } from '@/services/api';
+import { meetingService } from '@/services/api';
 import { Save, RefreshCw, TestTube, Link, Shield, Bell, FileText, Bot } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -62,7 +62,7 @@ export default function ConfigurationPage() {
     const loadConfig = async () => {
         try {
             setLoading(true);
-            const data = await meetingConfigService.getConfig();
+            const data = await meetingService.getConfig();
             setConfig(data);
         } catch (error) {
             toast.error('Failed to load configuration');
@@ -113,7 +113,7 @@ export default function ConfigurationPage() {
 
         try {
             setSaving(true);
-            await meetingConfigService.saveConfig(config);
+            await meetingService.saveConfig(config);
             toast.success('Configuration saved successfully');
         } catch (error) {
             toast.error('Failed to save configuration');
@@ -130,7 +130,7 @@ export default function ConfigurationPage() {
 
         try {
             setTesting(true);
-            await meetingConfigService.testOtterIntegration(config.otterAI.apiKey);
+            await meetingService.testOtterIntegration(config.otterAI.apiKey);
             toast.success('Otter AI integration test successful');
         } catch (error) {
             toast.error('Otter AI integration test failed');

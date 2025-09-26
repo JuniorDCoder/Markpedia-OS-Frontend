@@ -866,6 +866,49 @@ export const taskService = {
 };
 
 export const meetingService = {
+    async getConfig(): Promise<MeetingConfig> {
+        // Placeholder: return a sensible default until Python API is wired
+        return {
+            id: 'default',
+            otterAI: {
+                enabled: false,
+                apiKey: '',
+                webhookUrl: '',
+                autoSync: false,
+                syncInterval: 30,
+            },
+            notifications: {
+                beforeMeeting: true,
+                beforeMeetingTime: 15,
+                afterMeeting: true,
+                actionItemsDue: true,
+                decisionFollowUp: true,
+            },
+            automation: {
+                autoCreateTasks: false,
+                taskPriority: 'medium',
+                defaultAssignee: '',
+                syncWithCalendar: true,
+            },
+            templates: {
+                defaultTemplate: 'standard',
+                customTemplates: [],
+            },
+        };
+    },
+
+    // Persist configuration
+    async saveConfig(config: MeetingConfig): Promise<void> {
+        // Placeholder: no-op until Python API is wired
+        await Promise.resolve();
+    },
+
+    // Test Otter integration (e.g., ping Python backend)
+    async testOtterIntegration(apiKey: string): Promise<{ ok: boolean; message?: string }> {
+        // Placeholder: simulate success
+        return { ok: true };
+    },
+
     getMeetings: async (): Promise<Meeting[]> => {
         const response = await fetch('/api/meetings');
         if (!response.ok) throw new Error('Failed to fetch meetings');
