@@ -105,13 +105,13 @@ const navigation = {
             href: '/people/warnings',
             icon: Shield,
             roles: ['CEO', 'Admin', 'Manager'],
+        },
+        {
+            name: 'Team',
+            href: '/people/team',
+            icon: Users,
+            roles: ['CEO', 'Admin', 'Manager'],
         }
-        // {
-        //     name: 'Team',
-        //     href: '/people/team',
-        //     icon: Users,
-        //     roles: ['CEO', 'Admin', 'Manager'],
-        // },
     ],
     money: [
         {
@@ -121,7 +121,7 @@ const navigation = {
             roles: ['CEO', 'Admin'],
         },
         {
-            name: 'Requests',
+            name: 'Requests & Money Flow',
             href: '/money/requests',
             icon: DollarSign,
             roles: ['CEO', 'Admin', 'Manager'],

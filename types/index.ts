@@ -276,20 +276,104 @@ export interface FrameworkSection {
     order: number;
 }
 
+export interface TeamMember {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    departmentId: string;
+    roleId: string;
+    hireDate: string;
+    salary: number;
+    status: 'Active' | 'Inactive' | 'On Leave';
+    avatar?: string;
+    department?: Department;
+    role?: Role;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface Department {
+    id: string;
+    name: string;
+    description: string;
+}
+
+export interface Role {
+    id: string;
+    name: string;
+    level: number;
+}
+
+export interface CreateTeamMember {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    departmentId: string;
+    roleId: string;
+    hireDate: string;
+    salary: number;
+    status: 'Active' | 'Inactive' | 'On Leave';
+    avatar?: string;
+}
+
 export interface MoneyRequest {
-  id: string;
-  title: string;
-  description: string;
-  amount: number;
-  category: string;
-  requestedBy: string;
-  requestedDate: string;
-  status: 'Pending' | 'Approved' | 'Rejected' | 'Disbursed';
-  approvedBy?: string;
-  approvedDate?: string;
-  disbursedDate?: string;
-  reason?: string;
-  attachments?: string[];
+    id: string;
+    title: string;
+    description: string;
+    amount: number;
+    category: string;
+    requestedBy: string;
+    requestedByName?: string;
+    requestedDate: string;
+    status: 'Pending' | 'CEO Review' | 'Finance Review' | 'Approved' | 'Rejected' | 'Disbursed';
+    approvedBy?: string;
+    approvedByName?: string;
+    approvedDate?: string;
+    disbursedBy?: string;
+    disbursedByName?: string;
+    disbursedDate?: string;
+    reason?: string;
+    currentApprover?: string;
+    attachments?: string[];
+    budgetLine?: string;
+}
+
+export interface Expense {
+    id: string;
+    requestId?: string;
+    title: string;
+    amount: number;
+    category: string;
+    date: string;
+    description: string;
+    approvedBy?: string;
+    disbursedBy?: string;
+    budgetLine?: string;
+}
+
+export interface Income {
+    id: string;
+    title: string;
+    amount: number;
+    category: string;
+    date: string;
+    description: string;
+    receivedBy?: string;
+    client?: string;
+}
+
+export interface CreateMoneyRequest {
+    title: string;
+    description: string;
+    amount: number;
+    category: string;
+    requestedBy: string;
+    requestedByName: string;
+    attachments?: string[];
+    budgetLine?: string;
 }
 
 export interface GMVEntry {

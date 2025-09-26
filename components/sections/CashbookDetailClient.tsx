@@ -82,13 +82,14 @@ export default function CashbookDetailClient({ entry }: { entry: CashbookEntry }
                         )}
                     </div>
                     <div className="flex gap-4 pt-6 border-t justify-end">
+
+                        <Button variant="ghost" onClick={() => router.back()}>
+                            Cancel
+                        </Button>
                         <Button asChild>
                             <Link href={`/money/cashbook/${entry.id}/edit`}>
                                 <Edit className="h-4 w-4 mr-2" /> Edit
                             </Link>
-                        </Button>
-                        <Button variant="destructive" onClick={handleDelete}>
-                            <Trash className="h-4 w-4 mr-2" /> Delete
                         </Button>
                     </div>
                 </CardContent>

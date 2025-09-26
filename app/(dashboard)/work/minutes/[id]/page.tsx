@@ -6,6 +6,16 @@ interface PageProps {
     params: { id: string };
 }
 
+export async function generateStaticParams(){
+    try {
+        const meetings = await meetingService.getMeetings();
+        return meetings.map((meeting) => ({ id: meeting.id }));
+    } catch (error) {
+        console.error('Failed to fetch meetings for static params:', error);
+        return []
+    }
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
     try {
         const meeting = await meetingService.getMeeting(params.id);
