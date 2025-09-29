@@ -3,7 +3,7 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'CEO' | 'Admin' | 'Manager' | 'Employee';
+  role: 'CEO' | 'Admin' | 'Manager' | 'Employee' | 'CXO';
   department?: string;
   position?: string;
   avatar?: string;
@@ -12,6 +12,44 @@ export interface User {
   lastLogin?: string;
     permissions?: string[]; // e.g., ['view_reports', 'manage_users']
 }
+
+export interface Employee {
+    id: string;
+    name: string;
+    email: string;
+    title: string;
+    role: 'CEO' | 'Manager' | 'Employee' | 'Admin' | 'CXO';
+    department: string;
+    avatar?: string;
+    startDate: string;
+    reportsTo?: string;
+    team?: string[];
+    isActive: boolean;
+}
+
+export interface OrganigramNode {
+    id: string;
+    employeeId: string;
+    position: {
+        x: number;
+        y: number;
+    };
+    size: {
+        width: number;
+        height: number;
+    };
+    children: string[];
+}
+
+export interface OrganigramSnapshot {
+    id: string;
+    name: string;
+    description?: string;
+    nodes: OrganigramNode[];
+    createdAt: string;
+    createdBy: string;
+}
+
 
 export interface AuthState {
   user: User | null;
@@ -228,6 +266,7 @@ export interface Department {
     name: string;
     color: string;
     description: string;
+    memberCount: number;
 }
 
 export interface JobDescription {
@@ -483,6 +522,29 @@ export interface Innovation {
   status: 'Under Review' | 'Approved' | 'In Development' | 'Testing' | 'Deployed';
   assignedTo?: string;
   feedback?: string;
+}
+
+export interface OrganigramNode {
+    id: string;
+    employeeId: string;
+    position: {
+        x: number;
+        y: number;
+    };
+    size: {
+        width: number;
+        height: number;
+    };
+    children: string[];
+}
+
+export interface OrganigramSnapshot {
+    id: string;
+    name: string;
+    description?: string;
+    nodes: OrganigramNode[];
+    createdAt: string;
+    createdBy: string;
 }
 
 export interface Policy {

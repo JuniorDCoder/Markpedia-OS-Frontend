@@ -134,32 +134,32 @@ const navigation = {
             icon: Target,
             roles: ['CEO', 'Admin', 'Manager'],
         },
-        {
-            name: 'Innovation',
-            href: '/strategy/innovation',
-            icon: Lightbulb,
-            roles: ['CEO', 'Admin', 'Manager'],
-        },
+        // {
+        //     name: 'Innovation',
+        //     href: '/strategy/innovation',
+        //     icon: Lightbulb,
+        //     roles: ['CEO', 'Admin', 'Manager'],
+        // },
         {
             name: 'Journal',
             href: '/strategy/journal',
             icon: BookOpen,
             roles: ['CEO', 'Admin', 'Manager', 'Employee'],
+        },
+        {
+            name: 'Organigram',
+            href: '/strategy/organigram',
+            icon: Users,
+            roles: ['CEO', 'Admin', 'Manager', 'Employee'],
         }
     ],
     resources: [
         {
-            name: 'Policies',
-            href: '/resources/policies',
+            name: 'Compnay Resources',
+            href: '/resources',
             icon: BookOpen,
             roles: ['CEO', 'Admin', 'Manager', 'Employee'],
-        },
-        {
-            name: 'SOPs',
-            href: '/resources/sops',
-            icon: FileText,
-            roles: ['CEO', 'Admin', 'Manager', 'Employee'],
-        },
+        }
     ],
     community: [
         {
