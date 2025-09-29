@@ -387,31 +387,62 @@ export interface GMVEntry {
 }
 
 export interface Goal {
-  id: string;
-  title: string;
-  description: string;
-  type: 'Company' | 'Department' | 'Individual';
-  category: 'Revenue' | 'Growth' | 'Efficiency' | 'Quality' | 'Innovation';
-  targetValue: number;
-  currentValue: number;
-  unit: string;
-  startDate: string;
-  endDate: string;
-  ownerId: string;
-  parentId?: string;
-  status: 'Not Started' | 'In Progress' | 'At Risk' | 'Completed';
-  keyResults: KeyResult[];
+    id: string;
+    title: string;
+    description: string;
+    type: 'Company' | 'Department' | 'Individual';
+    category: string;
+    targetValue: number;
+    currentValue: number;
+    unit: string;
+    startDate: string;
+    endDate: string;
+    ownerId: string;
+    ownerName?: string;
+    department?: string;
+    status: 'Not Started' | 'In Progress' | 'At Risk' | 'Completed';
+    parentGoalId?: string | null;
+    keyResults: KeyResult[];
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface KeyResult {
-  id: string;
-  description: string;
-  targetValue: number;
-  currentValue: number;
-  unit: string;
-  status: 'Not Started' | 'In Progress' | 'At Risk' | 'Completed';
+    id: string;
+    description: string;
+    targetValue: number;
+    currentValue: number;
+    unit: string;
+    status: 'Not Started' | 'In Progress' | 'At Risk' | 'Completed';
+}
+export interface JournalEntry {
+    id: string;
+    title: string;
+    content: string;
+    type: 'private' | 'learning' | 'sop' | 'idea';
+    category: string;
+    tags: string[];
+    isPrivate: boolean;
+    authorId: string;
+    authorName?: string;
+    department?: string;
+    status: 'draft' | 'published' | 'archived';
+    relatedGoalId?: string | null;
+    relatedTaskId?: string | null;
+    createdAt: string;
+    updatedAt: string;
+    publishedAt?: string;
 }
 
+export interface QuickCapture {
+    id: string;
+    content: string;
+    tags: string[];
+    authorId: string;
+    createdAt: string;
+    processed: boolean;
+    convertedTo?: 'task' | 'goal' | 'meeting' | null;
+}
 export interface Decision {
   id: string;
   title: string;

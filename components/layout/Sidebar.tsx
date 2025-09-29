@@ -140,6 +140,12 @@ const navigation = {
             icon: Lightbulb,
             roles: ['CEO', 'Admin', 'Manager'],
         },
+        {
+            name: 'Journal',
+            href: '/strategy/journal',
+            icon: BookOpen,
+            roles: ['CEO', 'Admin', 'Manager', 'Employee'],
+        }
     ],
     resources: [
         {
