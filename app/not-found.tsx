@@ -43,7 +43,7 @@ export default function NotFound() {
     const quickLinks = [
         { href: '/strategy/goals', label: 'Goals & OKRs', icon: Target },
         { href: '/strategy/organigram', label: 'Organigram', icon: Users },
-        { href: '/strategy/resources', label: 'Resources', icon: Book },
+        { href: '/resources', label: 'Resources', icon: Book },
         { href: '/strategy/journal', label: 'Journal', icon: FileText },
     ];
 

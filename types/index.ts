@@ -1,3 +1,6 @@
+import {DataType} from "csstype";
+import Attachment = DataType.Attachment;
+
 export interface User {
   id: string;
   email: string;
@@ -582,11 +585,26 @@ export interface SOP {
   updatedAt: string;
 }
 
+export interface ChecklistItem {
+    id: string;
+    description: string;
+    completed: boolean;
+    order: number;
+    // Optional fields you might want to add:
+    required?: boolean;
+    notes?: string;
+    completedAt?: string;
+    completedBy?: string;
+    estimatedTime?: number; // in minutes
+    attachments?: Attachment[];
+}
+
 export interface SOPStep {
   id: string;
   title: string;
   description: string;
   order: number;
+  checklistItems: ChecklistItem[];
   isRequired: boolean;
   estimatedTime?: number;
   resources?: string[];

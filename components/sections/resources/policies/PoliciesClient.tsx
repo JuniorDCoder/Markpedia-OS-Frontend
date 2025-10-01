@@ -44,7 +44,7 @@ export default function PoliciesClient({ policies, sops, user }: PoliciesClientP
                             <Badge variant="outline">v{policy.version}</Badge>
                         </div>
                         <CardTitle className="text-lg">
-                            <Link href={`/strategy/resources/policies/${policy.id}`} className="hover:underline">
+                            <Link href={`/resources/policies/${policy.id}`} className="hover:underline">
                                 {policy.title}
                             </Link>
                         </CardTitle>
@@ -91,7 +91,7 @@ export default function PoliciesClient({ policies, sops, user }: PoliciesClientP
                             <Badge variant="outline">{sop.steps.length} steps</Badge>
                         </div>
                         <CardTitle className="text-lg">
-                            <Link href={`/strategy/resources/sops/${sop.id}`} className="hover:underline">
+                            <Link href={`/resources/sops/${sop.id}`} className="hover:underline">
                                 {sop.title}
                             </Link>
                         </CardTitle>
@@ -116,7 +116,7 @@ export default function PoliciesClient({ policies, sops, user }: PoliciesClientP
                         </div>
                     </div>
                     <Button size="sm" asChild>
-                        <Link href={`/strategy/resources/sops/${sop.id}/run`}>
+                        <Link href={`/resources/sops/${sop.id}/run`}>
                             Run SOP
                         </Link>
                     </Button>
@@ -139,13 +139,13 @@ export default function PoliciesClient({ policies, sops, user }: PoliciesClientP
                     {canManage && (
                         <>
                             <Button asChild variant="outline">
-                                <Link href="/strategy/resources/policies/new">
+                                <Link href="/resources/policies/new">
                                     <Plus className="h-4 w-4 mr-2" />
                                     New Policy
                                 </Link>
                             </Button>
                             <Button asChild>
-                                <Link href="/strategy/resources/sops/new">
+                                <Link href="/resources/sops/new">
                                     <Plus className="h-4 w-4 mr-2" />
                                     New SOP
                                 </Link>
@@ -202,7 +202,7 @@ export default function PoliciesClient({ policies, sops, user }: PoliciesClientP
                                     </p>
                                     {canManage && (
                                         <Button asChild>
-                                            <Link href="/strategy/resources/policies/new">
+                                            <Link href="/resources/policies/new">
                                                 <Plus className="h-4 w-4 mr-2" />
                                                 Create Policy
                                             </Link>
@@ -228,7 +228,7 @@ export default function PoliciesClient({ policies, sops, user }: PoliciesClientP
                                     </p>
                                     {canManage && (
                                         <Button asChild>
-                                            <Link href="/strategy/resources/sops/new">
+                                            <Link href="/resources/sops/new">
                                                 <Plus className="h-4 w-4 mr-2" />
                                                 Create SOP
                                             </Link>
