@@ -175,6 +175,15 @@ const navigation = {
             roles: ['CEO', 'Admin', 'Manager', 'Employee'],
         },
     ],
+
+    chats: [
+        {
+            name: 'Chats',
+            href: '/chats',
+            icon: MessageSquare,
+            roles: ['CEO', 'Admin', 'Manager', 'Employee'],
+        }
+    ],
     other: [
         {
             name: 'Time',
@@ -199,6 +208,7 @@ const sections = [
     { key: 'strategy', label: 'Strategy', items: navigation.strategy },
     { key: 'resources', label: 'Resources', items: navigation.resources },
     { key: 'community', label: 'Community', items: navigation.community },
+    { key: 'chats', label: 'Discussions', items: navigation.chats },
     { key: 'other', label: 'Other', items: navigation.other },
 ];
 

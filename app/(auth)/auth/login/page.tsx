@@ -53,7 +53,7 @@ export default function LoginPage() {
             <Building className="h-6 w-6 text-primary-foreground" />
           </div>
           <div>
-            <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
+            <CardTitle className="text-2xl text-primary font-bold">Welcome back</CardTitle>
             <CardDescription>Sign in to your Markpedia OS account</CardDescription>
           </div>
         </CardHeader>
