@@ -189,9 +189,9 @@ export default function NotFound() {
                         </Button>
 
                         <Button asChild variant="outline" size="lg" className="hover-lift">
-                            <Link href="/strategy" className="flex items-center gap-2">
+                            <Link href="/dashboard" className="flex items-center gap-2">
                                 <ArrowLeft className="w-5 h-5" />
-                                Strategy Dashboard
+                                Dashboard
                             </Link>
                         </Button>
                     </motion.div>

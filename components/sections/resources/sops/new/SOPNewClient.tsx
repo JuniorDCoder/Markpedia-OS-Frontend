@@ -85,7 +85,7 @@ export default function SOPNewClient({ user }: { user: any }) {
         try {
             // api call to create sop
             toast.success('SOP created successfully');
-            router.push(`/resources/sops`);
+            router.push(`/resources/policies`);
         } catch (error) {
             toast.error('Failed to create SOP');
         } finally {
@@ -98,7 +98,7 @@ export default function SOPNewClient({ user }: { user: any }) {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <Button variant="outline" size="icon" asChild>
-                        <Link href="/resources/sops">
+                        <Link href="/resources/policies">
                             <ArrowLeft className="h-4 w-4" />
                         </Link>
                     </Button>
@@ -312,7 +312,7 @@ export default function SOPNewClient({ user }: { user: any }) {
                                     {isLoading ? 'Creating...' : 'Create SOP'}
                                 </Button>
                                 <Button variant="outline" className="w-full" asChild>
-                                    <Link href="/resources/sops">Cancel</Link>
+                                    <Link href="/resources/policies">Cancel</Link>
                                 </Button>
                             </CardContent>
                         </Card>

@@ -19,7 +19,9 @@ import {
     MoreVertical,
     Edit,
     Trash2,
-    Save
+    Save,
+    ChevronDown,
+    Menu
 } from 'lucide-react';
 
 interface OrganigramClientProps {
@@ -49,6 +51,7 @@ export default function OrganigramClient({
     const [isDragging, setIsDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const [selectedNode, setSelectedNode] = useState<string | null>(null);
+    const [mobileView, setMobileView] = useState<'organigram' | 'list'>('organigram');
     const organigramRef = useRef<HTMLDivElement>(null);
 
     // Build organigram tree from snapshot
@@ -123,7 +126,7 @@ export default function OrganigramClient({
                     draggable={canManage}
                     onDragStart={(e) => handleDragStart(e, node.id)}
                     className={`
-            relative bg-white border-2 rounded-lg p-4 shadow-sm cursor-move min-w-[200px] 
+            relative bg-white border-2 rounded-lg p-3 sm:p-4 shadow-sm cursor-move min-w-[160px] sm:min-w-[200px]
             transition-all duration-200 hover:shadow-md hover:border-blue-300
             ${selectedNode === node.id ? 'border-blue-500 shadow-md' : 'border-gray-200'}
             ${employee.department === 'Executive' ? 'border-purple-300 bg-purple-50' : ''}
@@ -144,10 +147,10 @@ export default function OrganigramClient({
                     />
 
                     <div className="text-center">
-                        <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center justify-between mb-2 gap-1">
                             <Badge
                                 variant="secondary"
-                                className="text-xs capitalize"
+                                className="text-xs capitalize flex-1 truncate"
                                 style={{
                                     backgroundColor: departments.find(d => d.name === employee.department)?.color + '20',
                                     color: departments.find(d => d.name === employee.department)?.color
@@ -156,42 +159,39 @@ export default function OrganigramClient({
                                 {employee.department}
                             </Badge>
                             {canManage && (
-                                <div className="flex gap-1">
-                                    <Button variant="ghost" size="icon" className="h-6 w-6">
-                                        <Edit className="h-3 w-3" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6">
-                                        <Trash2 className="h-3 w-3" />
+                                <div className="flex gap-1 flex-shrink-0">
+                                    <Button variant="ghost" size="icon" className="h-5 w-5 sm:h-6 sm:w-6">
+                                        <Edit className="h-2 w-2 sm:h-3 sm:w-3" />
                                     </Button>
                                 </div>
                             )}
                         </div>
 
-                        <h3 className="font-semibold text-sm mb-1">{employee.name}</h3>
-                        <p className="text-xs text-muted-foreground mb-2">{employee.title}</p>
-                        <p className="text-xs text-muted-foreground">{employee.email}</p>
+                        <h3 className="font-semibold text-sm mb-1 line-clamp-1">{employee.name}</h3>
+                        <p className="text-xs text-muted-foreground mb-2 line-clamp-1">{employee.title}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-1">{employee.email}</p>
 
                         {employee.role === 'CEO' && (
-                            <Badge variant="default" className="mt-2 bg-purple-500">CEO</Badge>
+                            <Badge variant="default" className="mt-2 bg-purple-500 text-xs">CEO</Badge>
                         )}
                         {employee.role === 'CXO' && (
-                            <Badge variant="default" className="mt-2 bg-blue-500">CXO</Badge>
+                            <Badge variant="default" className="mt-2 bg-blue-500 text-xs">CXO</Badge>
                         )}
                     </div>
 
                     {/* Connection line to children */}
                     {children.length > 0 && (
-                        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full w-0.5 h-8 bg-gray-300" />
+                        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full w-0.5 h-6 sm:h-8 bg-gray-300" />
                     )}
                 </div>
 
                 {/* Children */}
                 {children.length > 0 && (
-                    <div className="relative mt-8 flex gap-8">
+                    <div className="relative mt-6 sm:mt-8 flex gap-4 sm:gap-8">
                         {children.map((child, index) => (
                             <div key={child.id} className="flex flex-col items-center">
                                 {/* Horizontal connection line */}
-                                <div className="absolute top-0 left-0 w-full h-0.5 bg-gray-300 -translate-y-4" />
+                                <div className="absolute top-0 left-0 w-full h-0.5 bg-gray-300 -translate-y-3 sm:-translate-y-4" />
                                 {renderOrganigramNode(child, level + 1)}
                             </div>
                         ))}
@@ -201,35 +201,101 @@ export default function OrganigramClient({
         );
     };
 
+    // Mobile Navigation
+    const MobileNavigation = () => (
+        <div className="sm:hidden">
+            <div className="grid grid-cols-2 gap-2 mb-4">
+                <Button
+                    variant={mobileView === 'organigram' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setMobileView('organigram')}
+                    className="text-xs"
+                >
+                    <Building className="h-3 w-3 mr-1" />
+                    Organigram
+                </Button>
+                <Button
+                    variant={mobileView === 'list' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setMobileView('list')}
+                    className="text-xs"
+                >
+                    <Users className="h-3 w-3 mr-1" />
+                    List View
+                </Button>
+            </div>
+        </div>
+    );
+
+    // Employee List View for Mobile
+    const EmployeeListView = () => (
+        <div className="space-y-3">
+            {filteredEmployees.map(employee => (
+                <Card key={employee.id} className="border">
+                    <CardContent className="pt-4">
+                        <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Badge
+                                        variant="secondary"
+                                        className="text-xs"
+                                        style={{
+                                            backgroundColor: departments.find(d => d.name === employee.department)?.color + '20',
+                                            color: departments.find(d => d.name === employee.department)?.color
+                                        }}
+                                    >
+                                        {employee.department}
+                                    </Badge>
+                                    {employee.role === 'CEO' && (
+                                        <Badge variant="default" className="bg-purple-500 text-xs">CEO</Badge>
+                                    )}
+                                    {employee.role === 'CXO' && (
+                                        <Badge variant="default" className="bg-blue-500 text-xs">CXO</Badge>
+                                    )}
+                                </div>
+                                <h3 className="font-semibold text-sm mb-1">{employee.name}</h3>
+                                <p className="text-xs text-muted-foreground mb-1">{employee.title}</p>
+                                <p className="text-xs text-muted-foreground">{employee.email}</p>
+                            </div>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            ))}
+        </div>
+    );
+
     return (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 lg:p-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight flex items-center">
-                        <Building className="h-8 w-8 mr-3" />
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight flex items-center">
+                        <Building className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8 mr-2 sm:mr-3" />
                         Organigram
                     </h1>
-                    <p className="text-muted-foreground mt-2">
+                    <p className="text-muted-foreground mt-1 sm:mt-2 text-xs sm:text-sm">
                         Visualize and manage your organization structure
                     </p>
                 </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" onClick={handleTakeSnapshot}>
-                        <Camera className="h-4 w-4 mr-2" />
-                        Take Snapshot
+                <div className="flex gap-2 w-full sm:w-auto">
+                    <Button variant="outline" onClick={handleTakeSnapshot} size="sm" className="flex-1 sm:flex-none text-xs">
+                        <Camera className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                        Snapshot
                     </Button>
-                    <Button variant="outline" asChild>
+                    <Button variant="outline" asChild size="sm" className="flex-1 sm:flex-none text-xs">
                         <Link href="/strategy/organigram/employees/new">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Employee
+                            <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                            Add
                         </Link>
                     </Button>
                     {canManage && (
-                        <Button asChild>
+                        <Button asChild size="sm" className="flex-1 sm:flex-none text-xs">
                             <Link href="/strategy/organigram/edit">
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit Structure
+                                <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                Edit
                             </Link>
                         </Button>
                     )}
@@ -237,70 +303,73 @@ export default function OrganigramClient({
             </div>
 
             {/* Stats Cards */}
-            <div className="grid gap-4 md:grid-cols-4">
-                <Card>
+            <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
+                <Card className="border shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
-                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-xs sm:text-sm font-medium">Total Employees</CardTitle>
+                        <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{employees.length}</div>
+                        <div className="text-xl sm:text-2xl font-bold">{employees.length}</div>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="border shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Departments</CardTitle>
-                        <Building className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-xs sm:text-sm font-medium">Departments</CardTitle>
+                        <Building className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{departments.length}</div>
+                        <div className="text-xl sm:text-2xl font-bold">{departments.length}</div>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="border shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Snapshots</CardTitle>
-                        <Camera className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-xs sm:text-sm font-medium">Snapshots</CardTitle>
+                        <Camera className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{snapshots.length}</div>
+                        <div className="text-xl sm:text-2xl font-bold">{snapshots.length}</div>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="border shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Managers</CardTitle>
-                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-xs sm:text-sm font-medium">Managers</CardTitle>
+                        <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">
+                        <div className="text-xl sm:text-2xl font-bold">
                             {employees.filter(e => e.role === 'Manager' || e.role === 'CXO').length}
                         </div>
                     </CardContent>
                 </Card>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-4">
-                {/* Sidebar */}
-                <div className="space-y-6">
+            {/* Mobile Navigation */}
+            <MobileNavigation />
+
+            <div className="grid gap-4 sm:gap-6 lg:grid-cols-4">
+                {/* Sidebar - Hidden on mobile when in organigram view */}
+                <div className={`space-y-4 sm:space-y-6 ${mobileView === 'organigram' ? 'hidden sm:block' : 'block'}`}>
                     {/* Filters */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Filters</CardTitle>
+                    <Card className="border shadow-sm">
+                        <CardHeader className="pb-3 sm:pb-4">
+                            <CardTitle className="text-base sm:text-lg">Filters</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent className="space-y-3 sm:space-y-4">
                             <div className="relative">
-                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <Search className="absolute left-3 top-1/2 h-3 w-3 sm:h-4 sm:w-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     placeholder="Search employees..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="pl-10"
+                                    className="pl-9 sm:pl-10 text-sm"
                                 />
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium mb-2">Department</label>
                                 <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                                    <SelectTrigger>
+                                    <SelectTrigger className="text-sm">
                                         <SelectValue placeholder="All Departments" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -317,17 +386,17 @@ export default function OrganigramClient({
                     </Card>
 
                     {/* Snapshots */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Snapshots</CardTitle>
-                            <CardDescription>Saved organization structures</CardDescription>
+                    <Card className="border shadow-sm">
+                        <CardHeader className="pb-3 sm:pb-4">
+                            <CardTitle className="text-base sm:text-lg">Snapshots</CardTitle>
+                            <CardDescription className="text-sm">Saved organization structures</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-2">
                                 {snapshots.map(snapshot => (
                                     <div
                                         key={snapshot.id}
-                                        className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                                        className={`p-2 sm:p-3 border rounded-lg cursor-pointer transition-colors ${
                                             selectedSnapshot?.id === snapshot.id
                                                 ? 'border-blue-500 bg-blue-50'
                                                 : 'border-gray-200 hover:bg-gray-50'
@@ -335,18 +404,18 @@ export default function OrganigramClient({
                                         onClick={() => setSelectedSnapshot(snapshot)}
                                     >
                                         <div className="flex items-center justify-between">
-                                            <div>
-                                                <h4 className="font-medium text-sm">{snapshot.name}</h4>
+                                            <div className="min-w-0 flex-1">
+                                                <h4 className="font-medium text-sm truncate">{snapshot.name}</h4>
                                                 <p className="text-xs text-muted-foreground">
                                                     {new Date(snapshot.createdAt).toLocaleDateString()}
                                                 </p>
                                             </div>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0">
                                                 <Download className="h-3 w-3" />
                                             </Button>
                                         </div>
                                         {snapshot.description && (
-                                            <p className="text-xs text-muted-foreground mt-1">{snapshot.description}</p>
+                                            <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{snapshot.description}</p>
                                         )}
                                     </div>
                                 ))}
@@ -355,23 +424,23 @@ export default function OrganigramClient({
                     </Card>
 
                     {/* Departments */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Departments</CardTitle>
-                            <CardDescription>Team distribution</CardDescription>
+                    <Card className="border shadow-sm">
+                        <CardHeader className="pb-3 sm:pb-4">
+                            <CardTitle className="text-base sm:text-lg">Departments</CardTitle>
+                            <CardDescription className="text-sm">Team distribution</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-3">
+                            <div className="space-y-2 sm:space-y-3">
                                 {departments.map(dept => (
                                     <div key={dept.id} className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             <div
-                                                className="w-3 h-3 rounded-full"
+                                                className="w-3 h-3 rounded-full flex-shrink-0"
                                                 style={{ backgroundColor: dept.color }}
                                             />
-                                            <span className="text-sm">{dept.name}</span>
+                                            <span className="text-sm truncate">{dept.name}</span>
                                         </div>
-                                        <Badge variant="secondary">{dept.memberCount}</Badge>
+                                        <Badge variant="secondary" className="text-xs">{dept.memberCount}</Badge>
                                     </div>
                                 ))}
                             </div>
@@ -379,22 +448,22 @@ export default function OrganigramClient({
                     </Card>
                 </div>
 
-                {/* Main Organigram */}
-                <div className="lg:col-span-3">
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <CardTitle>
+                {/* Main Content */}
+                <div className={`lg:col-span-3 ${mobileView === 'list' ? 'hidden sm:block' : 'block'}`}>
+                    <Card className="border shadow-sm">
+                        <CardHeader className="pb-3 sm:pb-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
+                                <div className="flex-1 min-w-0">
+                                    <CardTitle className="text-base sm:text-lg line-clamp-1">
                                         {selectedSnapshot?.name || 'Current Organization Structure'}
                                     </CardTitle>
-                                    <CardDescription>
-                                        Drag to rearrange • Click to select • Double-click to edit
+                                    <CardDescription className="text-xs sm:text-sm">
+                                        {canManage ? 'Drag to rearrange • Click to select' : 'Organization structure view'}
                                     </CardDescription>
                                 </div>
                                 <div className="flex gap-2">
                                     <Select defaultValue="export">
-                                        <SelectTrigger className="w-[130px]">
+                                        <SelectTrigger className="w-[120px] sm:w-[130px] text-xs sm:text-sm">
                                             <SelectValue placeholder="Export" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -414,39 +483,43 @@ export default function OrganigramClient({
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <div
-                                ref={organigramRef}
-                                className="relative min-h-[600px] border-2 border-dashed border-gray-200 rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 overflow-auto"
-                                onDragOver={handleDragOver}
-                                onDrop={handleDrop}
-                            >
-                                {organigramTree.length > 0 ? (
-                                    organigramTree.map(node => renderOrganigramNode(node))
-                                ) : (
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                        <div className="text-center">
-                                            <Building className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                                            <h3 className="text-lg font-medium text-muted-foreground mb-2">
-                                                No organization structure
-                                            </h3>
-                                            <p className="text-sm text-muted-foreground mb-4">
-                                                {canManage
-                                                    ? 'Start by adding employees and creating your organization structure'
-                                                    : 'Organization structure will be available soon'
-                                                }
-                                            </p>
-                                            {canManage && (
-                                                <Button asChild>
-                                                    <Link href="/strategy/organigram/edit">
-                                                        <Plus className="h-4 w-4 mr-2" />
-                                                        Create Structure
-                                                    </Link>
-                                                </Button>
-                                            )}
+                            {mobileView === 'list' ? (
+                                <EmployeeListView />
+                            ) : (
+                                <div
+                                    ref={organigramRef}
+                                    className="relative min-h-[400px] sm:min-h-[500px] lg:min-h-[600px] border-2 border-dashed border-gray-200 rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 overflow-auto"
+                                    onDragOver={handleDragOver}
+                                    onDrop={handleDrop}
+                                >
+                                    {organigramTree.length > 0 ? (
+                                        organigramTree.map(node => renderOrganigramNode(node))
+                                    ) : (
+                                        <div className="absolute inset-0 flex items-center justify-center p-4">
+                                            <div className="text-center">
+                                                <Building className="h-8 w-8 sm:h-12 sm:w-12 mx-auto text-muted-foreground mb-3 sm:mb-4" />
+                                                <h3 className="text-base sm:text-lg font-medium text-muted-foreground mb-2">
+                                                    No organization structure
+                                                </h3>
+                                                <p className="text-xs sm:text-sm text-muted-foreground mb-4">
+                                                    {canManage
+                                                        ? 'Start by adding employees and creating your organization structure'
+                                                        : 'Organization structure will be available soon'
+                                                    }
+                                                </p>
+                                                {canManage && (
+                                                    <Button asChild size="sm" className="text-xs sm:text-sm">
+                                                        <Link href="/strategy/organigram/edit">
+                                                            <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                                            Create Structure
+                                                        </Link>
+                                                    </Button>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
-                            </div>
+                                    )}
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </div>

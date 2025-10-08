@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Employee, OrganigramSnapshot, Department, User, OrganigramNode as ApiOrganigramNode } from '@/types';
 import {
     ArrowLeft,
@@ -18,7 +19,8 @@ import {
     Users,
     Building,
     Download,
-    Camera
+    Camera,
+    Menu
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -53,6 +55,7 @@ export default function EditOrganigramClient({
     const [organigramNodes, setOrganigramNodes] = useState<OrganigramNode[]>([]);
     const [draggedEmployee, setDraggedEmployee] = useState<DraggedEmployee | null>(null);
     const [selectedNode, setSelectedNode] = useState<OrganigramNode | null>(null);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const organigramRef = useRef<HTMLDivElement>(null);
 
     // Initialize organigram from latest snapshot or create new
@@ -143,6 +146,7 @@ export default function EditOrganigramClient({
                 }))
         );
         setSelectedNode(null);
+        setIsSidebarOpen(false);
     };
 
     const handleSaveSnapshot = async (name: string, description?: string) => {
@@ -194,12 +198,13 @@ export default function EditOrganigramClient({
             <div
                 key={node.id}
                 className={`
-          absolute bg-white border-2 rounded-lg p-4 shadow-sm cursor-move min-w-[200px]
+          absolute bg-white border-2 rounded-lg p-3 shadow-sm cursor-move 
           transition-all duration-200 hover:shadow-md
           ${selectedNode?.id === node.id ? 'border-blue-500 shadow-md ring-2 ring-blue-200' : 'border-gray-200'}
           ${node.employee.department === 'Executive' ? 'border-purple-300 bg-purple-50' : ''}
           ${node.employee.department === 'Technology' ? 'border-blue-300 bg-blue-50' : ''}
           ${node.employee.department === 'Marketing' ? 'border-green-300 bg-green-50' : ''}
+          min-w-[160px] max-w-[200px] md:min-w-[180px] lg:min-w-[200px]
         `}
                 style={{
                     left: node.position.x,
@@ -207,7 +212,10 @@ export default function EditOrganigramClient({
                     width: node.size.width,
                     height: node.size.height
                 }}
-                onClick={() => setSelectedNode(node)}
+                onClick={() => {
+                    setSelectedNode(node);
+                    setIsSidebarOpen(true);
+                }}
                 draggable
                 onDragStart={(e) => {
                     e.dataTransfer.setData('text/plain', node.id);
@@ -232,7 +240,7 @@ export default function EditOrganigramClient({
                     <div>
                         <Badge
                             variant="secondary"
-                            className="text-xs capitalize mb-2"
+                            className="text-xs capitalize mb-1 px-1"
                             style={{
                                 backgroundColor: departments.find(d => d.name === node.employee.department)?.color + '20',
                                 color: departments.find(d => d.name === node.employee.department)?.color
@@ -241,15 +249,15 @@ export default function EditOrganigramClient({
                             {node.employee.department}
                         </Badge>
 
-                        <h3 className="font-semibold text-sm mb-1">{node.employee.name}</h3>
-                        <p className="text-xs text-muted-foreground">{node.employee.title}</p>
+                        <h3 className="font-semibold text-sm mb-1 line-clamp-2">{node.employee.name}</h3>
+                        <p className="text-xs text-muted-foreground line-clamp-2">{node.employee.title}</p>
                     </div>
 
-                    <div className="flex justify-center gap-1 mt-2">
+                    <div className="flex justify-center gap-1 mt-1">
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6"
+                            className="h-5 w-5"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 handleRemoveNode(node.id);
@@ -261,7 +269,7 @@ export default function EditOrganigramClient({
                 </div>
 
                 {/* Connection points */}
-                <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-blue-500 rounded-full cursor-crosshair" />
+                <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-blue-500 rounded-full cursor-crosshair" />
                 {node.children.length > 0 && node.children.map(child => (
                     <svg
                         key={child.id}
@@ -288,154 +296,194 @@ export default function EditOrganigramClient({
         );
     };
 
+    // Sidebar content component to avoid duplication
+    const SidebarContent = () => (
+        <>
+            {/* Available Employees */}
+            <Card>
+                <CardHeader className="pb-3">
+                    <CardTitle className="text-lg">Available Employees</CardTitle>
+                    <CardDescription>Drag employees to the canvas</CardDescription>
+                </CardHeader>
+                <CardContent className="pb-3">
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                        {availableEmployees.map(employee => (
+                            <div
+                                key={employee.id}
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, employee)}
+                                className="p-3 border rounded-lg cursor-move hover:bg-gray-50 transition-colors"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div
+                                        className="w-2 h-8 rounded"
+                                        style={{
+                                            backgroundColor: departments.find(d => d.name === employee.department)?.color
+                                        }}
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="font-medium text-sm truncate">{employee.name}</h4>
+                                        <p className="text-xs text-muted-foreground truncate">{employee.title}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        {availableEmployees.length === 0 && (
+                            <div className="text-center py-4 text-muted-foreground text-sm">
+                                All employees are on the organigram
+                            </div>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Selected Node Actions */}
+            {selectedNode && (
+                <Card>
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-lg">Selected Node</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 pb-3">
+                        <div className="text-sm">
+                            <div className="font-medium">{selectedNode.employee.name}</div>
+                            <div className="text-muted-foreground">{selectedNode.employee.title}</div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full"
+                                onClick={() => handleRemoveNode(selectedNode.id)}
+                            >
+                                <Trash2 className="h-3 w-3 mr-2" />
+                                Remove from Chart
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Instructions */}
+            <Card>
+                <CardHeader className="pb-3">
+                    <CardTitle className="text-lg">Instructions</CardTitle>
+                </CardHeader>
+                <CardContent className="pb-3">
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                        <p>• Drag employees from the sidebar to the canvas</p>
+                        <p>• Drag nodes to reposition them</p>
+                        <p>• Click to select a node</p>
+                        <p>• Drag from connection point to create relationships</p>
+                        <p>• Save snapshots to preserve structures</p>
+                    </div>
+                </CardContent>
+            </Card>
+        </>
+    );
+
     return (
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <Button variant="outline" size="icon" asChild>
+                <div className="flex items-center gap-2 md:gap-4">
+                    <Button variant="outline" size="icon" asChild className="flex-shrink-0">
                         <Link href="/strategy/organigram">
                             <ArrowLeft className="h-4 w-4" />
                         </Link>
                     </Button>
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Edit Organigram</h1>
-                        <p className="text-muted-foreground mt-1">
+                    <div className="min-w-0 flex-1">
+                        <h1 className="text-xl md:text-2xl lg:text-3xl font-bold tracking-tight truncate">
+                            Edit Organigram
+                        </h1>
+                        <p className="text-muted-foreground text-xs md:text-sm mt-1 truncate">
                             Drag and drop to build your organization structure
                         </p>
                     </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-1 md:gap-2">
+                    <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
+                        <SheetTrigger asChild>
+                            <Button variant="outline" size="icon" className="md:hidden flex-shrink-0">
+                                <Menu className="h-4 w-4" />
+                            </Button>
+                        </SheetTrigger>
+                        <SheetContent side="left" className="w-[300px] sm:w-[350px] overflow-y-auto">
+                            <div className="space-y-4 mt-4">
+                                <SidebarContent />
+                            </div>
+                        </SheetContent>
+                    </Sheet>
+
                     <Button
                         variant="outline"
+                        size="sm"
                         onClick={() => handleSaveSnapshot(`Snapshot ${new Date().toLocaleDateString()}`)}
                         disabled={isLoading}
+                        className="hidden sm:flex flex-shrink-0"
                     >
                         <Camera className="h-4 w-4 mr-2" />
-                        Save Snapshot
+                        Save
                     </Button>
-                    <Button asChild>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleSaveSnapshot(`Snapshot ${new Date().toLocaleDateString()}`)}
+                        disabled={isLoading}
+                        className="sm:hidden flex-shrink-0"
+                    >
+                        <Camera className="h-4 w-4" />
+                    </Button>
+                    <Button asChild size="sm" className="hidden sm:flex flex-shrink-0">
                         <Link href="/strategy/organigram/employees/new">
                             <Plus className="h-4 w-4 mr-2" />
                             Add Employee
                         </Link>
                     </Button>
+                    <Button asChild size="icon" className="sm:hidden flex-shrink-0">
+                        <Link href="/strategy/organigram/employees/new">
+                            <Plus className="h-4 w-4" />
+                        </Link>
+                    </Button>
                 </div>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-4">
-                {/* Sidebar */}
-                <div className="space-y-6">
-                    {/* Available Employees */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Available Employees</CardTitle>
-                            <CardDescription>Drag employees to the canvas</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-2">
-                                {availableEmployees.map(employee => (
-                                    <div
-                                        key={employee.id}
-                                        draggable
-                                        onDragStart={(e) => handleDragStart(e, employee)}
-                                        className="p-3 border rounded-lg cursor-move hover:bg-gray-50 transition-colors"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div
-                                                className="w-2 h-8 rounded"
-                                                style={{
-                                                    backgroundColor: departments.find(d => d.name === employee.department)?.color
-                                                }}
-                                            />
-                                            <div className="flex-1 min-w-0">
-                                                <h4 className="font-medium text-sm truncate">{employee.name}</h4>
-                                                <p className="text-xs text-muted-foreground truncate">{employee.title}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                                {availableEmployees.length === 0 && (
-                                    <div className="text-center py-4 text-muted-foreground text-sm">
-                                        All employees are on the organigram
-                                    </div>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Selected Node Actions */}
-                    {selectedNode && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Selected Node</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-3">
-                                <div className="text-sm">
-                                    <div className="font-medium">{selectedNode.employee.name}</div>
-                                    <div className="text-muted-foreground">{selectedNode.employee.title}</div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="w-full"
-                                        onClick={() => handleRemoveNode(selectedNode.id)}
-                                    >
-                                        <Trash2 className="h-3 w-3 mr-2" />
-                                        Remove from Chart
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {/* Instructions */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Instructions</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2 text-sm text-muted-foreground">
-                            <p>• Drag employees from the sidebar to the canvas</p>
-                            <p>• Drag nodes to reposition them</p>
-                            <p>• Click to select a node</p>
-                            <p>• Drag from connection point to create relationships</p>
-                            <p>• Save snapshots to preserve structures</p>
-                        </CardContent>
-                    </Card>
+            <div className="grid gap-4 md:gap-6 lg:grid-cols-4">
+                {/* Desktop Sidebar */}
+                <div className="hidden lg:block space-y-4 md:space-y-6">
+                    <SidebarContent />
                 </div>
 
                 {/* Main Canvas */}
                 <div className="lg:col-span-3">
                     <Card>
-                        <CardHeader>
+                        <CardHeader className="pb-3">
                             <div className="flex items-center justify-between">
-                                <div>
-                                    <CardTitle>Organization Canvas</CardTitle>
-                                    <CardDescription>
+                                <div className="min-w-0 flex-1">
+                                    <CardTitle className="text-lg md:text-xl">Organization Canvas</CardTitle>
+                                    <CardDescription className="truncate">
                                         Build your organizational structure by dragging and dropping
                                     </CardDescription>
                                 </div>
-                                <Badge variant="secondary">
-                                    {organigramNodes.length} nodes placed
+                                <Badge variant="secondary" className="flex-shrink-0 ml-2">
+                                    {organigramNodes.length} nodes
                                 </Badge>
                             </div>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="p-2 sm:p-4">
                             <div
                                 ref={organigramRef}
-                                className="relative min-h-[600px] border-2 border-dashed border-gray-300 rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 overflow-auto"
+                                className="relative min-h-[400px] md:min-h-[500px] lg:min-h-[600px] border-2 border-dashed border-gray-300 rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 overflow-auto"
                                 onDragOver={handleDragOver}
                                 onDrop={handleDrop}
                             >
                                 {organigramNodes.map(node => renderOrganigramNode(node))}
 
                                 {organigramNodes.length === 0 && (
-                                    <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className="absolute inset-0 flex items-center justify-center p-4">
                                         <div className="text-center">
-                                            <Building className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                                            <h3 className="text-lg font-medium text-muted-foreground mb-2">
+                                            <Building className="h-12 w-12 md:h-16 md:w-16 mx-auto text-muted-foreground mb-3" />
+                                            <h3 className="text-base md:text-lg font-medium text-muted-foreground mb-2">
                                                 Start Building Your Organigram
                                             </h3>
                                             <p className="text-sm text-muted-foreground">

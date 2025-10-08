@@ -12,7 +12,7 @@ const mockUser: User = {
 
 export default function SOPNewPage() {
     if (!['CEO', 'Admin', 'CXO'].includes(mockUser.role)) {
-        redirect('/resources/sops');
+        redirect('/resources/policies');
     }
 
     return <SOPNewClient user={mockUser} />;

@@ -8,11 +8,12 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { TableSkeleton } from '@/components/ui/loading';
 import { useAppStore } from '@/store/app';
 import { useAuthStore } from '@/store/auth';
 import { Goal } from '@/types';
-import { Plus, Search, Filter, Target, TrendingUp, Calendar, User, Building, Users, User2 as Person } from 'lucide-react';
+import { Plus, Search, Filter, Target, TrendingUp, Calendar, User, Building, Users, User2 as Person, Menu, ChevronDown, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function GoalsPage() {
@@ -23,6 +24,7 @@ export default function GoalsPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [typeFilter, setTypeFilter] = useState('all');
+    const [isFiltersOpen, setIsFiltersOpen] = useState(false);
     const [expandedSections, setExpandedSections] = useState({
         company: true,
         department: true,
@@ -311,21 +313,21 @@ export default function GoalsPage() {
 
     const GoalCard = ({ goal }: { goal: Goal }) => (
         <Card key={goal.id} className="hover:shadow-md transition-shadow">
-            <CardHeader>
-                <div className="flex items-start justify-between">
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className={getStatusColor(goal.status)}>
+            <CardHeader className="pb-3">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                    <div className="space-y-2 flex-1 min-w-0">
+                        <div className="flex items-center gap-1 md:gap-2 flex-wrap">
+                            <Badge variant="secondary" className={`${getStatusColor(goal.status)} text-xs`}>
                                 {goal.status}
                             </Badge>
-                            <Badge variant="outline" className={getTypeColor(goal.type)}>
+                            <Badge variant="outline" className={`${getTypeColor(goal.type)} text-xs`}>
                                 {goal.type}
                             </Badge>
-                            <Badge variant="outline" className={getCategoryColor(goal.category)}>
+                            <Badge variant="outline" className={`${getCategoryColor(goal.category)} text-xs`}>
                                 {goal.category}
                             </Badge>
                         </div>
-                        <CardTitle className="text-xl">
+                        <CardTitle className="text-lg md:text-xl line-clamp-2">
                             <Link
                                 href={`/strategy/goals/${goal.id}`}
                                 className="hover:underline"
@@ -333,81 +335,83 @@ export default function GoalsPage() {
                                 {goal.title}
                             </Link>
                         </CardTitle>
-                        <CardDescription>{goal.description}</CardDescription>
+                        <CardDescription className="line-clamp-2 text-sm">
+                            {goal.description}
+                        </CardDescription>
                     </div>
-                    <div className="text-right">
-                        <div className="text-2xl font-bold">
+                    <div className="text-right flex-shrink-0">
+                        <div className="text-xl md:text-2xl font-bold">
                             {calculateProgress(goal)}%
                         </div>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-xs md:text-sm text-muted-foreground">
                             {goal.currentValue.toLocaleString()} / {goal.targetValue.toLocaleString()} {goal.unit}
                         </div>
                     </div>
                 </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-0">
                 <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center justify-between text-xs md:text-sm">
                         <span>Progress</span>
                         <span className="font-medium">{calculateProgress(goal)}%</span>
                     </div>
-                    <Progress value={calculateProgress(goal)} />
+                    <Progress value={calculateProgress(goal)} className="h-2" />
                 </div>
 
                 {/* Roll-up progress for parent goals */}
                 {goal.type === 'Company' && calculateRollupProgress(goal.id) !== null && (
                     <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                            <span>Department Roll-up Progress</span>
+                        <div className="flex items-center justify-between text-xs md:text-sm">
+                            <span>Department Roll-up</span>
                             <span className="font-medium">{calculateRollupProgress(goal.id)}%</span>
                         </div>
-                        <Progress value={calculateRollupProgress(goal.id) || 0} className="h-2 bg-muted" />
+                        <Progress value={calculateRollupProgress(goal.id) || 0} className="h-1.5 bg-muted" />
                     </div>
                 )}
 
                 {goal.type === 'Department' && calculateRollupProgress(goal.id) !== null && (
                     <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                            <span>Individual Roll-up Progress</span>
+                        <div className="flex items-center justify-between text-xs md:text-sm">
+                            <span>Individual Roll-up</span>
                             <span className="font-medium">{calculateRollupProgress(goal.id)}%</span>
                         </div>
-                        <Progress value={calculateRollupProgress(goal.id) || 0} className="h-2 bg-muted" />
+                        <Progress value={calculateRollupProgress(goal.id) || 0} className="h-1.5 bg-muted" />
                     </div>
                 )}
 
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 text-xs md:text-sm">
                     <div>
-                        <div className="font-medium text-muted-foreground">Start Date</div>
-                        <div className="flex items-center">
-                            <Calendar className="h-4 w-4 mr-1" />
-                            {new Date(goal.startDate).toLocaleDateString()}
+                        <div className="font-medium text-muted-foreground text-xs">Start Date</div>
+                        <div className="flex items-center mt-1">
+                            <Calendar className="h-3 w-3 md:h-4 md:w-4 mr-1 flex-shrink-0" />
+                            <span className="truncate">{new Date(goal.startDate).toLocaleDateString()}</span>
                         </div>
                     </div>
                     <div>
-                        <div className="font-medium text-muted-foreground">End Date</div>
-                        <div className="flex items-center">
-                            <Calendar className="h-4 w-4 mr-1" />
-                            {new Date(goal.endDate).toLocaleDateString()}
+                        <div className="font-medium text-muted-foreground text-xs">End Date</div>
+                        <div className="flex items-center mt-1">
+                            <Calendar className="h-3 w-3 md:h-4 md:w-4 mr-1 flex-shrink-0" />
+                            <span className="truncate">{new Date(goal.endDate).toLocaleDateString()}</span>
                         </div>
                     </div>
-                    <div>
-                        <div className="font-medium text-muted-foreground">Owner</div>
-                        <div className="flex items-center">
-                            <User className="h-4 w-4 mr-1" />
-                            {goal.ownerId === user?.id ? 'You' : 'Team Member'}
+                    <div className="col-span-2 md:col-span-1">
+                        <div className="font-medium text-muted-foreground text-xs">Owner</div>
+                        <div className="flex items-center mt-1">
+                            <User className="h-3 w-3 md:h-4 md:w-4 mr-1 flex-shrink-0" />
+                            <span className="truncate">{goal.ownerId === user?.id ? 'You' : 'Team Member'}</span>
                         </div>
                     </div>
                 </div>
 
                 {goal.keyResults.length > 0 && (
                     <div>
-                        <h4 className="font-medium mb-3">Key Results ({goal.keyResults.length})</h4>
-                        <div className="space-y-3">
+                        <h4 className="font-medium mb-2 text-sm">Key Results ({goal.keyResults.length})</h4>
+                        <div className="space-y-2">
                             {goal.keyResults.map(kr => (
-                                <div key={kr.id} className="p-3 bg-muted rounded-lg">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="text-sm font-medium">{kr.description}</span>
-                                        <Badge variant="outline" className={getStatusColor(kr.status)}>
+                                <div key={kr.id} className="p-2 md:p-3 bg-muted rounded-lg">
+                                    <div className="flex items-center justify-between mb-1 md:mb-2">
+                                        <span className="text-xs md:text-sm font-medium line-clamp-1">{kr.description}</span>
+                                        <Badge variant="outline" className={`${getStatusColor(kr.status)} text-xs`}>
                                             {kr.status}
                                         </Badge>
                                     </div>
@@ -416,7 +420,7 @@ export default function GoalsPage() {
                                             <span>{kr.currentValue} / {kr.targetValue} {kr.unit}</span>
                                             <span>{Math.round((kr.currentValue / kr.targetValue) * 100)}%</span>
                                         </div>
-                                        <Progress value={Math.min(100, (kr.currentValue / kr.targetValue) * 100)} className="h-2" />
+                                        <Progress value={Math.min(100, (kr.currentValue / kr.targetValue) * 100)} className="h-1.5" />
                                     </div>
                                 </div>
                             ))}
@@ -428,67 +432,76 @@ export default function GoalsPage() {
     );
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
+            {/* Header */}
             <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight flex items-center">
-                        <Target className="h-8 w-8 mr-3" />
-                        Goals & OKRs
+                <div className="min-w-0 flex-1">
+                    <h1 className="text-xl md:text-2xl lg:text-3xl font-bold tracking-tight flex items-center gap-2 md:gap-3">
+                        <Target className="h-5 w-5 md:h-6 md:w-6 lg:h-8 lg:w-8" />
+                        <span className="truncate">Goals & OKRs</span>
                     </h1>
-                    <p className="text-muted-foreground mt-2">
+                    <p className="text-muted-foreground text-xs md:text-sm mt-1 truncate">
                         Company → Department → Individual goal hierarchy with roll-up tracking
                     </p>
                 </div>
                 {canManage && (
-                    <Button asChild>
+                    <Button asChild size="sm" className="hidden sm:flex flex-shrink-0">
                         <Link href="/strategy/goals/new">
-                            <Plus className="h-4 w-4 mr-2" />
-                            New Goal
+                            <Plus className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                            <span className="hidden md:inline">New Goal</span>
+                            <span className="md:hidden">New</span>
+                        </Link>
+                    </Button>
+                )}
+                {canManage && (
+                    <Button asChild size="icon" className="sm:hidden flex-shrink-0">
+                        <Link href="/strategy/goals/new">
+                            <Plus className="h-4 w-4" />
                         </Link>
                     </Button>
                 )}
             </div>
 
             {/* Stats Cards */}
-            <div className="grid gap-4 md:grid-cols-4">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Goals</CardTitle>
-                        <Target className="h-4 w-4 text-muted-foreground" />
+            <div className="grid gap-2 sm:gap-4 grid-cols-2 lg:grid-cols-4">
+                <Card className="p-3 md:p-6">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2 md:pb-4">
+                        <CardTitle className="text-xs md:text-sm font-medium">Total Goals</CardTitle>
+                        <Target className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{goals.length}</div>
+                    <CardContent className="p-0">
+                        <div className="text-lg md:text-2xl font-bold">{goals.length}</div>
                     </CardContent>
                 </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                <Card className="p-3 md:p-6">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2 md:pb-4">
+                        <CardTitle className="text-xs md:text-sm font-medium">In Progress</CardTitle>
+                        <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">
+                    <CardContent className="p-0">
+                        <div className="text-lg md:text-2xl font-bold">
                             {goals.filter(g => g.status === 'In Progress').length}
                         </div>
                     </CardContent>
                 </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">At Risk</CardTitle>
-                        <div className="h-4 w-4 rounded-full bg-yellow-500" />
+                <Card className="p-3 md:p-6">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2 md:pb-4">
+                        <CardTitle className="text-xs md:text-sm font-medium">At Risk</CardTitle>
+                        <div className="h-3 w-3 md:h-4 md:w-4 rounded-full bg-yellow-500" />
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">
+                    <CardContent className="p-0">
+                        <div className="text-lg md:text-2xl font-bold">
                             {goals.filter(g => g.status === 'At Risk').length}
                         </div>
                     </CardContent>
                 </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Completed</CardTitle>
-                        <div className="h-4 w-4 rounded-full bg-green-500" />
+                <Card className="p-3 md:p-6">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2 md:pb-4">
+                        <CardTitle className="text-xs md:text-sm font-medium">Completed</CardTitle>
+                        <div className="h-3 w-3 md:h-4 md:w-4 rounded-full bg-green-500" />
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">
+                    <CardContent className="p-0">
+                        <div className="text-lg md:text-2xl font-bold">
                             {goals.filter(g => g.status === 'Completed').length}
                         </div>
                     </CardContent>
@@ -497,55 +510,104 @@ export default function GoalsPage() {
 
             {/* Filters */}
             <Card>
-                <CardContent className="pt-6">
-                    <div className="flex flex-col sm:flex-row gap-4">
+                <CardContent className="pt-4 md:pt-6">
+                    <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
                         <div className="flex-1 relative">
-                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <Search className="absolute left-3 top-1/2 h-3 w-3 md:h-4 md:w-4 -translate-y-1/2 text-muted-foreground" />
                             <Input
                                 placeholder="Search goals..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10"
+                                className="pl-9 md:pl-10 text-sm md:text-base"
                             />
                         </div>
                         <div className="flex gap-2">
-                            <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-[150px]">
-                                    <SelectValue placeholder="Status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Status</SelectItem>
-                                    <SelectItem value="Not Started">Not Started</SelectItem>
-                                    <SelectItem value="In Progress">In Progress</SelectItem>
-                                    <SelectItem value="At Risk">At Risk</SelectItem>
-                                    <SelectItem value="Completed">Completed</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Select value={typeFilter} onValueChange={setTypeFilter}>
-                                <SelectTrigger className="w-[150px]">
-                                    <SelectValue placeholder="Type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Types</SelectItem>
-                                    <SelectItem value="Company">Company</SelectItem>
-                                    <SelectItem value="Department">Department</SelectItem>
-                                    <SelectItem value="Individual">Individual</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <Sheet open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+                                <SheetTrigger asChild>
+                                    <Button variant="outline" size="sm" className="sm:hidden">
+                                        <Filter className="h-4 w-4" />
+                                    </Button>
+                                </SheetTrigger>
+                                <SheetContent side="bottom" className="h-auto">
+                                    <div className="space-y-4 mt-4">
+                                        <div className="space-y-3">
+                                            <label className="text-sm font-medium">Status</label>
+                                            <Select value={statusFilter} onValueChange={(value) => {
+                                                setStatusFilter(value);
+                                                setIsFiltersOpen(false);
+                                            }}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Status" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">All Status</SelectItem>
+                                                    <SelectItem value="Not Started">Not Started</SelectItem>
+                                                    <SelectItem value="In Progress">In Progress</SelectItem>
+                                                    <SelectItem value="At Risk">At Risk</SelectItem>
+                                                    <SelectItem value="Completed">Completed</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <label className="text-sm font-medium">Type</label>
+                                            <Select value={typeFilter} onValueChange={(value) => {
+                                                setTypeFilter(value);
+                                                setIsFiltersOpen(false);
+                                            }}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Type" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">All Types</SelectItem>
+                                                    <SelectItem value="Company">Company</SelectItem>
+                                                    <SelectItem value="Department">Department</SelectItem>
+                                                    <SelectItem value="Individual">Individual</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                </SheetContent>
+                            </Sheet>
+
+                            <div className="hidden sm:flex gap-2">
+                                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                    <SelectTrigger className="w-[130px] md:w-[150px] text-sm">
+                                        <SelectValue placeholder="Status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Status</SelectItem>
+                                        <SelectItem value="Not Started">Not Started</SelectItem>
+                                        <SelectItem value="In Progress">In Progress</SelectItem>
+                                        <SelectItem value="At Risk">At Risk</SelectItem>
+                                        <SelectItem value="Completed">Completed</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                                    <SelectTrigger className="w-[130px] md:w-[150px] text-sm">
+                                        <SelectValue placeholder="Type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Types</SelectItem>
+                                        <SelectItem value="Company">Company</SelectItem>
+                                        <SelectItem value="Department">Department</SelectItem>
+                                        <SelectItem value="Individual">Individual</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                     </div>
                 </CardContent>
             </Card>
 
             {/* Goals Hierarchy */}
-            <div className="space-y-6">
+            <div className="space-y-4 md:space-y-6">
                 {/* Company Goals Section */}
                 <section>
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                            <Building className="h-6 w-6 text-purple-600" />
-                            <h2 className="text-2xl font-bold">Company Goals</h2>
-                            <Badge variant="secondary" className="ml-2">
+                    <div className="flex items-center justify-between mb-3 md:mb-4">
+                        <div className="flex items-center gap-2 md:gap-3">
+                            <Building className="h-5 w-5 md:h-6 md:w-6 text-purple-600" />
+                            <h2 className="text-lg md:text-xl lg:text-2xl font-bold">Company Goals</h2>
+                            <Badge variant="secondary" className="ml-1 md:ml-2 text-xs">
                                 {companyGoals.length}
                             </Badge>
                         </div>
@@ -553,29 +615,39 @@ export default function GoalsPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => toggleSection('company')}
+                            className="h-8 w-8 p-0 md:h-9 md:px-3 md:py-2"
                         >
-                            {expandedSections.company ? 'Collapse' : 'Expand'}
+                            {expandedSections.company ? (
+                                <ChevronDown className="h-4 w-4" />
+                            ) : (
+                                <ChevronRight className="h-4 w-4" />
+                            )}
+                            <span className="hidden md:inline ml-1">
+                                {expandedSections.company ? 'Collapse' : 'Expand'}
+                            </span>
                         </Button>
                     </div>
 
                     {expandedSections.company && (
-                        <div className="space-y-4">
+                        <div className="space-y-3 md:space-y-4">
                             {companyGoals.length === 0 ? (
                                 <Card>
                                     <CardContent className="pt-6">
-                                        <div className="text-center py-8">
-                                            <Building className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                                            <h3 className="text-lg font-medium text-muted-foreground mb-2">No company goals</h3>
-                                            <p className="text-sm text-muted-foreground mb-4">
+                                        <div className="text-center py-6 md:py-8">
+                                            <Building className="h-8 w-8 md:h-12 md:w-12 mx-auto text-muted-foreground mb-3 md:mb-4" />
+                                            <h3 className="text-base md:text-lg font-medium text-muted-foreground mb-2">
+                                                No company goals
+                                            </h3>
+                                            <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4 max-w-sm mx-auto">
                                                 {searchTerm || statusFilter !== 'all' || typeFilter !== 'all'
                                                     ? 'No company goals match your filters'
                                                     : 'Set company-wide objectives to align the organization'
                                                 }
                                             </p>
                                             {canManage && (
-                                                <Button asChild>
+                                                <Button asChild size="sm">
                                                     <Link href="/strategy/goals/new?type=Company">
-                                                        <Plus className="h-4 w-4 mr-2" />
+                                                        <Plus className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
                                                         Create Company Goal
                                                     </Link>
                                                 </Button>
@@ -592,11 +664,11 @@ export default function GoalsPage() {
 
                 {/* Department Goals Section */}
                 <section>
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                            <Users className="h-6 w-6 text-blue-600" />
-                            <h2 className="text-2xl font-bold">Department Goals</h2>
-                            <Badge variant="secondary" className="ml-2">
+                    <div className="flex items-center justify-between mb-3 md:mb-4">
+                        <div className="flex items-center gap-2 md:gap-3">
+                            <Users className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
+                            <h2 className="text-lg md:text-xl lg:text-2xl font-bold">Department Goals</h2>
+                            <Badge variant="secondary" className="ml-1 md:ml-2 text-xs">
                                 {departmentGoals.length}
                             </Badge>
                         </div>
@@ -604,29 +676,39 @@ export default function GoalsPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => toggleSection('department')}
+                            className="h-8 w-8 p-0 md:h-9 md:px-3 md:py-2"
                         >
-                            {expandedSections.department ? 'Collapse' : 'Expand'}
+                            {expandedSections.department ? (
+                                <ChevronDown className="h-4 w-4" />
+                            ) : (
+                                <ChevronRight className="h-4 w-4" />
+                            )}
+                            <span className="hidden md:inline ml-1">
+                                {expandedSections.department ? 'Collapse' : 'Expand'}
+                            </span>
                         </Button>
                     </div>
 
                     {expandedSections.department && (
-                        <div className="space-y-4">
+                        <div className="space-y-3 md:space-y-4">
                             {departmentGoals.length === 0 ? (
                                 <Card>
                                     <CardContent className="pt-6">
-                                        <div className="text-center py-8">
-                                            <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                                            <h3 className="text-lg font-medium text-muted-foreground mb-2">No department goals</h3>
-                                            <p className="text-sm text-muted-foreground mb-4">
+                                        <div className="text-center py-6 md:py-8">
+                                            <Users className="h-8 w-8 md:h-12 md:w-12 mx-auto text-muted-foreground mb-3 md:mb-4" />
+                                            <h3 className="text-base md:text-lg font-medium text-muted-foreground mb-2">
+                                                No department goals
+                                            </h3>
+                                            <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4 max-w-sm mx-auto">
                                                 {searchTerm || statusFilter !== 'all' || typeFilter !== 'all'
                                                     ? 'No department goals match your filters'
                                                     : 'Create department goals that support company objectives'
                                                 }
                                             </p>
                                             {canManage && (
-                                                <Button asChild>
+                                                <Button asChild size="sm">
                                                     <Link href="/strategy/goals/new?type=Department">
-                                                        <Plus className="h-4 w-4 mr-2" />
+                                                        <Plus className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
                                                         Create Department Goal
                                                     </Link>
                                                 </Button>
@@ -643,11 +725,11 @@ export default function GoalsPage() {
 
                 {/* Personal Goals Section */}
                 <section>
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                            <Person className="h-6 w-6 text-green-600" />
-                            <h2 className="text-2xl font-bold">Personal Goals</h2>
-                            <Badge variant="secondary" className="ml-2">
+                    <div className="flex items-center justify-between mb-3 md:mb-4">
+                        <div className="flex items-center gap-2 md:gap-3">
+                            <Person className="h-5 w-5 md:h-6 md:w-6 text-green-600" />
+                            <h2 className="text-lg md:text-xl lg:text-2xl font-bold">Personal Goals</h2>
+                            <Badge variant="secondary" className="ml-1 md:ml-2 text-xs">
                                 {personalGoals.length}
                             </Badge>
                         </div>
@@ -655,28 +737,38 @@ export default function GoalsPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => toggleSection('personal')}
+                            className="h-8 w-8 p-0 md:h-9 md:px-3 md:py-2"
                         >
-                            {expandedSections.personal ? 'Collapse' : 'Expand'}
+                            {expandedSections.personal ? (
+                                <ChevronDown className="h-4 w-4" />
+                            ) : (
+                                <ChevronRight className="h-4 w-4" />
+                            )}
+                            <span className="hidden md:inline ml-1">
+                                {expandedSections.personal ? 'Collapse' : 'Expand'}
+                            </span>
                         </Button>
                     </div>
 
                     {expandedSections.personal && (
-                        <div className="space-y-4">
+                        <div className="space-y-3 md:space-y-4">
                             {personalGoals.length === 0 ? (
                                 <Card>
                                     <CardContent className="pt-6">
-                                        <div className="text-center py-8">
-                                            <Person className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                                            <h3 className="text-lg font-medium text-muted-foreground mb-2">No personal goals</h3>
-                                            <p className="text-sm text-muted-foreground mb-4">
+                                        <div className="text-center py-6 md:py-8">
+                                            <Person className="h-8 w-8 md:h-12 md:w-12 mx-auto text-muted-foreground mb-3 md:mb-4" />
+                                            <h3 className="text-base md:text-lg font-medium text-muted-foreground mb-2">
+                                                No personal goals
+                                            </h3>
+                                            <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4 max-w-sm mx-auto">
                                                 {searchTerm || statusFilter !== 'all' || typeFilter !== 'all'
                                                     ? 'No personal goals match your filters'
                                                     : 'Set personal goals that contribute to department objectives'
                                                 }
                                             </p>
-                                            <Button asChild>
+                                            <Button asChild size="sm">
                                                 <Link href="/strategy/goals/new?type=Individual">
-                                                    <Plus className="h-4 w-4 mr-2" />
+                                                    <Plus className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
                                                     Create Personal Goal
                                                 </Link>
                                             </Button>

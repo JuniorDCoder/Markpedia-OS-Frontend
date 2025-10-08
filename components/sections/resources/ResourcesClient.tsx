@@ -26,7 +26,6 @@ import {
     Lightbulb,
     TrendingUp,
     Award,
-    Network,
     Calendar
 } from 'lucide-react';
 
@@ -53,35 +52,36 @@ export default function ResourcesClient({ resources, user }: ResourcesClientProp
     const canManage = user?.role === 'CEO' || user?.role === 'Admin' || user?.role === 'CXO';
 
     const ResourceCard = ({ title, description, icon: Icon, count, href, color }: any) => (
-        <Card className="hover:shadow-lg transition-all duration-300 hover:scale-105 group">
+        <Card className="hover:shadow-lg transition-all duration-300 hover:scale-105 group border">
             <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                     <div className={`p-2 rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 group-hover:from-blue-50 group-hover:to-blue-100 transition-colors`}>
-                        <Icon className={`h-6 w-6 ${color}`} />
+                        <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${color}`} />
                     </div>
                     <Badge variant="secondary" className="text-xs">
                         {count} items
                     </Badge>
                 </div>
-                <CardTitle className="text-lg group-hover:text-blue-600 transition-colors">
+                <CardTitle className="text-base sm:text-lg group-hover:text-blue-600 transition-colors line-clamp-1">
                     {title}
                 </CardTitle>
-                <CardDescription className="line-clamp-2">
+                <CardDescription className="line-clamp-2 text-xs sm:text-sm">
                     {description}
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="flex gap-2">
-                    <Button asChild size="sm" className="flex-1">
+                    <Button asChild size="sm" className="flex-1 text-xs">
                         <Link href={href}>
-                            <Eye className="h-4 w-4 mr-1" />
+                            <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                             View
                         </Link>
                     </Button>
                     {canManage && (
-                        <Button asChild variant="outline" size="sm">
+                        <Button asChild variant="outline" size="sm" className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3">
                             <Link href={`${href}/new`}>
-                                <Plus className="h-4 w-4" />
+                                <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                                <span className="hidden sm:inline ml-1">Add</span>
                             </Link>
                         </Button>
                     )}
@@ -91,22 +91,22 @@ export default function ResourcesClient({ resources, user }: ResourcesClientProp
     );
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 lg:p-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight flex items-center">
-                        <FileText className="h-8 w-8 mr-3" />
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight flex items-center">
+                        <FileText className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8 mr-2 sm:mr-3" />
                         Company Resources
                     </h1>
-                    <p className="text-muted-foreground mt-2">
+                    <p className="text-muted-foreground mt-1 sm:mt-2 text-xs sm:text-sm">
                         Central repository for policies, procedures, strategy, and company knowledge
                     </p>
                 </div>
                 {canManage && (
-                    <Button asChild>
+                    <Button asChild className="w-full sm:w-auto text-sm">
                         <Link href="/resources/upload">
-                            <Plus className="h-4 w-4 mr-2" />
+                            <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                             Upload Resource
                         </Link>
                     </Button>
@@ -114,26 +114,28 @@ export default function ResourcesClient({ resources, user }: ResourcesClientProp
             </div>
 
             {/* Search and Filters */}
-            <Card>
-                <CardContent className="pt-6">
-                    <div className="flex flex-col sm:flex-row gap-4">
+            <Card className="border shadow-sm">
+                <CardContent className="pt-4 sm:pt-6">
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                         <div className="flex-1 relative">
-                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <Search className="absolute left-3 top-1/2 h-3 w-3 sm:h-4 sm:w-4 -translate-y-1/2 text-muted-foreground" />
                             <Input
                                 placeholder="Search across all company resources..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10"
+                                className="pl-9 sm:pl-10 text-sm"
                             />
                         </div>
-                        <div className="flex gap-2">
-                            <Button variant="outline" className="flex items-center gap-2">
-                                <Filter className="h-4 w-4" />
-                                Filter
+                        <div className="flex gap-2 w-full sm:w-auto">
+                            <Button variant="outline" className="flex-1 sm:flex-none text-xs sm:text-sm h-9">
+                                <Filter className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                <span className="hidden sm:inline">Filter</span>
+                                <span className="sm:hidden">Filter</span>
                             </Button>
-                            <Button variant="outline" className="flex items-center gap-2">
-                                <Download className="h-4 w-4" />
-                                Export All
+                            <Button variant="outline" className="flex-1 sm:flex-none text-xs sm:text-sm h-9">
+                                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                <span className="hidden sm:inline">Export</span>
+                                <span className="sm:hidden">Export</span>
                             </Button>
                         </div>
                     </div>
@@ -141,50 +143,50 @@ export default function ResourcesClient({ resources, user }: ResourcesClientProp
             </Card>
 
             {/* Quick Stats */}
-            <div className="grid gap-4 md:grid-cols-4">
-                <Card>
+            <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
+                <Card className="border shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Active Policies</CardTitle>
-                        <Shield className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-xs sm:text-sm font-medium">Active Policies</CardTitle>
+                        <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{resources.policies.length}</div>
+                        <div className="text-xl sm:text-2xl font-bold">{resources.policies.length}</div>
                         <p className="text-xs text-muted-foreground">
                             +2 from last quarter
                         </p>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="border shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">SOPs</CardTitle>
-                        <ClipboardList className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-xs sm:text-sm font-medium">SOPs</CardTitle>
+                        <ClipboardList className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{resources.sops.length}</div>
+                        <div className="text-xl sm:text-2xl font-bold">{resources.sops.length}</div>
                         <p className="text-xs text-muted-foreground">
                             Used 124 times this month
                         </p>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="border shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Active Objectives</CardTitle>
-                        <Target className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-xs sm:text-sm font-medium">Active Objectives</CardTitle>
+                        <Target className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{resources.objectives.length}</div>
+                        <div className="text-xl sm:text-2xl font-bold">{resources.objectives.length}</div>
                         <p className="text-xs text-muted-foreground">
                             67% average progress
                         </p>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="border shadow-sm">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Resources</CardTitle>
-                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-xs sm:text-sm font-medium">Resources</CardTitle>
+                        <FileText className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">
+                        <div className="text-xl sm:text-2xl font-bold">
                             {categories.reduce((total, cat) => total + cat.count, 0)}
                         </div>
                         <p className="text-xs text-muted-foreground">
@@ -195,7 +197,7 @@ export default function ResourcesClient({ resources, user }: ResourcesClientProp
             </div>
 
             {/* Resource Categories Grid */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 <ResourceCard
                     title="Policies & SOPs"
                     description="Company policies, standard operating procedures, and guidelines"
@@ -306,46 +308,46 @@ export default function ResourcesClient({ resources, user }: ResourcesClientProp
             </div>
 
             {/* Recent Activity */}
-            <Card>
+            <Card className="border shadow-sm">
                 <CardHeader>
-                    <CardTitle>Recent Activity</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-lg sm:text-xl">Recent Activity</CardTitle>
+                    <CardDescription className="text-sm sm:text-base">
                         Latest updates and changes across company resources
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-4 p-3 border rounded-lg">
-                            <div className="p-2 bg-blue-50 rounded-lg">
+                    <div className="space-y-3 sm:space-y-4">
+                        <div className="flex items-center gap-3 sm:gap-4 p-3 border rounded-lg">
+                            <div className="p-2 bg-blue-50 rounded-lg flex-shrink-0">
                                 <FileText className="h-4 w-4 text-blue-600" />
                             </div>
-                            <div className="flex-1">
-                                <p className="text-sm font-medium">Remote Work Policy updated to v2.1</p>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">Remote Work Policy updated to v2.1</p>
                                 <p className="text-xs text-muted-foreground">Updated by Sarah Johnson • 2 hours ago</p>
                             </div>
-                            <Badge variant="outline">Policy</Badge>
+                            <Badge variant="outline" className="text-xs flex-shrink-0">Policy</Badge>
                         </div>
 
-                        <div className="flex items-center gap-4 p-3 border rounded-lg">
-                            <div className="p-2 bg-green-50 rounded-lg">
+                        <div className="flex items-center gap-3 sm:gap-4 p-3 border rounded-lg">
+                            <div className="p-2 bg-green-50 rounded-lg flex-shrink-0">
                                 <ClipboardList className="h-4 w-4 text-green-600" />
                             </div>
-                            <div className="flex-1">
-                                <p className="text-sm font-medium">New Employee Onboarding SOP completed 5 times this week</p>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium line-clamp-2">New Employee Onboarding SOP completed 5 times this week</p>
                                 <p className="text-xs text-muted-foreground">Average time: 2 hours • 45 total runs</p>
                             </div>
-                            <Badge variant="outline">SOP</Badge>
+                            <Badge variant="outline" className="text-xs flex-shrink-0">SOP</Badge>
                         </div>
 
-                        <div className="flex items-center gap-4 p-3 border rounded-lg">
-                            <div className="p-2 bg-purple-50 rounded-lg">
+                        <div className="flex items-center gap-3 sm:gap-4 p-3 border rounded-lg">
+                            <div className="p-2 bg-purple-50 rounded-lg flex-shrink-0">
                                 <Target className="h-4 w-4 text-purple-600" />
                             </div>
-                            <div className="flex-1">
-                                <p className="text-sm font-medium">Q1 Revenue Target progress updated to 75%</p>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">Q1 Revenue Target progress updated to 75%</p>
                                 <p className="text-xs text-muted-foreground">Updated by Finance Team • 1 day ago</p>
                             </div>
-                            <Badge variant="outline">Objective</Badge>
+                            <Badge variant="outline" className="text-xs flex-shrink-0">Objective</Badge>
                         </div>
                     </div>
                 </CardContent>
