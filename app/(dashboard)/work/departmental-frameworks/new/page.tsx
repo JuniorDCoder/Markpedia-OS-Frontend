@@ -17,19 +17,11 @@ import {
     Plus,
     Minus,
     RefreshCw,
-    FileText,
-    Target,
-    BarChart3,
-    Settings,
-    Building,
-    Clock,
-    Shield,
-    Users,
     Badge
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-// Default framework sections based on client requirements
+// Default sections
 const defaultSections: FrameworkSection[] = [
     { id: '1', title: 'Strategic Objectives', content: '', order: 1 },
     { id: '2', title: 'Purpose', content: '', order: 2 },
@@ -131,15 +123,16 @@ export default function NewFrameworkPage() {
     };
 
     return (
-        <div className="space-y-6 p-6">
-            <div className="flex items-center justify-between">
+        <div className="p-4 sm:p-6 max-w-[95vw] md:max-w-6xl mx-auto space-y-6">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex items-center">
                     <Button variant="ghost" size="icon" onClick={() => router.back()} className="mr-2">
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div>
-                        <h1 className="text-3xl font-bold">Create Departmental Framework</h1>
-                        <p className="text-muted-foreground mt-1">
+                        <h1 className="text-2xl sm:text-3xl font-bold">Create Departmental Framework</h1>
+                        <p className="text-sm sm:text-base text-muted-foreground mt-1">
                             Define strategic objectives, goals, and operational frameworks for a department
                         </p>
                     </div>
@@ -148,12 +141,13 @@ export default function NewFrameworkPage() {
 
             <form onSubmit={handleSubmit}>
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="grid grid-cols-3 mb-6">
-                        <TabsTrigger value="basic">Basic Info</TabsTrigger>
-                        <TabsTrigger value="sections">Framework Content</TabsTrigger>
-                        <TabsTrigger value="review">Review & Submit</TabsTrigger>
+                    <TabsList className="grid grid-cols-3 gap-2 sm:gap-4 mb-6 w-full">
+                        <TabsTrigger value="basic" className="text-xs sm:text-sm">Basic Info</TabsTrigger>
+                        <TabsTrigger value="sections" className="text-xs sm:text-sm">Framework Content</TabsTrigger>
+                        <TabsTrigger value="review" className="text-xs sm:text-sm">Review & Submit</TabsTrigger>
                     </TabsList>
 
+                    {/* BASIC INFO */}
                     <TabsContent value="basic" className="space-y-6">
                         <Card>
                             <CardHeader>
@@ -163,7 +157,7 @@ export default function NewFrameworkPage() {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="name">Framework Name *</Label>
                                         <Input
@@ -227,51 +221,51 @@ export default function NewFrameworkPage() {
                             </CardContent>
                         </Card>
 
-                        <div className="flex justify-between">
-                            <Button variant="outline" onClick={() => router.back()}>
+                        <div className="flex flex-col sm:flex-row justify-between gap-3">
+                            <Button variant="outline" onClick={() => router.back()} className="w-full sm:w-auto">
                                 Cancel
                             </Button>
-                            <Button type="button" onClick={() => setActiveTab('sections')}>
+                            <Button type="button" onClick={() => setActiveTab('sections')} className="w-full sm:w-auto">
                                 Next: Framework Content
                             </Button>
                         </div>
                     </TabsContent>
 
+                    {/* SECTIONS */}
                     <TabsContent value="sections" className="space-y-6">
                         <Card>
                             <CardHeader>
                                 <CardTitle>Framework Content</CardTitle>
                                 <CardDescription>
-                                    Define the strategic elements and content for each section of the framework
+                                    Define the strategic elements and content for each section
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="text-lg font-medium">Strategic Framework Sections</h3>
-                                    <Button type="button" variant="outline" onClick={addCustomSection}>
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                    <h3 className="text-base sm:text-lg font-medium">Strategic Framework Sections</h3>
+                                    <Button type="button" variant="outline" onClick={addCustomSection} className="w-full sm:w-auto">
                                         <Plus className="h-4 w-4 mr-2" />
                                         Add Custom Section
                                     </Button>
                                 </div>
 
-                                <div className="space-y-6">
+                                <div className="space-y-6 max-h-[70vh] overflow-y-auto">
                                     {frameworkData.sections.map((section) => (
-                                        <Card key={section.id} className="relative">
+                                        <Card key={section.id}>
                                             <CardHeader className="pb-3">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center space-x-2 flex-1">
-                                                        <Input
-                                                            value={section.title}
-                                                            onChange={(e) => updateSectionTitle(section.id, e.target.value)}
-                                                            className="font-medium text-lg border-none focus:ring-0 focus:border-none shadow-none"
-                                                        />
-                                                    </div>
+                                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                                                    <Input
+                                                        value={section.title}
+                                                        onChange={(e) => updateSectionTitle(section.id, e.target.value)}
+                                                        className="font-medium text-lg border-none focus:ring-0 focus:border-none shadow-none"
+                                                    />
                                                     {!defaultSections.some(s => s.id === section.id) && (
                                                         <Button
                                                             type="button"
                                                             variant="ghost"
                                                             size="icon"
                                                             onClick={() => removeSection(section.id)}
+                                                            className="self-end sm:self-auto"
                                                         >
                                                             <Minus className="h-4 w-4" />
                                                         </Button>
@@ -284,7 +278,6 @@ export default function NewFrameworkPage() {
                                                     onChange={(e) => updateSectionContent(section.id, e.target.value)}
                                                     placeholder={`Enter content for ${section.title}...`}
                                                     rows={6}
-                                                    className="min-h-32"
                                                 />
                                             </CardContent>
                                         </Card>
@@ -293,16 +286,17 @@ export default function NewFrameworkPage() {
                             </CardContent>
                         </Card>
 
-                        <div className="flex justify-between">
-                            <Button variant="outline" onClick={() => setActiveTab('basic')}>
+                        <div className="flex flex-col sm:flex-row justify-between gap-3">
+                            <Button variant="outline" onClick={() => setActiveTab('basic')} className="w-full sm:w-auto">
                                 Back: Basic Info
                             </Button>
-                            <Button type="button" onClick={() => setActiveTab('review')}>
+                            <Button type="button" onClick={() => setActiveTab('review')} className="w-full sm:w-auto">
                                 Next: Review & Submit
                             </Button>
                         </div>
                     </TabsContent>
 
+                    {/* REVIEW */}
                     <TabsContent value="review" className="space-y-6">
                         <Card>
                             <CardHeader>
@@ -312,40 +306,39 @@ export default function NewFrameworkPage() {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                                    <div>
                                         <h4 className="font-medium">Framework Name</h4>
                                         <p className="text-muted-foreground">{frameworkData.name || 'Not specified'}</p>
                                     </div>
-
-                                    <div className="space-y-2">
+                                    <div>
                                         <h4 className="font-medium">Department</h4>
                                         <p className="text-muted-foreground">
                                             {departments.find(d => d.id === frameworkData.department)?.name || 'Not specified'}
                                         </p>
                                     </div>
-
-                                    <div className="space-y-2">
+                                    <div>
                                         <h4 className="font-medium">Status</h4>
                                         <p className="text-muted-foreground">{frameworkData.status}</p>
                                     </div>
-
-                                    <div className="space-y-2">
+                                    <div>
                                         <h4 className="font-medium">Version</h4>
                                         <p className="text-muted-foreground">{frameworkData.version}.0</p>
                                     </div>
                                 </div>
 
-                                <div className="space-y-2">
+                                <div>
                                     <h4 className="font-medium">Description</h4>
-                                    <p className="text-muted-foreground">{frameworkData.description || 'No description provided'}</p>
+                                    <p className="text-muted-foreground">
+                                        {frameworkData.description || 'No description provided'}
+                                    </p>
                                 </div>
 
-                                <div className="space-y-4">
+                                <div className="space-y-2">
                                     <h4 className="font-medium">Sections Included</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                                         {frameworkData.sections.map(section => (
-                                            <Badge key={section.id} variant="outline" className="text-xs">
+                                            <Badge key={section.id} variant="outline" className="text-xs truncate">
                                                 {section.title}
                                             </Badge>
                                         ))}
@@ -354,11 +347,11 @@ export default function NewFrameworkPage() {
                             </CardContent>
                         </Card>
 
-                        <div className="flex justify-between">
-                            <Button variant="outline" onClick={() => setActiveTab('sections')}>
+                        <div className="flex flex-col sm:flex-row justify-between gap-3">
+                            <Button variant="outline" onClick={() => setActiveTab('sections')} className="w-full sm:w-auto">
                                 Back: Framework Content
                             </Button>
-                            <Button type="submit" disabled={loading}>
+                            <Button type="submit" disabled={loading} className="w-full sm:w-auto">
                                 {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                                 Create Framework
                             </Button>

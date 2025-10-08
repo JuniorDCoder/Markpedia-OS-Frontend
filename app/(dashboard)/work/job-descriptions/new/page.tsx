@@ -80,195 +80,115 @@ export default function NewJobDescriptionPage() {
         }
     };
 
-    const addResponsibility = () => {
-        setJobDescription({
-            ...jobDescription,
-            responsibilities: [...jobDescription.responsibilities, '']
-        });
+    // Generic handlers for array fields
+    const addField = (field: keyof typeof jobDescription) => {
+        setJobDescription(prev => ({
+            ...prev,
+            [field]: [...(prev[field] as string[]), '']
+        }));
     };
 
-    const removeResponsibility = (index: number) => {
-        if (jobDescription.responsibilities.length <= 1) return;
-        const newResponsibilities = [...jobDescription.responsibilities];
-        newResponsibilities.splice(index, 1);
-        setJobDescription({
-            ...jobDescription,
-            responsibilities: newResponsibilities
-        });
+    const removeField = (field: keyof typeof jobDescription, index: number) => {
+        const currentArray = jobDescription[field] as string[];
+        if (currentArray.length <= 1) return;
+
+        const newArray = [...currentArray];
+        newArray.splice(index, 1);
+        setJobDescription(prev => ({
+            ...prev,
+            [field]: newArray
+        }));
     };
 
-    const updateResponsibility = (index: number, value: string) => {
-        const newResponsibilities = [...jobDescription.responsibilities];
-        newResponsibilities[index] = value;
-        setJobDescription({
-            ...jobDescription,
-            responsibilities: newResponsibilities
-        });
-    };
-
-    const addKPI = () => {
-        setJobDescription({
-            ...jobDescription,
-            kpis: [...jobDescription.kpis, '']
-        });
-    };
-
-    const removeKPI = (index: number) => {
-        if (jobDescription.kpis.length <= 1) return;
-        const newKPIs = [...jobDescription.kpis];
-        newKPIs.splice(index, 1);
-        setJobDescription({
-            ...jobDescription,
-            kpis: newKPIs
-        });
-    };
-
-    const updateKPI = (index: number, value: string) => {
-        const newKPIs = [...jobDescription.kpis];
-        newKPIs[index] = value;
-        setJobDescription({
-            ...jobDescription,
-            kpis: newKPIs
-        });
-    };
-
-    const addOKR = () => {
-        setJobDescription({
-            ...jobDescription,
-            okrs: [...jobDescription.okrs, '']
-        });
-    };
-
-    const removeOKR = (index: number) => {
-        if (jobDescription.okrs.length <= 1) return;
-        const newOKRs = [...jobDescription.okrs];
-        newOKRs.splice(index, 1);
-        setJobDescription({
-            ...jobDescription,
-            okrs: newOKRs
-        });
-    };
-
-    const updateOKR = (index: number, value: string) => {
-        const newOKRs = [...jobDescription.okrs];
-        newOKRs[index] = value;
-        setJobDescription({
-            ...jobDescription,
-            okrs: newOKRs
-        });
-    };
-
-    const addSkill = () => {
-        setJobDescription({
-            ...jobDescription,
-            skills: [...jobDescription.skills, '']
-        });
-    };
-
-    const removeSkill = (index: number) => {
-        if (jobDescription.skills.length <= 1) return;
-        const newSkills = [...jobDescription.skills];
-        newSkills.splice(index, 1);
-        setJobDescription({
-            ...jobDescription,
-            skills: newSkills
-        });
-    };
-
-    const updateSkill = (index: number, value: string) => {
-        const newSkills = [...jobDescription.skills];
-        newSkills[index] = value;
-        setJobDescription({
-            ...jobDescription,
-            skills: newSkills
-        });
-    };
-
-    const addTool = () => {
-        setJobDescription({
-            ...jobDescription,
-            tools: [...jobDescription.tools, '']
-        });
-    };
-
-    const removeTool = (index: number) => {
-        if (jobDescription.tools.length <= 1) return;
-        const newTools = [...jobDescription.tools];
-        newTools.splice(index, 1);
-        setJobDescription({
-            ...jobDescription,
-            tools: newTools
-        });
-    };
-
-    const updateTool = (index: number, value: string) => {
-        const newTools = [...jobDescription.tools];
-        newTools[index] = value;
-        setJobDescription({
-            ...jobDescription,
-            tools: newTools
-        });
+    const updateField = (field: keyof typeof jobDescription, index: number, value: string) => {
+        const currentArray = jobDescription[field] as string[];
+        const newArray = [...currentArray];
+        newArray[index] = value;
+        setJobDescription(prev => ({
+            ...prev,
+            [field]: newArray
+        }));
     };
 
     return (
-        <div className="space-y-6 p-6">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                    <Button variant="ghost" size="icon" onClick={() => router.back()} className="mr-2">
-                        <ArrowLeft className="h-5 w-5" />
+        <div className="space-y-4 p-4 sm:p-6">
+            {/* Header Section */}
+            <div className="flex items-start justify-between">
+                <div className="flex items-start space-x-2 sm:space-x-3">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => router.back()}
+                        className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0 mt-1"
+                    >
+                        <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
                     </Button>
-                    <div>
-                        <h1 className="text-3xl font-bold">Create Job Description</h1>
-                        <p className="text-muted-foreground mt-1">
+                    <div className="min-w-0 flex-1">
+                        <h1 className="text-xl font-bold sm:text-2xl md:text-3xl truncate">
+                            Create Job Description
+                        </h1>
+                        <p className="text-muted-foreground text-sm sm:text-base mt-1 line-clamp-2">
                             Define roles, responsibilities, and expectations for this position
                         </p>
                     </div>
                 </div>
             </div>
 
+            {/* Form Section */}
             <form onSubmit={handleSubmit}>
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="grid grid-cols-4 mb-6">
-                        <TabsTrigger value="basic">Basic Info</TabsTrigger>
-                        <TabsTrigger value="details">Role Details</TabsTrigger>
-                        <TabsTrigger value="performance">Performance</TabsTrigger>
-                        <TabsTrigger value="additional">Additional Info</TabsTrigger>
+                    {/* Responsive Tabs */}
+                    <TabsList className="grid grid-cols-2 sm:grid-cols-4 mb-4 sm:mb-6 gap-1 sm:gap-2">
+                        <TabsTrigger value="basic" className="text-xs sm:text-sm px-2 sm:px-3 py-2 h-auto">
+                            Basic Info
+                        </TabsTrigger>
+                        <TabsTrigger value="details" className="text-xs sm:text-sm px-2 sm:px-3 py-2 h-auto">
+                            Role Details
+                        </TabsTrigger>
+                        <TabsTrigger value="performance" className="text-xs sm:text-sm px-2 sm:px-3 py-2 h-auto">
+                            Performance
+                        </TabsTrigger>
+                        <TabsTrigger value="additional" className="text-xs sm:text-sm px-2 sm:px-3 py-2 h-auto">
+                            Additional Info
+                        </TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="basic" className="space-y-6">
+                    {/* Basic Info Tab */}
+                    <TabsContent value="basic" className="space-y-4 sm:space-y-6">
                         <Card>
-                            <CardHeader>
-                                <CardTitle>Basic Information</CardTitle>
-                                <CardDescription>
+                            <CardHeader className="pb-3 sm:pb-6">
+                                <CardTitle className="text-lg sm:text-xl">Basic Information</CardTitle>
+                                <CardDescription className="text-sm sm:text-base">
                                     Enter the basic details about this job role
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <CardContent className="space-y-3 sm:space-y-4">
+                                <div className="grid grid-cols-1 gap-3 sm:gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="title">Job Title *</Label>
+                                        <Label htmlFor="title" className="text-sm sm:text-base">Job Title *</Label>
                                         <Input
                                             id="title"
                                             value={jobDescription.title}
                                             onChange={(e) => setJobDescription({ ...jobDescription, title: e.target.value })}
                                             placeholder="e.g., Software Engineer, Marketing Manager"
                                             required
+                                            className="text-sm sm:text-base"
                                         />
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="department">Department *</Label>
+                                        <Label htmlFor="department" className="text-sm sm:text-base">Department *</Label>
                                         <Select
                                             value={jobDescription.department}
                                             onValueChange={(value) => setJobDescription({ ...jobDescription, department: value })}
                                             required
                                         >
-                                            <SelectTrigger id="department">
+                                            <SelectTrigger id="department" className="text-sm sm:text-base">
                                                 <SelectValue placeholder="Select department" />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {departments.map(dept => (
-                                                    <SelectItem key={dept.id} value={dept.id}>
+                                                    <SelectItem key={dept.id} value={dept.id} className="text-sm sm:text-base">
                                                         {dept.name}
                                                     </SelectItem>
                                                 ))}
@@ -278,7 +198,7 @@ export default function NewJobDescriptionPage() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="summary">Role Summary *</Label>
+                                    <Label htmlFor="summary" className="text-sm sm:text-base">Role Summary *</Label>
                                     <Textarea
                                         id="summary"
                                         value={jobDescription.summary}
@@ -286,101 +206,123 @@ export default function NewJobDescriptionPage() {
                                         placeholder="Brief overview of the role and its purpose in the organization"
                                         rows={3}
                                         required
+                                        className="text-sm sm:text-base resize-vertical min-h-[80px]"
                                     />
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="purpose">Purpose</Label>
+                                    <Label htmlFor="purpose" className="text-sm sm:text-base">Purpose</Label>
                                     <Textarea
                                         id="purpose"
                                         value={jobDescription.purpose}
                                         onChange={(e) => setJobDescription({ ...jobDescription, purpose: e.target.value })}
                                         placeholder="Why this role exists and its importance to the organization"
                                         rows={2}
+                                        className="text-sm sm:text-base resize-vertical min-h-[60px]"
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 gap-3 sm:gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="vision">Vision</Label>
+                                        <Label htmlFor="vision" className="text-sm sm:text-base">Vision</Label>
                                         <Textarea
                                             id="vision"
                                             value={jobDescription.vision}
                                             onChange={(e) => setJobDescription({ ...jobDescription, vision: e.target.value })}
                                             placeholder="Where this role is heading in the future"
                                             rows={2}
+                                            className="text-sm sm:text-base resize-vertical min-h-[60px]"
                                         />
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="mission">Mission</Label>
+                                        <Label htmlFor="mission" className="text-sm sm:text-base">Mission</Label>
                                         <Textarea
                                             id="mission"
                                             value={jobDescription.mission}
                                             onChange={(e) => setJobDescription({ ...jobDescription, mission: e.target.value })}
                                             placeholder="What this role aims to accomplish"
                                             rows={2}
+                                            className="text-sm sm:text-base resize-vertical min-h-[60px]"
                                         />
                                     </div>
                                 </div>
                             </CardContent>
                         </Card>
 
-                        <div className="flex justify-between">
-                            <Button variant="outline" onClick={() => router.back()}>
+                        <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0 justify-between">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => router.back()}
+                                className="w-full sm:w-auto"
+                            >
                                 Cancel
                             </Button>
-                            <Button type="button" onClick={() => setActiveTab('details')}>
+                            <Button
+                                type="button"
+                                onClick={() => setActiveTab('details')}
+                                className="w-full sm:w-auto"
+                            >
                                 Next: Role Details
                             </Button>
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="details" className="space-y-6">
+                    {/* Role Details Tab */}
+                    <TabsContent value="details" className="space-y-4 sm:space-y-6">
                         <Card>
-                            <CardHeader>
-                                <CardTitle>Role Details</CardTitle>
-                                <CardDescription>
+                            <CardHeader className="pb-3 sm:pb-6">
+                                <CardTitle className="text-lg sm:text-xl">Role Details</CardTitle>
+                                <CardDescription className="text-sm sm:text-base">
                                     Define reporting structure and key responsibilities
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="space-y-4">
+                            <CardContent className="space-y-3 sm:space-y-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="reportsTo">Reports To</Label>
+                                    <Label htmlFor="reportsTo" className="text-sm sm:text-base">Reports To</Label>
                                     <Input
                                         id="reportsTo"
                                         value={jobDescription.reportsTo}
                                         onChange={(e) => setJobDescription({ ...jobDescription, reportsTo: e.target.value })}
                                         placeholder="Position or person this role reports to"
+                                        className="text-sm sm:text-base"
                                     />
                                 </div>
 
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <Label>Key Responsibilities *</Label>
-                                        <Button type="button" variant="outline" size="sm" onClick={addResponsibility}>
-                                            <Plus className="h-4 w-4 mr-1" />
+                                <div className="space-y-3 sm:space-y-4">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                        <Label className="text-sm sm:text-base">Key Responsibilities *</Label>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => addField('responsibilities')}
+                                            className="w-full sm:w-auto"
+                                        >
+                                            <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                                             Add Responsibility
                                         </Button>
                                     </div>
 
                                     {jobDescription.responsibilities.map((responsibility, index) => (
-                                        <div key={index} className="flex items-center space-x-2">
+                                        <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                                             <Textarea
                                                 value={responsibility}
-                                                onChange={(e) => updateResponsibility(index, e.target.value)}
+                                                onChange={(e) => updateField('responsibilities', index, e.target.value)}
                                                 placeholder="Describe a key responsibility"
                                                 rows={2}
-                                                className="flex-1"
+                                                className="flex-1 text-sm sm:text-base resize-vertical min-h-[60px] sm:min-h-[80px]"
                                             />
                                             {jobDescription.responsibilities.length > 1 && (
                                                 <Button
                                                     type="button"
                                                     variant="ghost"
                                                     size="icon"
-                                                    onClick={() => removeResponsibility(index)}
+                                                    onClick={() => removeField('responsibilities', index)}
+                                                    className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0 mt-1 sm:mt-0"
                                                 >
-                                                    <Minus className="h-4 w-4" />
+                                                    <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
                                                 </Button>
                                             )}
                                         </div>
@@ -389,79 +331,105 @@ export default function NewJobDescriptionPage() {
                             </CardContent>
                         </Card>
 
-                        <div className="flex justify-between">
-                            <Button variant="outline" onClick={() => setActiveTab('basic')}>
+                        <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0 justify-between">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setActiveTab('basic')}
+                                className="w-full sm:w-auto"
+                            >
                                 Back: Basic Info
                             </Button>
-                            <Button type="button" onClick={() => setActiveTab('performance')}>
+                            <Button
+                                type="button"
+                                onClick={() => setActiveTab('performance')}
+                                className="w-full sm:w-auto"
+                            >
                                 Next: Performance
                             </Button>
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="performance" className="space-y-6">
+                    {/* Performance Tab */}
+                    <TabsContent value="performance" className="space-y-4 sm:space-y-6">
                         <Card>
-                            <CardHeader>
-                                <CardTitle>Performance Metrics</CardTitle>
-                                <CardDescription>
+                            <CardHeader className="pb-3 sm:pb-6">
+                                <CardTitle className="text-lg sm:text-xl">Performance Metrics</CardTitle>
+                                <CardDescription className="text-sm sm:text-base">
                                     Define how success will be measured in this role
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="space-y-6">
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <Label>Key Performance Indicators (KPIs)</Label>
-                                        <Button type="button" variant="outline" size="sm" onClick={addKPI}>
-                                            <Plus className="h-4 w-4 mr-1" />
+                            <CardContent className="space-y-4 sm:space-y-6">
+                                <div className="space-y-3 sm:space-y-4">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                        <Label className="text-sm sm:text-base">Key Performance Indicators (KPIs)</Label>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => addField('kpis')}
+                                            className="w-full sm:w-auto"
+                                        >
+                                            <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                                             Add KPI
                                         </Button>
                                     </div>
 
                                     {jobDescription.kpis.map((kpi, index) => (
-                                        <div key={index} className="flex items-center space-x-2">
+                                        <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                                             <Input
                                                 value={kpi}
-                                                onChange={(e) => updateKPI(index, e.target.value)}
+                                                onChange={(e) => updateField('kpis', index, e.target.value)}
                                                 placeholder="e.g., Customer satisfaction score, Project completion rate"
+                                                className="flex-1 text-sm sm:text-base"
                                             />
                                             {jobDescription.kpis.length > 1 && (
                                                 <Button
                                                     type="button"
                                                     variant="ghost"
                                                     size="icon"
-                                                    onClick={() => removeKPI(index)}
+                                                    onClick={() => removeField('kpis', index)}
+                                                    className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0 mt-1 sm:mt-0"
                                                 >
-                                                    <Minus className="h-4 w-4" />
+                                                    <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
                                                 </Button>
                                             )}
                                         </div>
                                     ))}
                                 </div>
 
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <Label>Objectives and Key Results (OKRs)</Label>
-                                        <Button type="button" variant="outline" size="sm" onClick={addOKR}>
-                                            <Plus className="h-4 w-4 mr-1" />
+                                <div className="space-y-3 sm:space-y-4">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                        <Label className="text-sm sm:text-base">Objectives and Key Results (OKRs)</Label>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => addField('okrs')}
+                                            className="w-full sm:w-auto"
+                                        >
+                                            <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                                             Add OKR
                                         </Button>
                                     </div>
 
                                     {jobDescription.okrs.map((okr, index) => (
-                                        <div key={index} className="flex items-center space-x-2">
+                                        <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                                             <Input
                                                 value={okr}
-                                                onChange={(e) => updateOKR(index, e.target.value)}
+                                                onChange={(e) => updateField('okrs', index, e.target.value)}
                                                 placeholder="e.g., Increase market share by 15% in Q3"
+                                                className="flex-1 text-sm sm:text-base"
                                             />
                                             {jobDescription.okrs.length > 1 && (
                                                 <Button
                                                     type="button"
                                                     variant="ghost"
                                                     size="icon"
-                                                    onClick={() => removeOKR(index)}
+                                                    onClick={() => removeField('okrs', index)}
+                                                    className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0 mt-1 sm:mt-0"
                                                 >
-                                                    <Minus className="h-4 w-4" />
+                                                    <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
                                                 </Button>
                                             )}
                                         </div>
@@ -470,80 +438,106 @@ export default function NewJobDescriptionPage() {
                             </CardContent>
                         </Card>
 
-                        <div className="flex justify-between">
-                            <Button variant="outline" onClick={() => setActiveTab('details')}>
+                        <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0 justify-between">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setActiveTab('details')}
+                                className="w-full sm:w-auto"
+                            >
                                 Back: Role Details
                             </Button>
-                            <Button type="button" onClick={() => setActiveTab('additional')}>
+                            <Button
+                                type="button"
+                                onClick={() => setActiveTab('additional')}
+                                className="w-full sm:w-auto"
+                            >
                                 Next: Additional Info
                             </Button>
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="additional" className="space-y-6">
+                    {/* Additional Info Tab */}
+                    <TabsContent value="additional" className="space-y-4 sm:space-y-6">
                         <Card>
-                            <CardHeader>
-                                <CardTitle>Additional Information</CardTitle>
-                                <CardDescription>
+                            <CardHeader className="pb-3 sm:pb-6">
+                                <CardTitle className="text-lg sm:text-xl">Additional Information</CardTitle>
+                                <CardDescription className="text-sm sm:text-base">
                                     Define skills, tools, career path, and review process
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <Label>Required Skills</Label>
-                                            <Button type="button" variant="outline" size="sm" onClick={addSkill}>
-                                                <Plus className="h-4 w-4 mr-1" />
+                            <CardContent className="space-y-4 sm:space-y-6">
+                                <div className="grid grid-cols-1 gap-4 sm:gap-6">
+                                    <div className="space-y-3 sm:space-y-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                            <Label className="text-sm sm:text-base">Required Skills</Label>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => addField('skills')}
+                                                className="w-full sm:w-auto"
+                                            >
+                                                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                                                 Add Skill
                                             </Button>
                                         </div>
 
                                         {jobDescription.skills.map((skill, index) => (
-                                            <div key={index} className="flex items-center space-x-2">
+                                            <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                                                 <Input
                                                     value={skill}
-                                                    onChange={(e) => updateSkill(index, e.target.value)}
+                                                    onChange={(e) => updateField('skills', index, e.target.value)}
                                                     placeholder="e.g., JavaScript, Project Management"
+                                                    className="flex-1 text-sm sm:text-base"
                                                 />
                                                 {jobDescription.skills.length > 1 && (
                                                     <Button
                                                         type="button"
                                                         variant="ghost"
                                                         size="icon"
-                                                        onClick={() => removeSkill(index)}
+                                                        onClick={() => removeField('skills', index)}
+                                                        className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0 mt-1 sm:mt-0"
                                                     >
-                                                        <Minus className="h-4 w-4" />
+                                                        <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
                                                     </Button>
                                                 )}
                                             </div>
                                         ))}
                                     </div>
 
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <Label>Required Tools</Label>
-                                            <Button type="button" variant="outline" size="sm" onClick={addTool}>
-                                                <Plus className="h-4 w-4 mr-1" />
+                                    <div className="space-y-3 sm:space-y-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                            <Label className="text-sm sm:text-base">Required Tools</Label>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => addField('tools')}
+                                                className="w-full sm:w-auto"
+                                            >
+                                                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                                                 Add Tool
                                             </Button>
                                         </div>
 
                                         {jobDescription.tools.map((tool, index) => (
-                                            <div key={index} className="flex items-center space-x-2">
+                                            <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                                                 <Input
                                                     value={tool}
-                                                    onChange={(e) => updateTool(index, e.target.value)}
+                                                    onChange={(e) => updateField('tools', index, e.target.value)}
                                                     placeholder="e.g., Salesforce, Figma, JIRA"
+                                                    className="flex-1 text-sm sm:text-base"
                                                 />
                                                 {jobDescription.tools.length > 1 && (
                                                     <Button
                                                         type="button"
                                                         variant="ghost"
                                                         size="icon"
-                                                        onClick={() => removeTool(index)}
+                                                        onClick={() => removeField('tools', index)}
+                                                        className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0 mt-1 sm:mt-0"
                                                     >
-                                                        <Minus className="h-4 w-4" />
+                                                        <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
                                                     </Button>
                                                 )}
                                             </div>
@@ -552,79 +546,93 @@ export default function NewJobDescriptionPage() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="careerPath">Career Path</Label>
+                                    <Label htmlFor="careerPath" className="text-sm sm:text-base">Career Path</Label>
                                     <Textarea
                                         id="careerPath"
                                         value={jobDescription.careerPath}
                                         onChange={(e) => setJobDescription({ ...jobDescription, careerPath: e.target.value })}
                                         placeholder="Potential career progression and advancement opportunities"
                                         rows={3}
+                                        className="text-sm sm:text-base resize-vertical min-h-[80px]"
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 gap-3 sm:gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="probationPeriod">Probation Period (months)</Label>
+                                        <Label htmlFor="probationPeriod" className="text-sm sm:text-base">Probation Period</Label>
                                         <Select
                                             value={jobDescription.probationPeriod}
                                             onValueChange={(value) => setJobDescription({ ...jobDescription, probationPeriod: value })}
                                         >
-                                            <SelectTrigger id="probationPeriod">
+                                            <SelectTrigger id="probationPeriod" className="text-sm sm:text-base">
                                                 <SelectValue placeholder="Select period" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="1">1 month</SelectItem>
-                                                <SelectItem value="2">2 months</SelectItem>
-                                                <SelectItem value="3">3 months</SelectItem>
-                                                <SelectItem value="6">6 months</SelectItem>
+                                                <SelectItem value="1" className="text-sm sm:text-base">1 month</SelectItem>
+                                                <SelectItem value="2" className="text-sm sm:text-base">2 months</SelectItem>
+                                                <SelectItem value="3" className="text-sm sm:text-base">3 months</SelectItem>
+                                                <SelectItem value="6" className="text-sm sm:text-base">6 months</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="reviewCadence">Review Cadence</Label>
+                                        <Label htmlFor="reviewCadence" className="text-sm sm:text-base">Review Cadence</Label>
                                         <Select
                                             value={jobDescription.reviewCadence}
                                             onValueChange={(value) => setJobDescription({ ...jobDescription, reviewCadence: value })}
                                         >
-                                            <SelectTrigger id="reviewCadence">
+                                            <SelectTrigger id="reviewCadence" className="text-sm sm:text-base">
                                                 <SelectValue placeholder="Select cadence" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="Monthly">Monthly</SelectItem>
-                                                <SelectItem value="Quarterly">Quarterly</SelectItem>
-                                                <SelectItem value="Semi-Annual">Semi-Annual</SelectItem>
-                                                <SelectItem value="Annual">Annual</SelectItem>
+                                                <SelectItem value="Monthly" className="text-sm sm:text-base">Monthly</SelectItem>
+                                                <SelectItem value="Quarterly" className="text-sm sm:text-base">Quarterly</SelectItem>
+                                                <SelectItem value="Semi-Annual" className="text-sm sm:text-base">Semi-Annual</SelectItem>
+                                                <SelectItem value="Annual" className="text-sm sm:text-base">Annual</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="status">Status</Label>
+                                    <Label htmlFor="status" className="text-sm sm:text-base">Status</Label>
                                     <Select
                                         value={jobDescription.status}
                                         onValueChange={(value) => setJobDescription({ ...jobDescription, status: value })}
                                     >
-                                        <SelectTrigger id="status">
+                                        <SelectTrigger id="status" className="text-sm sm:text-base">
                                             <SelectValue placeholder="Select status" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="Draft">Draft</SelectItem>
-                                            <SelectItem value="Under Review">Under Review</SelectItem>
-                                            <SelectItem value="Approved">Approved</SelectItem>
+                                            <SelectItem value="Draft" className="text-sm sm:text-base">Draft</SelectItem>
+                                            <SelectItem value="Under Review" className="text-sm sm:text-base">Under Review</SelectItem>
+                                            <SelectItem value="Approved" className="text-sm sm:text-base">Approved</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                             </CardContent>
                         </Card>
 
-                        <div className="flex justify-between">
-                            <Button variant="outline" onClick={() => setActiveTab('performance')}>
+                        <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0 justify-between">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setActiveTab('performance')}
+                                className="w-full sm:w-auto"
+                            >
                                 Back: Performance
                             </Button>
-                            <Button type="submit" disabled={loading}>
-                                {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                            <Button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full sm:w-auto"
+                            >
+                                {loading ? (
+                                    <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
+                                ) : (
+                                    <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                )}
                                 Create Job Description
                             </Button>
                         </div>

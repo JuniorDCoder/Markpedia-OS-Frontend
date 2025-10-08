@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Minus, ArrowLeft, AlertTriangle, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import { Plus, Minus, ArrowLeft, FileText, CheckCircle, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function NewProblemPage() {
@@ -17,7 +17,6 @@ export default function NewProblemPage() {
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('basic');
 
-    // Form state
     const [problemData, setProblemData] = useState({
         title: '',
         description: '',
@@ -25,7 +24,7 @@ export default function NewProblemPage() {
         severity: 'Medium',
         status: 'Open',
         assignedTo: '',
-        reportedBy: 'Current User', // This would come from auth context
+        reportedBy: 'Current User',
         reportedDate: new Date().toISOString().split('T')[0],
     });
 
@@ -35,39 +34,39 @@ export default function NewProblemPage() {
         rootCause: ''
     });
 
-    const [correctiveActions, setCorrectiveActions] = useState([{
-        id: '1',
-        description: '',
-        assignedTo: '',
-        dueDate: '',
-        status: 'Not Started'
-    }]);
+    const [correctiveActions, setCorrectiveActions] = useState([
+        {
+            id: '1',
+            description: '',
+            assignedTo: '',
+            dueDate: '',
+            status: 'Not Started'
+        }
+    ]);
 
-    const [preventiveActions, setPreventiveActions] = useState([{
-        id: '1',
-        description: '',
-        assignedTo: '',
-        dueDate: '',
-        status: 'Not Started'
-    }]);
+    const [preventiveActions, setPreventiveActions] = useState([
+        {
+            id: '1',
+            description: '',
+            assignedTo: '',
+            dueDate: '',
+            status: 'Not Started'
+        }
+    ]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-
         try {
-            // In a real application, this would call an API
             const newProblem = {
                 ...problemData,
                 fiveWhysAnalysis: fiveWhys.problemStatement ? fiveWhys : undefined,
                 correctiveActions: correctiveActions[0].description ? correctiveActions : undefined,
                 preventiveActions: preventiveActions[0].description ? preventiveActions : undefined,
-                updatedDate: new Date().toISOString().split('T')[0]
+                updatedDate: new Date().toISOString().split('T')[0],
             };
 
             console.log('New problem data:', newProblem);
-
-            // Simulate API call
             await new Promise(resolve => setTimeout(resolve, 1000));
 
             toast.success('Problem reported successfully');
@@ -139,37 +138,38 @@ export default function NewProblemPage() {
     };
 
     return (
-        <div className="container mx-auto py-6 space-y-6">
-            <div className="flex items-center justify-between">
+        <div className="container mx-auto px-4 sm:px-6 py-6 space-y-6">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center">
                     <Button variant="ghost" size="icon" onClick={() => router.back()} className="mr-2">
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div>
-                        <h1 className="text-3xl font-bold">Report New Problem</h1>
-                        <p className="text-muted-foreground mt-1">
+                        <h1 className="text-2xl sm:text-3xl font-bold">Report New Problem</h1>
+                        <p className="text-muted-foreground mt-1 text-sm sm:text-base">
                             Document a new problem and perform root cause analysis
                         </p>
                     </div>
                 </div>
             </div>
 
+            {/* Form */}
             <form onSubmit={handleSubmit}>
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="grid grid-cols-4 mb-6">
-                        <TabsTrigger value="basic">Basic Info</TabsTrigger>
-                        <TabsTrigger value="analysis">5-Whys RCA</TabsTrigger>
-                        <TabsTrigger value="corrective">Corrective Actions</TabsTrigger>
-                        <TabsTrigger value="preventive">Preventive Actions</TabsTrigger>
+                    <TabsList className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
+                        <TabsTrigger value="basic" className="text-xs sm:text-sm">Basic Info</TabsTrigger>
+                        <TabsTrigger value="analysis" className="text-xs sm:text-sm">5-Whys RCA</TabsTrigger>
+                        <TabsTrigger value="corrective" className="text-xs sm:text-sm">Corrective Actions</TabsTrigger>
+                        <TabsTrigger value="preventive" className="text-xs sm:text-sm">Preventive Actions</TabsTrigger>
                     </TabsList>
 
+                    {/* BASIC INFO TAB */}
                     <TabsContent value="basic" className="space-y-6">
                         <Card>
                             <CardHeader>
                                 <CardTitle>Problem Information</CardTitle>
-                                <CardDescription>
-                                    Provide basic details about the problem you're reporting
-                                </CardDescription>
+                                <CardDescription>Provide basic details about the problem you're reporting</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="space-y-2">
@@ -261,16 +261,17 @@ export default function NewProblemPage() {
                             </CardContent>
                         </Card>
 
-                        <div className="flex justify-between">
-                            <Button variant="outline" onClick={() => router.back()}>
+                        <div className="flex flex-col sm:flex-row justify-between gap-3">
+                            <Button variant="outline" onClick={() => router.back()} className="w-full sm:w-auto">
                                 Cancel
                             </Button>
-                            <Button type="button" onClick={() => setActiveTab('analysis')}>
+                            <Button type="button" onClick={() => setActiveTab('analysis')} className="w-full sm:w-auto">
                                 Next: 5-Whys Analysis
                             </Button>
                         </div>
                     </TabsContent>
 
+                    {/* 5 WHYS TAB */}
                     <TabsContent value="analysis" className="space-y-6">
                         <Card>
                             <CardHeader>
@@ -289,33 +290,23 @@ export default function NewProblemPage() {
                                         id="problemStatement"
                                         value={fiveWhys.problemStatement}
                                         onChange={(e) => setFiveWhys({ ...fiveWhys, problemStatement: e.target.value })}
-                                        placeholder="Clear, concise statement of the problem to be analyzed"
+                                        placeholder="Clear, concise statement of the problem"
                                         rows={3}
                                     />
                                 </div>
 
-                                <div className="space-y-4">
-                                    <h4 className="font-medium">5-Whys Process</h4>
-                                    <p className="text-sm text-muted-foreground">
-                                        Ask "Why?" repeatedly until you reach the root cause (typically 5 times)
-                                    </p>
-
-                                    {[1, 2, 3, 4, 5].map((num, index) => (
-                                        <div key={index} className="space-y-2">
-                                            <Label htmlFor={`why-${index}`}>Why #{num}</Label>
-                                            <Textarea
-                                                id={`why-${index}`}
-                                                value={fiveWhys.whys[index]}
-                                                onChange={(e) => updateWhy(index, e.target.value)}
-                                                placeholder={index === 0
-                                                    ? "Why is this problem occurring?"
-                                                    : `Why is that? (Continue asking why)`
-                                                }
-                                                rows={2}
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
+                                {[1, 2, 3, 4, 5].map((num, index) => (
+                                    <div key={index} className="space-y-2">
+                                        <Label htmlFor={`why-${index}`}>Why #{num}</Label>
+                                        <Textarea
+                                            id={`why-${index}`}
+                                            value={fiveWhys.whys[index]}
+                                            onChange={(e) => updateWhy(index, e.target.value)}
+                                            placeholder={index === 0 ? 'Why is this problem occurring?' : 'Why is that?'}
+                                            rows={2}
+                                        />
+                                    </div>
+                                ))}
 
                                 <div className="space-y-2">
                                     <Label htmlFor="rootCause">Root Cause *</Label>
@@ -323,23 +314,24 @@ export default function NewProblemPage() {
                                         id="rootCause"
                                         value={fiveWhys.rootCause}
                                         onChange={(e) => setFiveWhys({ ...fiveWhys, rootCause: e.target.value })}
-                                        placeholder="The fundamental cause identified through the 5-Whys process"
+                                        placeholder="The fundamental cause identified"
                                         rows={3}
                                     />
                                 </div>
                             </CardContent>
                         </Card>
 
-                        <div className="flex justify-between">
-                            <Button variant="outline" onClick={() => setActiveTab('basic')}>
+                        <div className="flex flex-col sm:flex-row justify-between gap-3">
+                            <Button variant="outline" onClick={() => setActiveTab('basic')} className="w-full sm:w-auto">
                                 Back: Basic Info
                             </Button>
-                            <Button type="button" onClick={() => setActiveTab('corrective')}>
+                            <Button type="button" onClick={() => setActiveTab('corrective')} className="w-full sm:w-auto">
                                 Next: Corrective Actions
                             </Button>
                         </div>
                     </TabsContent>
 
+                    {/* CORRECTIVE ACTIONS TAB */}
                     <TabsContent value="corrective" className="space-y-6">
                         <Card>
                             <CardHeader>
@@ -347,9 +339,7 @@ export default function NewProblemPage() {
                                     <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
                                     Corrective Actions
                                 </CardTitle>
-                                <CardDescription>
-                                    Define immediate actions to fix the current problem
-                                </CardDescription>
+                                <CardDescription>Define immediate actions to fix the problem</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 {correctiveActions.map((action, index) => (
@@ -374,7 +364,7 @@ export default function NewProblemPage() {
                                                 id={`ca-desc-${action.id}`}
                                                 value={action.description}
                                                 onChange={(e) => updateCorrectiveAction(action.id, 'description', e.target.value)}
-                                                placeholder="What needs to be done to correct this problem?"
+                                                placeholder="What needs to be done?"
                                                 rows={2}
                                             />
                                         </div>
@@ -403,23 +393,24 @@ export default function NewProblemPage() {
                                     </div>
                                 ))}
 
-                                <Button type="button" variant="outline" onClick={addCorrectiveAction}>
+                                <Button type="button" variant="outline" onClick={addCorrectiveAction} className="w-full sm:w-auto">
                                     <Plus className="h-4 w-4 mr-2" />
                                     Add Another Corrective Action
                                 </Button>
                             </CardContent>
                         </Card>
 
-                        <div className="flex justify-between">
-                            <Button variant="outline" onClick={() => setActiveTab('analysis')}>
+                        <div className="flex flex-col sm:flex-row justify-between gap-3">
+                            <Button variant="outline" onClick={() => setActiveTab('analysis')} className="w-full sm:w-auto">
                                 Back: 5-Whys Analysis
                             </Button>
-                            <Button type="button" onClick={() => setActiveTab('preventive')}>
+                            <Button type="button" onClick={() => setActiveTab('preventive')} className="w-full sm:w-auto">
                                 Next: Preventive Actions
                             </Button>
                         </div>
                     </TabsContent>
 
+                    {/* PREVENTIVE ACTIONS TAB */}
                     <TabsContent value="preventive" className="space-y-6">
                         <Card>
                             <CardHeader>
@@ -427,9 +418,7 @@ export default function NewProblemPage() {
                                     <AlertCircle className="h-5 w-5 mr-2 text-amber-600" />
                                     Preventive Actions
                                 </CardTitle>
-                                <CardDescription>
-                                    Define actions to prevent this problem from happening again
-                                </CardDescription>
+                                <CardDescription>Define actions to prevent recurrence</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 {preventiveActions.map((action, index) => (
@@ -454,7 +443,7 @@ export default function NewProblemPage() {
                                                 id={`pa-desc-${action.id}`}
                                                 value={action.description}
                                                 onChange={(e) => updatePreventiveAction(action.id, 'description', e.target.value)}
-                                                placeholder="What can be done to prevent this problem from recurring?"
+                                                placeholder="What can prevent recurrence?"
                                                 rows={2}
                                             />
                                         </div>
@@ -483,18 +472,18 @@ export default function NewProblemPage() {
                                     </div>
                                 ))}
 
-                                <Button type="button" variant="outline" onClick={addPreventiveAction}>
+                                <Button type="button" variant="outline" onClick={addPreventiveAction} className="w-full sm:w-auto">
                                     <Plus className="h-4 w-4 mr-2" />
                                     Add Another Preventive Action
                                 </Button>
                             </CardContent>
                         </Card>
 
-                        <div className="flex justify-between">
-                            <Button variant="outline" onClick={() => setActiveTab('corrective')}>
+                        <div className="flex flex-col sm:flex-row justify-between gap-3">
+                            <Button variant="outline" onClick={() => setActiveTab('corrective')} className="w-full sm:w-auto">
                                 Back: Corrective Actions
                             </Button>
-                            <Button type="submit" disabled={loading}>
+                            <Button type="submit" disabled={loading} className="w-full sm:w-auto">
                                 {loading ? 'Reporting Problem...' : 'Report Problem'}
                             </Button>
                         </div>

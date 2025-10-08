@@ -15,9 +15,7 @@ interface PageProps {
 // Required for static export
 export async function generateStaticParams() {
     try {
-        // Get all leave requests to generate static paths
         const leaveRequests = await leaveRequestService.getLeaveRequests();
-
         return leaveRequests.map((request) => ({
             id: request.id.toString(),
         }));
@@ -65,46 +63,50 @@ export default async function LeaveRequestDetailPage({ params }: PageProps) {
     };
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
+        <div className="space-y-6 px-4 sm:px-6 md:px-8">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <Button variant="ghost" asChild className="mb-4">
+                    <Button variant="ghost" asChild className="mb-3 sm:mb-4">
                         <Link href="/people/leave">
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             Back to Leave Requests
                         </Link>
                     </Button>
-                    <h1 className="text-3xl font-bold tracking-tight flex items-center">
-                        <Calendar className="h-8 w-8 mr-3" />
+
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center">
+                        <Calendar className="h-7 w-7 sm:h-8 sm:w-8 mr-2 sm:mr-3" />
                         Leave Request Details
                     </h1>
-                    <p className="text-muted-foreground mt-2">
+                    <p className="text-sm sm:text-base text-muted-foreground mt-2">
                         View details of leave request #{leaveRequest.id}
                     </p>
                 </div>
-                <div className="flex gap-2">
-                    <Button asChild variant="outline">
-                        <Link href={`/people/leave/${leaveRequest.id}/edit`}>
-                            Edit Request
-                        </Link>
+
+                <div className="flex flex-col sm:flex-row gap-2">
+                    <Button asChild variant="outline" className="w-full sm:w-auto">
+                        <Link href={`/people/leave/${leaveRequest.id}/edit`}>Edit Request</Link>
                     </Button>
-                    <Button asChild>
-                        <Link href="/people/leave">
-                            Back to List
-                        </Link>
+                    <Button asChild className="w-full sm:w-auto">
+                        <Link href="/people/leave">Back to List</Link>
                     </Button>
                 </div>
             </div>
 
+            {/* Main Content */}
             <div className="grid gap-6 md:grid-cols-3">
-                {/* Main Information */}
+                {/* Left (Main Info) */}
                 <Card className="md:col-span-2">
                     <CardHeader>
                         <CardTitle>Request Information</CardTitle>
-                        <CardDescription>Detailed information about this leave request</CardDescription>
+                        <CardDescription>
+                            Detailed information about this leave request
+                        </CardDescription>
                     </CardHeader>
+
                     <CardContent className="space-y-6">
-                        <div className="flex items-center gap-4">
+                        {/* Badges */}
+                        <div className="flex flex-wrap items-center gap-3">
                             <Badge variant="outline" className={getTypeColor(leaveRequest.type)}>
                                 {leaveRequest.type}
                             </Badge>
@@ -113,28 +115,40 @@ export default async function LeaveRequestDetailPage({ params }: PageProps) {
                             </Badge>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Details Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <div>
-                                <h3 className="font-medium text-muted-foreground mb-2">Employee</h3>
-                                <p className="flex items-center">
+                                <h3 className="font-medium text-muted-foreground mb-2 text-sm sm:text-base">
+                                    Employee
+                                </h3>
+                                <p className="flex items-center text-sm sm:text-base">
                                     <User className="h-4 w-4 mr-2" />
                                     {leaveRequest.userName || 'Unknown User'}
                                 </p>
                             </div>
+
                             <div>
-                                <h3 className="font-medium text-muted-foreground mb-2">Duration</h3>
+                                <h3 className="font-medium text-muted-foreground mb-2 text-sm sm:text-base">
+                                    Duration
+                                </h3>
                                 <p>{leaveRequest.days} day{leaveRequest.days !== 1 ? 's' : ''}</p>
                             </div>
+
                             <div>
-                                <h3 className="font-medium text-muted-foreground mb-2">Start Date</h3>
-                                <p className="flex items-center">
+                                <h3 className="font-medium text-muted-foreground mb-2 text-sm sm:text-base">
+                                    Start Date
+                                </h3>
+                                <p className="flex items-center text-sm sm:text-base">
                                     <Calendar className="h-4 w-4 mr-2" />
                                     {new Date(leaveRequest.startDate).toLocaleDateString()}
                                 </p>
                             </div>
+
                             <div>
-                                <h3 className="font-medium text-muted-foreground mb-2">End Date</h3>
-                                <p className="flex items-center">
+                                <h3 className="font-medium text-muted-foreground mb-2 text-sm sm:text-base">
+                                    End Date
+                                </h3>
+                                <p className="flex items-center text-sm sm:text-base">
                                     <Calendar className="h-4 w-4 mr-2" />
                                     {new Date(leaveRequest.endDate).toLocaleDateString()}
                                 </p>
@@ -142,17 +156,21 @@ export default async function LeaveRequestDetailPage({ params }: PageProps) {
                         </div>
 
                         <div>
-                            <h3 className="font-medium text-muted-foreground mb-2">Reason</h3>
-                            <p className="text-sm bg-muted p-4 rounded-lg">{leaveRequest.reason}</p>
+                            <h3 className="font-medium text-muted-foreground mb-2 text-sm sm:text-base">
+                                Reason
+                            </h3>
+                            <p className="text-sm sm:text-base bg-muted p-4 rounded-lg leading-relaxed">
+                                {leaveRequest.reason}
+                            </p>
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* Sidebar */}
+                {/* Right Sidebar */}
                 <div className="space-y-6">
                     <Card>
                         <CardHeader>
-                            <CardTitle className="text-lg">Timeline</CardTitle>
+                            <CardTitle className="text-lg sm:text-xl">Timeline</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div>
@@ -162,6 +180,7 @@ export default async function LeaveRequestDetailPage({ params }: PageProps) {
                                     {new Date(leaveRequest.createdAt).toLocaleDateString()}
                                 </p>
                             </div>
+
                             {leaveRequest.updatedAt !== leaveRequest.createdAt && (
                                 <div>
                                     <p className="font-medium text-sm">Last Updated</p>
@@ -171,6 +190,7 @@ export default async function LeaveRequestDetailPage({ params }: PageProps) {
                                     </p>
                                 </div>
                             )}
+
                             {leaveRequest.approvedBy && (
                                 <div>
                                     <p className="font-medium text-sm">{leaveRequest.status} by</p>
@@ -186,18 +206,25 @@ export default async function LeaveRequestDetailPage({ params }: PageProps) {
                     {leaveRequest.status === 'Pending' && (
                         <Card>
                             <CardHeader>
-                                <CardTitle className="text-lg">Quick Actions</CardTitle>
+                                <CardTitle className="text-lg sm:text-xl">Quick Actions</CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-2">
-                                <p className="text-sm text-muted-foreground mb-2">
+                            <CardContent className="space-y-3">
+                                <p className="text-sm text-muted-foreground">
                                     Approve or reject this request
                                 </p>
-                                <div className="flex gap-2">
-                                    <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700">
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                    <Button
+                                        size="sm"
+                                        className="flex-1 bg-green-600 hover:bg-green-700"
+                                    >
                                         <Check className="h-4 w-4 mr-1" />
                                         Approve
                                     </Button>
-                                    <Button size="sm" variant="outline" className="flex-1 text-red-600 hover:text-red-700">
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="flex-1 text-red-600 hover:text-red-700"
+                                    >
                                         <X className="h-4 w-4 mr-1" />
                                         Reject
                                     </Button>

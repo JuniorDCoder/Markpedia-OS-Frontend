@@ -17,12 +17,6 @@ import {
     Plus,
     Minus,
     RefreshCw,
-    FileText,
-    Target,
-    BarChart3,
-    Settings,
-    User,
-    Building
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -31,9 +25,14 @@ interface JobDescriptionEditClientProps {
     initialJobDescription?: JobDescription;
 }
 
-export default function JobDescriptionEditClient({ jobDescriptionId, initialJobDescription }: JobDescriptionEditClientProps) {
+export default function JobDescriptionEditClient({
+                                                     jobDescriptionId,
+                                                     initialJobDescription,
+                                                 }: JobDescriptionEditClientProps) {
     const router = useRouter();
-    const [jobDescription, setJobDescription] = useState<JobDescription | null>(initialJobDescription || null);
+    const [jobDescription, setJobDescription] = useState<JobDescription | null>(
+        initialJobDescription || null
+    );
     const [departments, setDepartments] = useState<Department[]>([]);
     const [loading, setLoading] = useState(!initialJobDescription);
     const [saving, setSaving] = useState(false);
@@ -51,9 +50,8 @@ export default function JobDescriptionEditClient({ jobDescriptionId, initialJobD
             setLoading(true);
             const data = await jobDescriptionService.getJobDescription(jobDescriptionId);
             setJobDescription(data);
-        } catch (error) {
+        } catch {
             toast.error('Failed to load job description');
-            console.error(error);
         } finally {
             setLoading(false);
         }
@@ -63,7 +61,7 @@ export default function JobDescriptionEditClient({ jobDescriptionId, initialJobD
         try {
             const data = await jobDescriptionService.getDepartments();
             setDepartments(data);
-        } catch (error) {
+        } catch {
             console.error('Failed to load departments');
         }
     };
@@ -71,173 +69,39 @@ export default function JobDescriptionEditClient({ jobDescriptionId, initialJobD
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!jobDescription) return;
-
         try {
             setSaving(true);
             await jobDescriptionService.updateJobDescription(jobDescriptionId, jobDescription);
             toast.success('Job description updated successfully');
             router.push(`/work/job-descriptions/${jobDescriptionId}`);
-        } catch (error) {
+        } catch {
             toast.error('Failed to update job description');
-            console.error(error);
         } finally {
             setSaving(false);
         }
     };
 
-    const addResponsibility = () => {
+    const addItem = (key: keyof JobDescription) => {
         if (!jobDescription) return;
-
         setJobDescription({
             ...jobDescription,
-            responsibilities: [...jobDescription.responsibilities, '']
+            [key]: [...(jobDescription[key] as string[]), ''],
         });
     };
 
-    const removeResponsibility = (index: number) => {
-        if (!jobDescription || jobDescription.responsibilities.length <= 1) return;
-
-        const newResponsibilities = [...jobDescription.responsibilities];
-        newResponsibilities.splice(index, 1);
-        setJobDescription({
-            ...jobDescription,
-            responsibilities: newResponsibilities
-        });
-    };
-
-    const updateResponsibility = (index: number, value: string) => {
+    const removeItem = (key: keyof JobDescription, index: number) => {
         if (!jobDescription) return;
-
-        const newResponsibilities = [...jobDescription.responsibilities];
-        newResponsibilities[index] = value;
-        setJobDescription({
-            ...jobDescription,
-            responsibilities: newResponsibilities
-        });
+        const newItems = [...(jobDescription[key] as string[])];
+        if (newItems.length <= 1) return;
+        newItems.splice(index, 1);
+        setJobDescription({ ...jobDescription, [key]: newItems });
     };
 
-    const addKPI = () => {
+    const updateItem = (key: keyof JobDescription, index: number, value: string) => {
         if (!jobDescription) return;
-
-        setJobDescription({
-            ...jobDescription,
-            kpis: [...jobDescription.kpis, '']
-        });
-    };
-
-    const removeKPI = (index: number) => {
-        if (!jobDescription || jobDescription.kpis.length <= 1) return;
-
-        const newKPIs = [...jobDescription.kpis];
-        newKPIs.splice(index, 1);
-        setJobDescription({
-            ...jobDescription,
-            kpis: newKPIs
-        });
-    };
-
-    const updateKPI = (index: number, value: string) => {
-        if (!jobDescription) return;
-
-        const newKPIs = [...jobDescription.kpis];
-        newKPIs[index] = value;
-        setJobDescription({
-            ...jobDescription,
-            kpis: newKPIs
-        });
-    };
-
-    const addOKR = () => {
-        if (!jobDescription) return;
-
-        setJobDescription({
-            ...jobDescription,
-            okrs: [...jobDescription.okrs, '']
-        });
-    };
-
-    const removeOKR = (index: number) => {
-        if (!jobDescription || jobDescription.okrs.length <= 1) return;
-
-        const newOKRs = [...jobDescription.okrs];
-        newOKRs.splice(index, 1);
-        setJobDescription({
-            ...jobDescription,
-            okrs: newOKRs
-        });
-    };
-
-    const updateOKR = (index: number, value: string) => {
-        if (!jobDescription) return;
-
-        const newOKRs = [...jobDescription.okrs];
-        newOKRs[index] = value;
-        setJobDescription({
-            ...jobDescription,
-            okrs: newOKRs
-        });
-    };
-
-    const addSkill = () => {
-        if (!jobDescription) return;
-
-        setJobDescription({
-            ...jobDescription,
-            skills: [...jobDescription.skills, '']
-        });
-    };
-
-    const removeSkill = (index: number) => {
-        if (!jobDescription || jobDescription.skills.length <= 1) return;
-
-        const newSkills = [...jobDescription.skills];
-        newSkills.splice(index, 1);
-        setJobDescription({
-            ...jobDescription,
-            skills: newSkills
-        });
-    };
-
-    const updateSkill = (index: number, value: string) => {
-        if (!jobDescription) return;
-
-        const newSkills = [...jobDescription.skills];
-        newSkills[index] = value;
-        setJobDescription({
-            ...jobDescription,
-            skills: newSkills
-        });
-    };
-
-    const addTool = () => {
-        if (!jobDescription) return;
-
-        setJobDescription({
-            ...jobDescription,
-            tools: [...jobDescription.tools, '']
-        });
-    };
-
-    const removeTool = (index: number) => {
-        if (!jobDescription || jobDescription.tools.length <= 1) return;
-
-        const newTools = [...jobDescription.tools];
-        newTools.splice(index, 1);
-        setJobDescription({
-            ...jobDescription,
-            tools: newTools
-        });
-    };
-
-    const updateTool = (index: number, value: string) => {
-        if (!jobDescription) return;
-
-        const newTools = [...jobDescription.tools];
-        newTools[index] = value;
-        setJobDescription({
-            ...jobDescription,
-            tools: newTools
-        });
+        const newItems = [...(jobDescription[key] as string[])];
+        newItems[index] = value;
+        setJobDescription({ ...jobDescription, [key]: newItems });
     };
 
     if (loading) {
@@ -252,7 +116,9 @@ export default function JobDescriptionEditClient({ jobDescriptionId, initialJobD
         return (
             <div className="p-6 text-center">
                 <h1 className="text-2xl font-bold mb-4">Job Description Not Found</h1>
-                <p className="text-muted-foreground mb-6">The job description you're looking for doesn't exist.</p>
+                <p className="text-muted-foreground mb-6">
+                    The job description you're looking for doesn't exist.
+                </p>
                 <Button onClick={() => router.push('/work/job-descriptions')}>
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to Job Descriptions
@@ -262,40 +128,54 @@ export default function JobDescriptionEditClient({ jobDescriptionId, initialJobD
     }
 
     return (
-        <div className="space-y-6 p-6">
+        <div className="space-y-6 px-4 sm:px-6 lg:px-8 py-6 max-w-6xl mx-auto">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center">
-                    <Button variant="ghost" size="icon" onClick={() => router.push(`/work/job-descriptions/${jobDescriptionId}`)} className="mr-2">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => router.push(`/work/job-descriptions/${jobDescriptionId}`)}
+                        className="mr-2"
+                    >
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div>
-                        <h1 className="text-3xl font-bold">Edit Job Description</h1>
-                        <p className="text-muted-foreground mt-1">
+                        <h1 className="text-2xl sm:text-3xl font-bold">Edit Job Description</h1>
+                        <p className="text-muted-foreground text-sm sm:text-base mt-1">
                             Update role details, responsibilities, and requirements
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" onClick={() => router.push(`/work/job-descriptions/${jobDescriptionId}`)}>
+
+                <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={() => router.push(`/work/job-descriptions/${jobDescriptionId}`)}
+                    >
                         Cancel
                     </Button>
                     <Button onClick={handleSubmit} disabled={saving}>
-                        {saving ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                        {saving ? (
+                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                            <Save className="h-4 w-4 mr-2" />
+                        )}
                         Save Changes
                     </Button>
                 </div>
             </div>
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="space-y-6">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="grid grid-cols-4 mb-6">
+                    <TabsList className="grid grid-cols-2 sm:grid-cols-4 mb-6">
                         <TabsTrigger value="basic">Basic Info</TabsTrigger>
                         <TabsTrigger value="details">Role Details</TabsTrigger>
                         <TabsTrigger value="performance">Performance</TabsTrigger>
                         <TabsTrigger value="additional">Additional Info</TabsTrigger>
                     </TabsList>
 
+                    {/* --- BASIC INFO --- */}
                     <TabsContent value="basic" className="space-y-6">
                         <Card>
                             <CardHeader>
@@ -305,13 +185,15 @@ export default function JobDescriptionEditClient({ jobDescriptionId, initialJobD
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="title">Job Title *</Label>
                                         <Input
                                             id="title"
                                             value={jobDescription.title}
-                                            onChange={(e) => setJobDescription({ ...jobDescription, title: e.target.value })}
+                                            onChange={(e) =>
+                                                setJobDescription({ ...jobDescription, title: e.target.value })
+                                            }
                                             required
                                         />
                                     </div>
@@ -320,14 +202,16 @@ export default function JobDescriptionEditClient({ jobDescriptionId, initialJobD
                                         <Label htmlFor="department">Department *</Label>
                                         <Select
                                             value={jobDescription.department}
-                                            onValueChange={(value) => setJobDescription({ ...jobDescription, department: value })}
+                                            onValueChange={(value) =>
+                                                setJobDescription({ ...jobDescription, department: value })
+                                            }
                                             required
                                         >
                                             <SelectTrigger id="department">
                                                 <SelectValue placeholder="Select department" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {departments.map(dept => (
+                                                {departments.map((dept) => (
                                                     <SelectItem key={dept.id} value={dept.id}>
                                                         {dept.name}
                                                     </SelectItem>
@@ -342,48 +226,21 @@ export default function JobDescriptionEditClient({ jobDescriptionId, initialJobD
                                     <Textarea
                                         id="summary"
                                         value={jobDescription.summary}
-                                        onChange={(e) => setJobDescription({ ...jobDescription, summary: e.target.value })}
+                                        onChange={(e) =>
+                                            setJobDescription({ ...jobDescription, summary: e.target.value })
+                                        }
                                         rows={3}
                                         required
                                     />
                                 </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="purpose">Purpose</Label>
-                                    <Textarea
-                                        id="purpose"
-                                        value={jobDescription.purpose}
-                                        onChange={(e) => setJobDescription({ ...jobDescription, purpose: e.target.value })}
-                                        rows={2}
-                                    />
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="vision">Vision</Label>
-                                        <Textarea
-                                            id="vision"
-                                            value={jobDescription.vision}
-                                            onChange={(e) => setJobDescription({ ...jobDescription, vision: e.target.value })}
-                                            rows={2}
-                                        />
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="mission">Mission</Label>
-                                        <Textarea
-                                            id="mission"
-                                            value={jobDescription.mission}
-                                            onChange={(e) => setJobDescription({ ...jobDescription, mission: e.target.value })}
-                                            rows={2}
-                                        />
-                                    </div>
-                                </div>
                             </CardContent>
                         </Card>
 
-                        <div className="flex justify-between">
-                            <Button variant="outline" onClick={() => router.push(`/work/job-descriptions/${jobDescriptionId}`)}>
+                        <div className="flex justify-between flex-wrap gap-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => router.push(`/work/job-descriptions/${jobDescriptionId}`)}
+                            >
                                 Cancel
                             </Button>
                             <Button type="button" onClick={() => setActiveTab('details')}>
@@ -392,6 +249,7 @@ export default function JobDescriptionEditClient({ jobDescriptionId, initialJobD
                         </div>
                     </TabsContent>
 
+                    {/* --- ROLE DETAILS --- */}
                     <TabsContent value="details" className="space-y-6">
                         <Card>
                             <CardHeader>
@@ -406,15 +264,22 @@ export default function JobDescriptionEditClient({ jobDescriptionId, initialJobD
                                     <Input
                                         id="reportsTo"
                                         value={jobDescription.reportsTo}
-                                        onChange={(e) => setJobDescription({ ...jobDescription, reportsTo: e.target.value })}
+                                        onChange={(e) =>
+                                            setJobDescription({ ...jobDescription, reportsTo: e.target.value })
+                                        }
                                         placeholder="Position or person this role reports to"
                                     />
                                 </div>
 
                                 <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex items-center justify-between flex-wrap gap-2">
                                         <Label>Key Responsibilities *</Label>
-                                        <Button type="button" variant="outline" size="sm" onClick={addResponsibility}>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => addItem('responsibilities')}
+                                        >
                                             <Plus className="h-4 w-4 mr-1" />
                                             Add Responsibility
                                         </Button>
@@ -424,7 +289,9 @@ export default function JobDescriptionEditClient({ jobDescriptionId, initialJobD
                                         <div key={index} className="flex items-center space-x-2">
                                             <Textarea
                                                 value={responsibility}
-                                                onChange={(e) => updateResponsibility(index, e.target.value)}
+                                                onChange={(e) =>
+                                                    updateItem('responsibilities', index, e.target.value)
+                                                }
                                                 placeholder="Describe a key responsibility"
                                                 rows={2}
                                                 className="flex-1"
@@ -434,7 +301,7 @@ export default function JobDescriptionEditClient({ jobDescriptionId, initialJobD
                                                     type="button"
                                                     variant="ghost"
                                                     size="icon"
-                                                    onClick={() => removeResponsibility(index)}
+                                                    onClick={() => removeItem('responsibilities', index)}
                                                 >
                                                     <Minus className="h-4 w-4" />
                                                 </Button>
@@ -445,7 +312,7 @@ export default function JobDescriptionEditClient({ jobDescriptionId, initialJobD
                             </CardContent>
                         </Card>
 
-                        <div className="flex justify-between">
+                        <div className="flex justify-between flex-wrap gap-2">
                             <Button variant="outline" onClick={() => setActiveTab('basic')}>
                                 Back: Basic Info
                             </Button>
@@ -455,6 +322,7 @@ export default function JobDescriptionEditClient({ jobDescriptionId, initialJobD
                         </div>
                     </TabsContent>
 
+                    {/* --- PERFORMANCE --- */}
                     <TabsContent value="performance" className="space-y-6">
                         <Card>
                             <CardHeader>
@@ -464,69 +332,61 @@ export default function JobDescriptionEditClient({ jobDescriptionId, initialJobD
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <Label>Key Performance Indicators (KPIs)</Label>
-                                        <Button type="button" variant="outline" size="sm" onClick={addKPI}>
-                                            <Plus className="h-4 w-4 mr-1" />
-                                            Add KPI
-                                        </Button>
-                                    </div>
-
-                                    {jobDescription.kpis.map((kpi, index) => (
-                                        <div key={index} className="flex items-center space-x-2">
-                                            <Input
-                                                value={kpi}
-                                                onChange={(e) => updateKPI(index, e.target.value)}
-                                                placeholder="e.g., Customer satisfaction score, Project completion rate"
-                                            />
-                                            {jobDescription.kpis.length > 1 && (
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => removeKPI(index)}
-                                                >
-                                                    <Minus className="h-4 w-4" />
-                                                </Button>
-                                            )}
+                                {['kpis', 'okrs'].map((section) => (
+                                    <div key={section} className="space-y-4">
+                                        <div className="flex items-center justify-between flex-wrap gap-2">
+                                            <Label>
+                                                {section === 'kpis'
+                                                    ? 'Key Performance Indicators (KPIs)'
+                                                    : 'Objectives and Key Results (OKRs)'}
+                                            </Label>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => addItem(section as keyof JobDescription)}
+                                            >
+                                                <Plus className="h-4 w-4 mr-1" />
+                                                Add {section === 'kpis' ? 'KPI' : 'OKR'}
+                                            </Button>
                                         </div>
-                                    ))}
-                                </div>
 
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <Label>Objectives and Key Results (OKRs)</Label>
-                                        <Button type="button" variant="outline" size="sm" onClick={addOKR}>
-                                            <Plus className="h-4 w-4 mr-1" />
-                                            Add OKR
-                                        </Button>
+                                        {(jobDescription[section as keyof JobDescription] as string[]).map(
+                                            (item, index) => (
+                                                <div key={index} className="flex items-center space-x-2">
+                                                    <Input
+                                                        value={item}
+                                                        onChange={(e) =>
+                                                            updateItem(section as keyof JobDescription, index, e.target.value)
+                                                        }
+                                                        placeholder={
+                                                            section === 'kpis'
+                                                                ? 'e.g., Customer satisfaction score'
+                                                                : 'e.g., Increase market share by 15% in Q3'
+                                                        }
+                                                    />
+                                                    {(jobDescription[section as keyof JobDescription] as string[]).length >
+                                                        1 && (
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() =>
+                                                                    removeItem(section as keyof JobDescription, index)
+                                                                }
+                                                            >
+                                                                <Minus className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
+                                                </div>
+                                            )
+                                        )}
                                     </div>
-
-                                    {jobDescription.okrs.map((okr, index) => (
-                                        <div key={index} className="flex items-center space-x-2">
-                                            <Input
-                                                value={okr}
-                                                onChange={(e) => updateOKR(index, e.target.value)}
-                                                placeholder="e.g., Increase market share by 15% in Q3"
-                                            />
-                                            {jobDescription.okrs.length > 1 && (
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => removeOKR(index)}
-                                                >
-                                                    <Minus className="h-4 w-4" />
-                                                </Button>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
+                                ))}
                             </CardContent>
                         </Card>
 
-                        <div className="flex justify-between">
+                        <div className="flex justify-between flex-wrap gap-2">
                             <Button variant="outline" onClick={() => setActiveTab('details')}>
                                 Back: Role Details
                             </Button>
@@ -536,75 +396,66 @@ export default function JobDescriptionEditClient({ jobDescriptionId, initialJobD
                         </div>
                     </TabsContent>
 
+                    {/* --- ADDITIONAL --- */}
                     <TabsContent value="additional" className="space-y-6">
                         <Card>
                             <CardHeader>
                                 <CardTitle>Additional Information</CardTitle>
                                 <CardDescription>
-                                    Update skills, tools, career path, and review process
+                                    Update skills, tools, and career info
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <Label>Required Skills</Label>
-                                            <Button type="button" variant="outline" size="sm" onClick={addSkill}>
-                                                <Plus className="h-4 w-4 mr-1" />
-                                                Add Skill
-                                            </Button>
-                                        </div>
-
-                                        {jobDescription.skills.map((skill, index) => (
-                                            <div key={index} className="flex items-center space-x-2">
-                                                <Input
-                                                    value={skill}
-                                                    onChange={(e) => updateSkill(index, e.target.value)}
-                                                    placeholder="e.g., JavaScript, Project Management"
-                                                />
-                                                {jobDescription.skills.length > 1 && (
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => removeSkill(index)}
-                                                    >
-                                                        <Minus className="h-4 w-4" />
-                                                    </Button>
-                                                )}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    {['skills', 'tools'].map((section) => (
+                                        <div key={section} className="space-y-4">
+                                            <div className="flex items-center justify-between flex-wrap gap-2">
+                                                <Label>
+                                                    {section === 'skills' ? 'Required Skills' : 'Required Tools'}
+                                                </Label>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => addItem(section as keyof JobDescription)}
+                                                >
+                                                    <Plus className="h-4 w-4 mr-1" />
+                                                    Add {section === 'skills' ? 'Skill' : 'Tool'}
+                                                </Button>
                                             </div>
-                                        ))}
-                                    </div>
 
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <Label>Required Tools</Label>
-                                            <Button type="button" variant="outline" size="sm" onClick={addTool}>
-                                                <Plus className="h-4 w-4 mr-1" />
-                                                Add Tool
-                                            </Button>
+                                            {(jobDescription[section as keyof JobDescription] as string[]).map(
+                                                (item, index) => (
+                                                    <div key={index} className="flex items-center space-x-2">
+                                                        <Input
+                                                            value={item}
+                                                            onChange={(e) =>
+                                                                updateItem(section as keyof JobDescription, index, e.target.value)
+                                                            }
+                                                            placeholder={
+                                                                section === 'skills'
+                                                                    ? 'e.g., React, Project Management'
+                                                                    : 'e.g., Figma, Salesforce'
+                                                            }
+                                                        />
+                                                        {(jobDescription[section as keyof JobDescription] as string[])
+                                                            .length > 1 && (
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() =>
+                                                                    removeItem(section as keyof JobDescription, index)
+                                                                }
+                                                            >
+                                                                <Minus className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                )
+                                            )}
                                         </div>
-
-                                        {jobDescription.tools.map((tool, index) => (
-                                            <div key={index} className="flex items-center space-x-2">
-                                                <Input
-                                                    value={tool}
-                                                    onChange={(e) => updateTool(index, e.target.value)}
-                                                    placeholder="e.g., Salesforce, Figma, JIRA"
-                                                />
-                                                {jobDescription.tools.length > 1 && (
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => removeTool(index)}
-                                                    >
-                                                        <Minus className="h-4 w-4" />
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
+                                    ))}
                                 </div>
 
                                 <div className="space-y-2">
@@ -612,76 +463,26 @@ export default function JobDescriptionEditClient({ jobDescriptionId, initialJobD
                                     <Textarea
                                         id="careerPath"
                                         value={jobDescription.careerPath}
-                                        onChange={(e) => setJobDescription({ ...jobDescription, careerPath: e.target.value })}
-                                        placeholder="Potential career progression and advancement opportunities"
+                                        onChange={(e) =>
+                                            setJobDescription({ ...jobDescription, careerPath: e.target.value })
+                                        }
+                                        placeholder="Potential career progression"
                                         rows={3}
                                     />
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="probationPeriod">Probation Period (months)</Label>
-                                        <Select
-                                            value={jobDescription.probationPeriod}
-                                            onValueChange={(value) => setJobDescription({ ...jobDescription, probationPeriod: value })}
-                                        >
-                                            <SelectTrigger id="probationPeriod">
-                                                <SelectValue placeholder="Select period" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="1">1 month</SelectItem>
-                                                <SelectItem value="2">2 months</SelectItem>
-                                                <SelectItem value="3">3 months</SelectItem>
-                                                <SelectItem value="6">6 months</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="reviewCadence">Review Cadence</Label>
-                                        <Select
-                                            value={jobDescription.reviewCadence}
-                                            onValueChange={(value) => setJobDescription({ ...jobDescription, reviewCadence: value })}
-                                        >
-                                            <SelectTrigger id="reviewCadence">
-                                                <SelectValue placeholder="Select cadence" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="Monthly">Monthly</SelectItem>
-                                                <SelectItem value="Quarterly">Quarterly</SelectItem>
-                                                <SelectItem value="Semi-Annual">Semi-Annual</SelectItem>
-                                                <SelectItem value="Annual">Annual</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="status">Status</Label>
-                                    <Select
-                                        value={jobDescription.status}
-                                        onValueChange={(value) => setJobDescription({ ...jobDescription, status: value as any })}
-                                    >
-                                        <SelectTrigger id="status">
-                                            <SelectValue placeholder="Select status" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Draft">Draft</SelectItem>
-                                            <SelectItem value="Under Review">Under Review</SelectItem>
-                                            <SelectItem value="Approved">Approved</SelectItem>
-                                            <SelectItem value="Archived">Archived</SelectItem>
-                                        </SelectContent>
-                                    </Select>
                                 </div>
                             </CardContent>
                         </Card>
 
-                        <div className="flex justify-between">
+                        <div className="flex justify-between flex-wrap gap-2">
                             <Button variant="outline" onClick={() => setActiveTab('performance')}>
                                 Back: Performance
                             </Button>
                             <Button type="submit" disabled={saving}>
-                                {saving ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                                {saving ? (
+                                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                    <Save className="h-4 w-4 mr-2" />
+                                )}
                                 Save Changes
                             </Button>
                         </div>

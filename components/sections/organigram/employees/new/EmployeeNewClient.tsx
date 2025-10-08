@@ -83,18 +83,20 @@ export default function EmployeeNewClient({ departments, user }: EmployeeNewClie
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <Button variant="outline" size="icon" asChild>
+                <div className="flex items-center gap-2 md:gap-4">
+                    <Button variant="outline" size="icon" asChild className="flex-shrink-0">
                         <Link href="/strategy/organigram">
                             <ArrowLeft className="h-4 w-4" />
                         </Link>
                     </Button>
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Add New Employee</h1>
-                        <p className="text-muted-foreground mt-1">
+                    <div className="min-w-0 flex-1">
+                        <h1 className="text-xl md:text-2xl lg:text-3xl font-bold tracking-tight line-clamp-2">
+                            Add New Employee
+                        </h1>
+                        <p className="text-muted-foreground text-xs md:text-sm mt-1">
                             Create a new employee profile for the organization
                         </p>
                     </div>
@@ -102,24 +104,24 @@ export default function EmployeeNewClient({ departments, user }: EmployeeNewClie
             </div>
 
             <form onSubmit={handleSubmit}>
-                <div className="grid gap-6 lg:grid-cols-3">
+                <div className="grid gap-4 md:gap-6 lg:grid-cols-3">
                     {/* Main Form */}
-                    <div className="lg:col-span-2 space-y-6">
+                    <div className="lg:col-span-2 space-y-4 md:space-y-6">
                         {/* Basic Information */}
                         <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <UserIcon className="h-5 w-5" />
+                            <CardHeader className="pb-3">
+                                <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                                    <UserIcon className="h-4 w-4 md:h-5 md:w-5" />
                                     Basic Information
                                 </CardTitle>
-                                <CardDescription>
+                                <CardDescription className="text-sm">
                                     Personal details and contact information
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label htmlFor="name" className="block text-sm font-medium mb-2">
+                            <CardContent className="space-y-3 md:space-y-4 pt-0">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                                    <div className="space-y-2">
+                                        <label htmlFor="name" className="block text-sm font-medium">
                                             Full Name *
                                         </label>
                                         <Input
@@ -128,11 +130,12 @@ export default function EmployeeNewClient({ departments, user }: EmployeeNewClie
                                             onChange={(e) => handleInputChange('name', e.target.value)}
                                             placeholder="Enter full name"
                                             required
+                                            className="text-sm md:text-base"
                                         />
                                     </div>
 
-                                    <div>
-                                        <label htmlFor="email" className="block text-sm font-medium mb-2">
+                                    <div className="space-y-2">
+                                        <label htmlFor="email" className="block text-sm font-medium">
                                             Email Address *
                                         </label>
                                         <Input
@@ -142,12 +145,13 @@ export default function EmployeeNewClient({ departments, user }: EmployeeNewClie
                                             onChange={(e) => handleInputChange('email', e.target.value)}
                                             placeholder="employee@company.com"
                                             required
+                                            className="text-sm md:text-base"
                                         />
                                     </div>
                                 </div>
 
-                                <div>
-                                    <label htmlFor="title" className="block text-sm font-medium mb-2">
+                                <div className="space-y-2">
+                                    <label htmlFor="title" className="block text-sm font-medium">
                                         Job Title *
                                     </label>
                                     <Input
@@ -156,6 +160,7 @@ export default function EmployeeNewClient({ departments, user }: EmployeeNewClie
                                         onChange={(e) => handleInputChange('title', e.target.value)}
                                         placeholder="e.g., Senior Software Engineer"
                                         required
+                                        className="text-sm md:text-base"
                                     />
                                 </div>
                             </CardContent>
@@ -163,26 +168,26 @@ export default function EmployeeNewClient({ departments, user }: EmployeeNewClie
 
                         {/* Organizational Information */}
                         <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Building className="h-5 w-5" />
+                            <CardHeader className="pb-3">
+                                <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                                    <Building className="h-4 w-4 md:h-5 md:w-5" />
                                     Organizational Details
                                 </CardTitle>
-                                <CardDescription>
+                                <CardDescription className="text-sm">
                                     Role, department, and reporting structure
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label htmlFor="role" className="block text-sm font-medium mb-2">
+                            <CardContent className="space-y-3 md:space-y-4 pt-0">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                                    <div className="space-y-2">
+                                        <label htmlFor="role" className="block text-sm font-medium">
                                             Role *
                                         </label>
                                         <Select
                                             value={formData.role}
                                             onValueChange={(value: any) => handleInputChange('role', value)}
                                         >
-                                            <SelectTrigger>
+                                            <SelectTrigger className="text-sm md:text-base">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -195,15 +200,15 @@ export default function EmployeeNewClient({ departments, user }: EmployeeNewClie
                                         </Select>
                                     </div>
 
-                                    <div>
-                                        <label htmlFor="department" className="block text-sm font-medium mb-2">
+                                    <div className="space-y-2">
+                                        <label htmlFor="department" className="block text-sm font-medium">
                                             Department *
                                         </label>
                                         <Select
                                             value={formData.department}
                                             onValueChange={(value) => handleInputChange('department', value)}
                                         >
-                                            <SelectTrigger>
+                                            <SelectTrigger className="text-sm md:text-base">
                                                 <SelectValue placeholder="Select department" />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -211,10 +216,10 @@ export default function EmployeeNewClient({ departments, user }: EmployeeNewClie
                                                     <SelectItem key={dept.id} value={dept.name}>
                                                         <div className="flex items-center gap-2">
                                                             <div
-                                                                className="w-3 h-3 rounded-full"
+                                                                className="w-3 h-3 rounded-full flex-shrink-0"
                                                                 style={{ backgroundColor: dept.color }}
                                                             />
-                                                            {dept.name}
+                                                            <span className="truncate">{dept.name}</span>
                                                         </div>
                                                     </SelectItem>
                                                 ))}
@@ -223,9 +228,9 @@ export default function EmployeeNewClient({ departments, user }: EmployeeNewClie
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label htmlFor="startDate" className="block text-sm font-medium mb-2">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                                    <div className="space-y-2">
+                                        <label htmlFor="startDate" className="block text-sm font-medium">
                                             Start Date *
                                         </label>
                                         <Input
@@ -234,11 +239,12 @@ export default function EmployeeNewClient({ departments, user }: EmployeeNewClie
                                             value={formData.startDate}
                                             onChange={(e) => handleInputChange('startDate', e.target.value)}
                                             required
+                                            className="text-sm md:text-base"
                                         />
                                     </div>
 
-                                    <div>
-                                        <label htmlFor="reportsTo" className="block text-sm font-medium mb-2">
+                                    <div className="space-y-2">
+                                        <label htmlFor="reportsTo" className="block text-sm font-medium">
                                             Reports To (Optional)
                                         </label>
                                         <Input
@@ -246,6 +252,7 @@ export default function EmployeeNewClient({ departments, user }: EmployeeNewClie
                                             value={formData.reportsTo}
                                             onChange={(e) => handleInputChange('reportsTo', e.target.value)}
                                             placeholder="Manager's email or ID"
+                                            className="text-sm md:text-base"
                                         />
                                     </div>
                                 </div>
@@ -254,26 +261,26 @@ export default function EmployeeNewClient({ departments, user }: EmployeeNewClie
                     </div>
 
                     {/* Sidebar */}
-                    <div className="space-y-6">
+                    <div className="space-y-4 md:space-y-6">
                         {/* Actions */}
                         <Card>
-                            <CardHeader>
-                                <CardTitle>Actions</CardTitle>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-lg">Actions</CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-4">
+                            <CardContent className="space-y-3 pt-0">
                                 <Button
                                     type="submit"
-                                    className="w-full"
+                                    className="w-full text-sm md:text-base"
                                     disabled={isLoading}
                                 >
-                                    <Save className="h-4 w-4 mr-2" />
+                                    <Save className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
                                     {isLoading ? 'Creating...' : 'Create Employee'}
                                 </Button>
 
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    className="w-full"
+                                    className="w-full text-sm md:text-base"
                                     asChild
                                 >
                                     <Link href="/strategy/organigram">
@@ -285,12 +292,12 @@ export default function EmployeeNewClient({ departments, user }: EmployeeNewClie
 
                         {/* Status */}
                         <Card>
-                            <CardHeader>
-                                <CardTitle>Status</CardTitle>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-lg">Status</CardTitle>
                             </CardHeader>
-                            <CardContent>
-                                <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <CardContent className="pt-0">
+                                <div className="flex items-center gap-2 p-2 md:p-3 bg-green-50 border border-green-200 rounded-lg">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
                                     <span className="text-sm font-medium text-green-800">Active Employee</span>
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-2">
@@ -301,24 +308,29 @@ export default function EmployeeNewClient({ departments, user }: EmployeeNewClie
 
                         {/* Role Guide */}
                         <Card>
-                            <CardHeader>
-                                <CardTitle>Role Guide</CardTitle>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-lg">Role Guide</CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-2 text-sm text-muted-foreground">
-                                <div>
-                                    <strong>CEO</strong> - Overall company leadership
+                            <CardContent className="space-y-2 text-xs md:text-sm text-muted-foreground pt-0">
+                                <div className="flex items-start gap-2">
+                                    <strong className="flex-shrink-0 w-12">CEO</strong>
+                                    <span>- Overall company leadership</span>
                                 </div>
-                                <div>
-                                    <strong>CXO</strong> - Department leadership (CTO, CMO, etc.)
+                                <div className="flex items-start gap-2">
+                                    <strong className="flex-shrink-0 w-12">CXO</strong>
+                                    <span>- Department leadership (CTO, CMO, etc.)</span>
                                 </div>
-                                <div>
-                                    <strong>Manager</strong> - Team leadership and management
+                                <div className="flex items-start gap-2">
+                                    <strong className="flex-shrink-0 w-12">Manager</strong>
+                                    <span>- Team leadership and management</span>
                                 </div>
-                                <div>
-                                    <strong>Employee</strong> - Individual contributor
+                                <div className="flex items-start gap-2">
+                                    <strong className="flex-shrink-0 w-12">Employee</strong>
+                                    <span>- Individual contributor</span>
                                 </div>
-                                <div>
-                                    <strong>Admin</strong> - System administrator
+                                <div className="flex items-start gap-2">
+                                    <strong className="flex-shrink-0 w-12">Admin</strong>
+                                    <span>- System administrator</span>
                                 </div>
                             </CardContent>
                         </Card>

@@ -239,16 +239,25 @@ export default function NewTeamMemberPage() {
                             </Select>
                         </div>
 
-                        {/* Action Buttons */}
-                        <div className="flex gap-4 justify-end pt-6 border-t">
-                            <Button type="button" variant="outline" asChild>
+                        {/* Action Buttons - Fixed positioning */}
+                        <div className="flex flex-col sm:flex-row gap-3 justify-end pt-4 md:pt-6 border-t mt-4 md:mt-6">
+                            <Button type="button" variant="outline" asChild className="order-2 sm:order-1">
                                 <Link href="/people/team">
                                     Cancel
                                 </Link>
                             </Button>
-                            <Button type="submit" disabled={saving}>
-                                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
-                                Create Team Member
+                            <Button type="submit" disabled={saving} className="order-1 sm:order-2">
+                                {saving ? (
+                                    <>
+                                        <Loader2 className="h-3 w-3 md:h-4 md:w-4 animate-spin mr-1 md:mr-2" />
+                                        <span className="text-sm md:text-base">Creating...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <UserPlus className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                                        <span className="text-sm md:text-base">Create Team Member</span>
+                                    </>
+                                )}
                             </Button>
                         </div>
                     </CardContent>

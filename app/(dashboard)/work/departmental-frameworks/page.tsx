@@ -21,10 +21,7 @@ import {
     Building,
     Calendar,
     Target,
-    BarChart3,
-    Users,
     Shield,
-    Clock
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -72,7 +69,8 @@ export default function DepartmentalFrameworksPage() {
     };
 
     const filteredFrameworks = frameworks.filter(framework => {
-        const matchesSearch = framework.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        const matchesSearch =
+            framework.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             framework.description.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = statusFilter === 'all' || framework.status === statusFilter;
         const matchesDepartment = departmentFilter === 'all' || framework.department === departmentFilter;
@@ -109,18 +107,19 @@ export default function DepartmentalFrameworksPage() {
     }
 
     return (
-        <div className="space-y-6 p-6">
-            <div className="flex items-center justify-between">
+        <div className="space-y-6 p-4 sm:p-6">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight flex items-center">
-                        <Building className="h-8 w-8 mr-3 text-indigo-600" />
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center">
+                        <Building className="h-6 w-6 sm:h-8 sm:w-8 mr-2 sm:mr-3 text-indigo-600" />
                         Departmental Frameworks
                     </h1>
-                    <p className="text-muted-foreground mt-2">
+                    <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">
                         Strategic objectives, goals, and operational frameworks for each department
                     </p>
                 </div>
-                <Button asChild>
+                <Button asChild className="w-full sm:w-auto">
                     <Link href="/work/departmental-frameworks/new">
                         <Plus className="h-4 w-4 mr-2" />
                         Create Framework
@@ -131,12 +130,13 @@ export default function DepartmentalFrameworksPage() {
             {/* Info Card */}
             <Card className="bg-indigo-50 border-indigo-200">
                 <CardContent className="p-4">
-                    <div className="flex items-center">
-                        <Shield className="h-5 w-5 text-indigo-600 mr-3" />
+                    <div className="flex items-start sm:items-center gap-3">
+                        <Shield className="h-5 w-5 text-indigo-600 flex-shrink-0" />
                         <div>
                             <h3 className="font-semibold text-indigo-800">Manager Access Required</h3>
-                            <p className="text-sm text-indigo-600">
-                                Departmental frameworks are only accessible to managers and above. Each framework includes strategic objectives, goals, OKRs, KPIs, and risk management.
+                            <p className="text-sm text-indigo-600 leading-snug">
+                                Departmental frameworks are accessible to managers and above. Each framework includes
+                                strategic objectives, goals, OKRs, KPIs, and risk management.
                             </p>
                         </div>
                     </div>
@@ -146,7 +146,7 @@ export default function DepartmentalFrameworksPage() {
             {/* Filters */}
             <Card>
                 <CardContent className="pt-6">
-                    <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex flex-col md:flex-row gap-4 md:items-center">
                         <div className="flex-1 relative">
                             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                             <Input
@@ -156,9 +156,9 @@ export default function DepartmentalFrameworksPage() {
                                 className="pl-10"
                             />
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                             <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-[150px]">
+                                <SelectTrigger className="w-full sm:w-[150px]">
                                     <Filter className="h-4 w-4 mr-2" />
                                     <SelectValue placeholder="Status" />
                                 </SelectTrigger>
@@ -170,8 +170,9 @@ export default function DepartmentalFrameworksPage() {
                                     <SelectItem value="Archived">Archived</SelectItem>
                                 </SelectContent>
                             </Select>
+
                             <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                                <SelectTrigger className="w-[150px]">
+                                <SelectTrigger className="w-full sm:w-[150px]">
                                     <Building className="h-4 w-4 mr-2" />
                                     <SelectValue placeholder="Department" />
                                 </SelectTrigger>
@@ -193,14 +194,13 @@ export default function DepartmentalFrameworksPage() {
             {filteredFrameworks.length === 0 ? (
                 <Card>
                     <CardContent className="pt-6">
-                        <div className="text-center py-12">
+                        <div className="text-center py-12 px-4">
                             <Target className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                             <h3 className="text-lg font-medium text-muted-foreground mb-2">No frameworks found</h3>
                             <p className="text-sm text-muted-foreground mb-4">
                                 {searchTerm || statusFilter !== 'all' || departmentFilter !== 'all'
                                     ? 'Try adjusting your search or filter criteria'
-                                    : 'Get started by creating your first departmental framework'
-                                }
+                                    : 'Get started by creating your first departmental framework'}
                             </p>
                             {!searchTerm && statusFilter === 'all' && departmentFilter === 'all' && (
                                 <Button asChild>
@@ -214,13 +214,13 @@ export default function DepartmentalFrameworksPage() {
                     </CardContent>
                 </Card>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                     {filteredFrameworks.map(framework => (
-                        <Card key={framework.id} className="hover:shadow-md transition-shadow h-full flex flex-col">
+                        <Card key={framework.id} className="hover:shadow-md transition-shadow flex flex-col h-full">
                             <CardHeader className="pb-3">
                                 <div className="flex items-start justify-between">
                                     <div className="space-y-2 flex-1">
-                                        <CardTitle className="text-lg">
+                                        <CardTitle className="text-lg break-words">
                                             <Link
                                                 href={`/work/departmental-frameworks/${framework.id}`}
                                                 className="hover:underline"
@@ -229,7 +229,7 @@ export default function DepartmentalFrameworksPage() {
                                             </Link>
                                         </CardTitle>
                                         <CardDescription className="line-clamp-2">{framework.description}</CardDescription>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex flex-wrap items-center gap-2">
                                             <Badge variant="secondary" className={getStatusColor(framework.status)}>
                                                 {framework.status}
                                             </Badge>
@@ -246,18 +246,16 @@ export default function DepartmentalFrameworksPage() {
                                         <FileText className="h-4 w-4 mr-2" />
                                         Version: {framework.version}
                                     </div>
-
                                     {framework.lastReviewed && (
                                         <div className="flex items-center text-sm text-muted-foreground">
                                             <Calendar className="h-4 w-4 mr-2" />
                                             Last reviewed: {new Date(framework.lastReviewed).toLocaleDateString()}
                                         </div>
                                     )}
-
                                     <div className="pt-4 border-t">
                                         <h4 className="font-medium text-sm mb-2">Strategic Elements</h4>
                                         <div className="flex flex-wrap gap-1">
-                                            {framework.sections.slice(0, 3).map((section, index) => (
+                                            {framework.sections.slice(0, 3).map(section => (
                                                 <Badge key={section.id} variant="outline" className="text-xs">
                                                     {section.title}
                                                 </Badge>
@@ -271,8 +269,8 @@ export default function DepartmentalFrameworksPage() {
                                     </div>
                                 </div>
                             </CardContent>
-                            <div className="p-4 border-t">
-                                <div className="flex items-center justify-between">
+                            <div className="p-4 border-t mt-auto">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
                                     <div className="flex items-center space-x-2">
                                         <Button asChild variant="ghost" size="sm">
                                             <Link href={`/work/departmental-frameworks/${framework.id}`}>

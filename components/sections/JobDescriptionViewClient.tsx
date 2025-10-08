@@ -20,8 +20,7 @@ import {
     User,
     Building,
     Clock,
-    CheckCircle,
-    AlertCircle
+    CheckCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -30,17 +29,20 @@ interface JobDescriptionViewClientProps {
     initialJobDescription?: JobDescription;
 }
 
-export default function JobDescriptionViewClient({ jobDescriptionId, initialJobDescription }: JobDescriptionViewClientProps) {
+export default function JobDescriptionViewClient({
+                                                     jobDescriptionId,
+                                                     initialJobDescription
+                                                 }: JobDescriptionViewClientProps) {
     const router = useRouter();
-    const [jobDescription, setJobDescription] = useState<JobDescription | null>(initialJobDescription || null);
+    const [jobDescription, setJobDescription] = useState<JobDescription | null>(
+        initialJobDescription || null
+    );
     const [departments, setDepartments] = useState<Department[]>([]);
     const [loading, setLoading] = useState(!initialJobDescription);
     const [exporting, setExporting] = useState(false);
 
     useEffect(() => {
-        if (!initialJobDescription) {
-            loadJobDescription();
-        }
+        if (!initialJobDescription) loadJobDescription();
         loadDepartments();
     }, [jobDescriptionId, initialJobDescription]);
 
@@ -49,9 +51,8 @@ export default function JobDescriptionViewClient({ jobDescriptionId, initialJobD
             setLoading(true);
             const data = await jobDescriptionService.getJobDescription(jobDescriptionId);
             setJobDescription(data);
-        } catch (error) {
+        } catch {
             toast.error('Failed to load job description');
-            console.error(error);
         } finally {
             setLoading(false);
         }
@@ -68,12 +69,11 @@ export default function JobDescriptionViewClient({ jobDescriptionId, initialJobD
 
     const handleExportPDF = async () => {
         if (!jobDescription) return;
-
         try {
             setExporting(true);
             await jobDescriptionService.exportToPDF(jobDescriptionId);
             toast.success('PDF exported successfully');
-        } catch (error) {
+        } catch {
             toast.error('Failed to export PDF');
         } finally {
             setExporting(false);
@@ -82,12 +82,11 @@ export default function JobDescriptionViewClient({ jobDescriptionId, initialJobD
 
     const createNewVersion = async () => {
         if (!jobDescription) return;
-
         try {
             const newVersion = await jobDescriptionService.createNewVersion(jobDescriptionId);
             toast.success('New version created successfully');
             router.push(`/work/job-descriptions/${newVersion.id}/edit`);
-        } catch (error) {
+        } catch {
             toast.error('Failed to create new version');
         }
     };
@@ -129,7 +128,9 @@ export default function JobDescriptionViewClient({ jobDescriptionId, initialJobD
         return (
             <div className="p-6 text-center">
                 <h1 className="text-2xl font-bold mb-4">Job Description Not Found</h1>
-                <p className="text-muted-foreground mb-6">The job description you're looking for doesn't exist.</p>
+                <p className="text-muted-foreground mb-6">
+                    The job description you're looking for doesn't exist.
+                </p>
                 <Button onClick={() => router.push('/work/job-descriptions')}>
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to Job Descriptions
@@ -139,25 +140,32 @@ export default function JobDescriptionViewClient({ jobDescriptionId, initialJobD
     }
 
     return (
-        <div className="space-y-6 p-6">
+        <div className="space-y-6 p-4 sm:p-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                    <Button variant="ghost" size="icon" onClick={() => router.push('/work/job-descriptions')} className="mr-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-start sm:items-center">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => router.push('/work/job-descriptions')}
+                        className="mr-2"
+                    >
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div>
-                        <h1 className="text-3xl font-bold">{jobDescription.title}</h1>
-                        <p className="text-muted-foreground mt-1">
+                        <h1 className="text-2xl sm:text-3xl font-bold">{jobDescription.title}</h1>
+                        <p className="text-muted-foreground text-sm sm:text-base mt-1">
                             {jobDescription.summary}
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
+
+                <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
                     <Button
                         variant="outline"
                         onClick={handleExportPDF}
                         disabled={exporting}
+                        className="w-full sm:w-auto"
                     >
                         {exporting ? (
                             <div className="animate-spin rounded-full h-4 w-4 mr-2 border-b-2 border-blue-600"></div>
@@ -166,32 +174,27 @@ export default function JobDescriptionViewClient({ jobDescriptionId, initialJobD
                         )}
                         Export PDF
                     </Button>
-                    <Button asChild>
-                      <span className="flex items-center">
+                    <Button className="w-full sm:w-auto">
                         <Edit className="h-4 w-4 mr-2" />
                         Edit
-                      </span>
                     </Button>
-
                     {jobDescription.status === 'Approved' && (
-                        <Button variant="outline" onClick={createNewVersion}>
+                        <Button variant="outline" className="w-full sm:w-auto" onClick={createNewVersion}>
                             <FileText className="h-4 w-4 mr-2" />
-                            Create New Version
+                            New Version
                         </Button>
                     )}
                 </div>
             </div>
 
             {/* Metadata */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <Card>
                     <CardHeader className="pb-3">
                         <CardTitle className="text-sm font-medium">Status</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <Badge className={getStatusColor(jobDescription.status)}>
-                            {jobDescription.status}
-                        </Badge>
+                        <Badge className={getStatusColor(jobDescription.status)}>{jobDescription.status}</Badge>
                     </CardContent>
                 </Card>
 
@@ -221,281 +224,215 @@ export default function JobDescriptionViewClient({ jobDescriptionId, initialJobD
             {/* Additional Metadata */}
             <Card>
                 <CardContent className="pt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="flex items-center">
-                            <User className="h-5 w-5 mr-3 text-muted-foreground" />
-                            <div>
-                                <p className="text-sm font-medium">Reports To</p>
-                                <p className="text-sm text-muted-foreground">
-                                    {jobDescription.reportsTo || 'Not specified'}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center">
-                            <Clock className="h-5 w-5 mr-3 text-muted-foreground" />
-                            <div>
-                                <p className="text-sm font-medium">Probation Period</p>
-                                <p className="text-sm text-muted-foreground">
-                                    {jobDescription.probationPeriod} months
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center">
-                            <Calendar className="h-5 w-5 mr-3 text-muted-foreground" />
-                            <div>
-                                <p className="text-sm font-medium">Review Cadence</p>
-                                <p className="text-sm text-muted-foreground">
-                                    {jobDescription.reviewCadence}
-                                </p>
-                            </div>
-                        </div>
-
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <MetaItem icon={<User />} label="Reports To" value={jobDescription.reportsTo || 'Not specified'} />
+                        <MetaItem icon={<Clock />} label="Probation Period" value={`${jobDescription.probationPeriod} months`} />
+                        <MetaItem icon={<Calendar />} label="Review Cadence" value={jobDescription.reviewCadence} />
                         {jobDescription.lastReviewed && (
-                            <div className="flex items-center">
-                                <Calendar className="h-5 w-5 mr-3 text-muted-foreground" />
-                                <div>
-                                    <p className="text-sm font-medium">Last Reviewed</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        {new Date(jobDescription.lastReviewed).toLocaleDateString()}
-                                    </p>
-                                </div>
-                            </div>
+                            <MetaItem
+                                icon={<Calendar />}
+                                label="Last Reviewed"
+                                value={new Date(jobDescription.lastReviewed).toLocaleDateString()}
+                            />
                         )}
                     </div>
                 </CardContent>
             </Card>
 
-            {/* Purpose, Vision, Mission */}
+            {/* Purpose / Vision / Mission */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {jobDescription.purpose && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center text-sm">
-                                <Target className="h-4 w-4 mr-2 text-blue-600" />
-                                Purpose
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-sm text-muted-foreground">{jobDescription.purpose}</p>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {jobDescription.vision && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center text-sm">
-                                <BarChart3 className="h-4 w-4 mr-2 text-green-600" />
-                                Vision
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-sm text-muted-foreground">{jobDescription.vision}</p>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {jobDescription.mission && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center text-sm">
-                                <Settings className="h-4 w-4 mr-2 text-purple-600" />
-                                Mission
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-sm text-muted-foreground">{jobDescription.mission}</p>
-                        </CardContent>
-                    </Card>
-                )}
+                {jobDescription.purpose && <InfoCard title="Purpose" icon={<Target />} color="text-blue-600" text={jobDescription.purpose} />}
+                {jobDescription.vision && <InfoCard title="Vision" icon={<BarChart3 />} color="text-green-600" text={jobDescription.vision} />}
+                {jobDescription.mission && <InfoCard title="Mission" icon={<Settings />} color="text-purple-600" text={jobDescription.mission} />}
             </div>
 
-            {/* Key Responsibilities */}
+            {/* Responsibilities */}
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center">
                         <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
                         Key Responsibilities
                     </CardTitle>
-                    <CardDescription>
-                        Primary duties and responsibilities for this role
-                    </CardDescription>
+                    <CardDescription>Primary duties and responsibilities for this role</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <ul className="space-y-2">
-                        {jobDescription.responsibilities.map((responsibility, index) => (
-                            <li key={index} className="flex items-start">
+                        {jobDescription.responsibilities.map((r, i) => (
+                            <li key={i} className="flex items-start text-sm">
                                 <span className="mr-2 text-green-600">•</span>
-                                <span className="text-muted-foreground">{responsibility}</span>
+                                <span className="text-muted-foreground">{r}</span>
                             </li>
                         ))}
                     </ul>
                 </CardContent>
             </Card>
 
-            {/* Performance Metrics */}
+            {/* KPIs & OKRs */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* KPIs */}
-                {jobDescription.kpis && jobDescription.kpis.length > 0 && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center">
-                                <Target className="h-5 w-5 mr-2 text-blue-600" />
-                                Key Performance Indicators (KPIs)
-                            </CardTitle>
-                            <CardDescription>
-                                Metrics used to measure success in this role
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <ul className="space-y-2">
-                                {jobDescription.kpis.map((kpi, index) => (
-                                    <li key={index} className="flex items-start">
-                                        <span className="mr-2 text-blue-600">•</span>
-                                        <span className="text-muted-foreground">{kpi}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </CardContent>
-                    </Card>
+                {jobDescription.kpis?.length > 0 && (
+                    <InfoListCard title="Key Performance Indicators (KPIs)" icon={<Target />} color="text-blue-600" items={jobDescription.kpis} />
                 )}
-
-                {/* OKRs */}
-                {jobDescription.okrs && jobDescription.okrs.length > 0 && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center">
-                                <BarChart3 className="h-5 w-5 mr-2 text-orange-600" />
-                                Objectives & Key Results (OKRs)
-                            </CardTitle>
-                            <CardDescription>
-                                Goals and measurable outcomes for this role
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <ul className="space-y-2">
-                                {jobDescription.okrs.map((okr, index) => (
-                                    <li key={index} className="flex items-start">
-                                        <span className="mr-2 text-orange-600">•</span>
-                                        <span className="text-muted-foreground">{okr}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </CardContent>
-                    </Card>
+                {jobDescription.okrs?.length > 0 && (
+                    <InfoListCard title="Objectives & Key Results (OKRs)" icon={<BarChart3 />} color="text-orange-600" items={jobDescription.okrs} />
                 )}
             </div>
 
             {/* Skills & Tools */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Required Skills */}
-                {jobDescription.skills && jobDescription.skills.length > 0 && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center">
-                                <User className="h-5 w-5 mr-2 text-purple-600" />
-                                Required Skills
-                            </CardTitle>
-                            <CardDescription>
-                                Skills and competencies needed for this role
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex flex-wrap gap-2">
-                                {jobDescription.skills.map((skill, index) => (
-                                    <Badge key={index} variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-                                        {skill}
-                                    </Badge>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
+                {jobDescription.skills?.length > 0 && (
+                    <BadgeListCard title="Required Skills" icon={<User />} color="text-purple-600" items={jobDescription.skills} />
                 )}
-
-                {/* Required Tools */}
-                {jobDescription.tools && jobDescription.tools.length > 0 && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center">
-                                <Settings className="h-5 w-5 mr-2 text-gray-600" />
-                                Required Tools
-                            </CardTitle>
-                            <CardDescription>
-                                Software and tools used in this role
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex flex-wrap gap-2">
-                                {jobDescription.tools.map((tool, index) => (
-                                    <Badge key={index} variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
-                                        {tool}
-                                    </Badge>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
+                {jobDescription.tools?.length > 0 && (
+                    <BadgeListCard title="Required Tools" icon={<Settings />} color="text-gray-600" items={jobDescription.tools} />
                 )}
             </div>
 
             {/* Career Path */}
             {jobDescription.careerPath && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center">
-                            <Building className="h-5 w-5 mr-2 text-indigo-600" />
-                            Career Path
-                        </CardTitle>
-                        <CardDescription>
-                            Potential career progression and advancement opportunities
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-muted-foreground">{jobDescription.careerPath}</p>
-                    </CardContent>
-                </Card>
+                <InfoCard
+                    title="Career Path"
+                    icon={<Building />}
+                    color="text-indigo-600"
+                    text={jobDescription.careerPath}
+                />
             )}
 
             {/* Additional Info */}
             <Card>
                 <CardHeader>
                     <CardTitle>Additional Information</CardTitle>
-                    <CardDescription>
-                        Created and review information
-                    </CardDescription>
+                    <CardDescription>Created and review information</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div>
-                            <p className="font-medium">Created By</p>
-                            <p className="text-muted-foreground">System Administrator</p>
-                        </div>
-                        <div>
-                            <p className="font-medium">Created On</p>
-                            <p className="text-muted-foreground">
-                                {new Date(jobDescription.createdAt).toLocaleDateString()}
-                            </p>
-                        </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                        <MetaLine label="Created By" value="System Administrator" />
+                        <MetaLine label="Created On" value={new Date(jobDescription.createdAt).toLocaleDateString()} />
                         {jobDescription.lastReviewed && (
-                            <div>
-                                <p className="font-medium">Last Reviewed</p>
-                                <p className="text-muted-foreground">
-                                    {new Date(jobDescription.lastReviewed).toLocaleDateString()}
-                                </p>
-                            </div>
+                            <MetaLine label="Last Reviewed" value={new Date(jobDescription.lastReviewed).toLocaleDateString()} />
                         )}
                         {jobDescription.nextReview && (
-                            <div>
-                                <p className="font-medium">Next Review</p>
-                                <p className="text-muted-foreground">
-                                    {new Date(jobDescription.nextReview).toLocaleDateString()}
-                                </p>
-                            </div>
+                            <MetaLine label="Next Review" value={new Date(jobDescription.nextReview).toLocaleDateString()} />
                         )}
                     </div>
                 </CardContent>
             </Card>
+        </div>
+    );
+}
+
+/* === Helper Components === */
+function MetaItem({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+    return (
+        <div className="flex items-start sm:items-center">
+            <div className="text-muted-foreground mr-3 mt-1 sm:mt-0">{icon}</div>
+            <div>
+                <p className="text-sm font-medium">{label}</p>
+                <p className="text-sm text-muted-foreground">{value}</p>
+            </div>
+        </div>
+    );
+}
+
+function InfoCard({
+                      title,
+                      icon,
+                      color,
+                      text
+                  }: {
+    title: string;
+    icon: React.ReactNode;
+    color: string;
+    text: string;
+}) {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className={`flex items-center text-sm ${color}`}>
+                    {icon}
+                    <span className="ml-2 text-foreground">{title}</span>
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p className="text-sm text-muted-foreground">{text}</p>
+            </CardContent>
+        </Card>
+    );
+}
+
+function InfoListCard({
+                          title,
+                          icon,
+                          color,
+                          items
+                      }: {
+    title: string;
+    icon: React.ReactNode;
+    color: string;
+    items: string[];
+}) {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className={`flex items-center ${color}`}>
+                    {icon}
+                    <span className="ml-2 text-foreground text-sm">{title}</span>
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <ul className="space-y-2">
+                    {items.map((item, i) => (
+                        <li key={i} className="flex items-start text-sm">
+                            <span className={`${color} mr-2`}>•</span>
+                            <span className="text-muted-foreground">{item}</span>
+                        </li>
+                    ))}
+                </ul>
+            </CardContent>
+        </Card>
+    );
+}
+
+function BadgeListCard({
+                           title,
+                           icon,
+                           color,
+                           items
+                       }: {
+    title: string;
+    icon: React.ReactNode;
+    color: string;
+    items: string[];
+}) {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className={`flex items-center ${color}`}>
+                    {icon}
+                    <span className="ml-2 text-foreground text-sm">{title}</span>
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="flex flex-wrap gap-2">
+                    {items.map((item, i) => (
+                        <Badge
+                            key={i}
+                            variant="outline"
+                            className="bg-gray-50 text-gray-700 border-gray-200 text-xs sm:text-sm"
+                        >
+                            {item}
+                        </Badge>
+                    ))}
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+function MetaLine({ label, value }: { label: string; value: string }) {
+    return (
+        <div>
+            <p className="font-medium">{label}</p>
+            <p className="text-muted-foreground">{value}</p>
         </div>
     );
 }

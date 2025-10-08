@@ -11,14 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, ArrowLeft, Save, Users, Building, AlertTriangle } from 'lucide-react';
+import { CalendarIcon, ArrowLeft, Save, Users } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { projectService } from '@/services/api';
 import { Project } from '@/types';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
-import { DollarSign } from "lucide-react";
 
 interface ProjectEditClientProps {
     initialProject: Project | null;
@@ -68,23 +67,15 @@ export default function ProjectEditClient({ initialProject, projectId }: Project
                 endDate: initialProject.endDate ? new Date(initialProject.endDate) : undefined,
                 stakeholders: initialProject.stakeholders || []
             });
-
-            if (initialProject.startDate) {
-                setStartDate(new Date(initialProject.startDate));
-            }
-            if (initialProject.endDate) {
-                setEndDate(new Date(initialProject.endDate));
-            }
-            if (initialProject.stakeholders) {
-                setStakeholders(initialProject.stakeholders);
-            }
+            if (initialProject.startDate) setStartDate(new Date(initialProject.startDate));
+            if (initialProject.endDate) setEndDate(new Date(initialProject.endDate));
+            if (initialProject.stakeholders) setStakeholders(initialProject.stakeholders);
         }
     }, [initialProject]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-
         try {
             await projectService.updateProject(projectId, {
                 ...formData,
@@ -101,7 +92,7 @@ export default function ProjectEditClient({ initialProject, projectId }: Project
         }
     };
 
-    const handleChange = (field: string, value: string) => {
+    const handleChange = (field: string, value: string | number) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
@@ -118,7 +109,7 @@ export default function ProjectEditClient({ initialProject, projectId }: Project
 
     if (!project) {
         return (
-            <div className="p-6 max-w-4xl mx-auto">
+            <div className="p-4 sm:p-6 max-w-4xl mx-auto">
                 <div className="animate-pulse space-y-4">
                     <div className="h-8 bg-slate-200 rounded w-1/4"></div>
                     <div className="h-48 bg-slate-200 rounded"></div>
@@ -128,7 +119,7 @@ export default function ProjectEditClient({ initialProject, projectId }: Project
     }
 
     return (
-        <div className="p-6 max-w-4xl mx-auto">
+        <div className="p-4 sm:p-6 max-w-4xl mx-auto">
             <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Project
@@ -145,6 +136,7 @@ export default function ProjectEditClient({ initialProject, projectId }: Project
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-6">
+                            {/* Project Name */}
                             <div className="space-y-2">
                                 <Label htmlFor="name">Project Name *</Label>
                                 <Input
@@ -153,9 +145,11 @@ export default function ProjectEditClient({ initialProject, projectId }: Project
                                     onChange={(e) => handleChange('name', e.target.value)}
                                     placeholder="Enter project name"
                                     required
+                                    className="w-full"
                                 />
                             </div>
 
+                            {/* Description */}
                             <div className="space-y-2">
                                 <Label htmlFor="description">Description</Label>
                                 <Textarea
@@ -164,17 +158,19 @@ export default function ProjectEditClient({ initialProject, projectId }: Project
                                     onChange={(e) => handleChange('description', e.target.value)}
                                     placeholder="Describe the project in detail"
                                     rows={4}
+                                    className="w-full"
                                 />
                             </div>
 
+                            {/* Status & Priority */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="status">Status</Label>
+                                <div className="space-y-2 w-full">
+                                    <Label>Status</Label>
                                     <Select
                                         value={formData.status}
                                         onValueChange={(value) => handleChange('status', value)}
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger className="w-full">
                                             <SelectValue placeholder="Select status" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -186,14 +182,13 @@ export default function ProjectEditClient({ initialProject, projectId }: Project
                                         </SelectContent>
                                     </Select>
                                 </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="priority">Priority</Label>
+                                <div className="space-y-2 w-full">
+                                    <Label>Priority</Label>
                                     <Select
                                         value={formData.priority}
                                         onValueChange={(value) => handleChange('priority', value)}
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger className="w-full">
                                             <SelectValue placeholder="Select priority" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -206,40 +201,41 @@ export default function ProjectEditClient({ initialProject, projectId }: Project
                                 </div>
                             </div>
 
+                            {/* Budget & Spent */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="budget">Budget ($)</Label>
+                                <div className="space-y-2 w-full">
+                                    <Label>Budget ($)</Label>
                                     <Input
-                                        id="budget"
                                         type="number"
-                                        value={formData.budget}
-                                        onChange={(e) => handleChange('budget', e.target.value)}
-                                        placeholder="Enter project budget"
                                         min="0"
+                                        value={formData.budget}
+                                        onChange={(e) => handleChange('budget', Number(e.target.value))}
+                                        placeholder="Enter project budget"
+                                        className="w-full"
                                     />
                                 </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="spent">Amount Spent ($)</Label>
+                                <div className="space-y-2 w-full">
+                                    <Label>Amount Spent ($)</Label>
                                     <Input
-                                        id="spent"
                                         type="number"
-                                        value={formData.spent}
-                                        onChange={(e) => handleChange('spent', e.target.value)}
-                                        placeholder="Enter amount spent"
                                         min="0"
+                                        value={formData.spent}
+                                        onChange={(e) => handleChange('spent', Number(e.target.value))}
+                                        placeholder="Enter amount spent"
+                                        className="w-full"
                                     />
                                 </div>
                             </div>
 
+                            {/* Risk Level & Department */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="riskLevel">Risk Level</Label>
+                                <div className="space-y-2 w-full">
+                                    <Label>Risk Level</Label>
                                     <Select
                                         value={formData.riskLevel}
                                         onValueChange={(value) => handleChange('riskLevel', value)}
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger className="w-full">
                                             <SelectValue placeholder="Select risk level" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -249,14 +245,13 @@ export default function ProjectEditClient({ initialProject, projectId }: Project
                                         </SelectContent>
                                     </Select>
                                 </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="department">Department</Label>
+                                <div className="space-y-2 w-full">
+                                    <Label>Department</Label>
                                     <Select
                                         value={formData.department}
                                         onValueChange={(value) => handleChange('department', value)}
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger className="w-full">
                                             <SelectValue placeholder="Select department" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -273,80 +268,59 @@ export default function ProjectEditClient({ initialProject, projectId }: Project
                                 </div>
                             </div>
 
+                            {/* Start & End Date */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>Start Date</Label>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                className={cn(
-                                                    "w-full justify-start text-left font-normal",
-                                                    !startDate && "text-muted-foreground"
-                                                )}
-                                            >
-                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {startDate ? format(startDate, "PPP") : "Pick a date"}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                            <Calendar
-                                                mode="single"
-                                                selected={startDate}
-                                                onSelect={setStartDate}
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label>End Date</Label>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                className={cn(
-                                                    "w-full justify-start text-left font-normal",
-                                                    !endDate && "text-muted-foreground"
-                                                )}
-                                            >
-                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {endDate ? format(endDate, "PPP") : "Pick a date"}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                            <Calendar
-                                                mode="single"
-                                                selected={endDate}
-                                                onSelect={setEndDate}
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                </div>
+                                {['Start Date', 'End Date'].map((label, idx) => {
+                                    const dateValue = idx === 0 ? startDate : endDate;
+                                    const setDate = idx === 0 ? setStartDate : setEndDate;
+                                    return (
+                                        <div className="space-y-2 w-full" key={label}>
+                                            <Label>{label}</Label>
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        className={cn(
+                                                            'w-full justify-start text-left font-normal',
+                                                            !dateValue && 'text-muted-foreground'
+                                                        )}
+                                                    >
+                                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                                        {dateValue ? format(dateValue, 'PPP') : 'Pick a date'}
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-auto p-0">
+                                                    <Calendar
+                                                        mode="single"
+                                                        selected={dateValue}
+                                                        onSelect={setDate}
+                                                        initialFocus
+                                                    />
+                                                </PopoverContent>
+                                            </Popover>
+                                        </div>
+                                    );
+                                })}
                             </div>
 
-                            <div className="space-y-2">
-                                <Label>Progress</Label>
-                                <div className="flex items-center gap-4">
-                                    <Input
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        value={formData.progress}
-                                        onChange={(e) => handleChange('progress', e.target.value)}
-                                        className="w-24"
-                                    />
-                                    <span>%</span>
-                                </div>
+                            {/* Progress */}
+                            <div className="space-y-2 w-full">
+                                <Label>Progress (%)</Label>
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    value={formData.progress}
+                                    onChange={(e) => handleChange('progress', Number(e.target.value))}
+                                    className="w-full"
+                                />
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="stakeholders">Stakeholders</Label>
-                                <div className="flex gap-2">
+                            {/* Stakeholders */}
+                            <div className="space-y-2 w-full">
+                                <Label>Stakeholders</Label>
+                                <div className="flex flex-col sm:flex-row gap-2 w-full">
                                     <Input
-                                        id="stakeholders"
                                         value={newStakeholder}
                                         onChange={(e) => setNewStakeholder(e.target.value)}
                                         placeholder="Enter stakeholder email"
@@ -356,8 +330,9 @@ export default function ProjectEditClient({ initialProject, projectId }: Project
                                                 addStakeholder();
                                             }
                                         }}
+                                        className="flex-1 w-full"
                                     />
-                                    <Button type="button" onClick={addStakeholder}>
+                                    <Button type="button" onClick={addStakeholder} className="w-full sm:w-auto flex-shrink-0">
                                         <Users className="h-4 w-4 mr-2" />
                                         Add
                                     </Button>
@@ -365,14 +340,9 @@ export default function ProjectEditClient({ initialProject, projectId }: Project
                                 {stakeholders.length > 0 && (
                                     <div className="mt-2 space-y-1">
                                         {stakeholders.map((email) => (
-                                            <div key={email} className="flex items-center justify-between bg-slate-100 px-3 py-1 rounded">
+                                            <div key={email} className="flex items-center justify-between bg-slate-100 px-3 py-1 rounded w-full">
                                                 <span className="text-sm">{email}</span>
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => removeStakeholder(email)}
-                                                >
+                                                <Button type="button" variant="ghost" size="sm" onClick={() => removeStakeholder(email)}>
                                                     ×
                                                 </Button>
                                             </div>
@@ -381,15 +351,12 @@ export default function ProjectEditClient({ initialProject, projectId }: Project
                                 )}
                             </div>
 
-                            <div className="flex justify-end gap-4 pt-4">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => router.back()}
-                                >
+                            {/* Buttons */}
+                            <div className="flex flex-col sm:flex-row justify-end gap-4 pt-4">
+                                <Button type="button" variant="outline" onClick={() => router.back()} className="w-full sm:w-auto">
                                     Cancel
                                 </Button>
-                                <Button type="submit" disabled={loading}>
+                                <Button type="submit" disabled={loading} className="w-full sm:w-auto">
                                     <Save className="h-4 w-4 mr-2" />
                                     {loading ? 'Updating...' : 'Update Project'}
                                 </Button>

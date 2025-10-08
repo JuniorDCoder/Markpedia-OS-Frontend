@@ -41,7 +41,6 @@ export default function NewTaskPage() {
         const now = new Date();
         const dayOfWeek = now.getDay(); // 0 = Sunday, 6 = Saturday
         const hour = now.getHours();
-
         return (dayOfWeek === 6) || (dayOfWeek === 0 && hour <= 16);
     };
 
@@ -59,7 +58,7 @@ export default function NewTaskPage() {
         try {
             await taskService.createTask({
                 ...formData,
-                dueDate: dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Default: 1 week from now
+                dueDate: dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
                 status: 'To Do',
             });
             toast.success('Task created successfully');
@@ -75,23 +74,28 @@ export default function NewTaskPage() {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
+    // ✅ Responsive Layout for Closed Creation Phase
     if (!canCreateTask) {
         return (
-            <div className="p-6 max-w-2xl mx-auto">
-                <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
+            <div className="p-4 sm:p-6 max-w-2xl mx-auto">
+                <Button
+                    variant="ghost"
+                    className="mb-6 flex items-center text-sm sm:text-base"
+                    onClick={() => router.back()}
+                >
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to Tasks
                 </Button>
 
-                <Card className="border-red-200">
+                <Card className="border-red-200 shadow-sm">
                     <CardHeader>
-                        <CardTitle className="text-red-600 flex items-center">
+                        <CardTitle className="text-red-600 flex items-center text-base sm:text-lg">
                             <AlertCircle className="h-5 w-5 mr-2" />
                             Creation Phase Closed
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <Alert variant="destructive" className="mb-6">
+                        <Alert variant="destructive" className="mb-6 text-sm sm:text-base">
                             <AlertDescription>
                                 Tasks can only be created during the creation phase:
                                 <br />
@@ -99,8 +103,8 @@ export default function NewTaskPage() {
                             </AlertDescription>
                         </Alert>
 
-                        <div className="flex items-center text-muted-foreground">
-                            <Clock className="h-4 w-4 mr-2" />
+                        <div className="flex items-start sm:items-center text-muted-foreground text-sm sm:text-base">
+                            <Clock className="h-4 w-4 mr-2 mt-0.5 sm:mt-0" />
                             <p>Please return during the next creation window to add new tasks.</p>
                         </div>
                     </CardContent>
@@ -109,9 +113,15 @@ export default function NewTaskPage() {
         );
     }
 
+    // ✅ Responsive Layout for Task Creation
     return (
-        <div className="p-6 max-w-2xl mx-auto">
-            <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
+        <div className="p-4 sm:p-6 max-w-2xl mx-auto">
+            {/* Back Button */}
+            <Button
+                variant="ghost"
+                className="mb-6 flex items-center text-sm sm:text-base"
+                onClick={() => router.back()}
+            >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Tasks
             </Button>
@@ -121,26 +131,31 @@ export default function NewTaskPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
             >
-                <Card>
+                <Card className="shadow-md rounded-xl border border-slate-200">
                     <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <CardTitle>Create New Task</CardTitle>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <CardTitle className="text-lg sm:text-xl font-semibold text-center sm:text-left">
+                                Create New Task
+                            </CardTitle>
+
                             {isPrivilegedUser && (
-                                <Badge className="bg-purple-100 text-purple-800 flex items-center">
+                                <Badge className="bg-purple-100 text-purple-800 flex items-center justify-center text-xs sm:text-sm px-2 py-1 rounded-md">
                                     <Crown className="h-3 w-3 mr-1" />
                                     Admin Privileges
                                 </Badge>
                             )}
                         </div>
-                        <p className="text-sm text-muted-foreground">
+
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-1 text-center sm:text-left">
                             {isPrivilegedUser
-                                ? "You can create tasks at any time with your admin privileges"
-                                : "Create a new task during the creation phase (Sat/Sun before 4:00 PM)"
-                            }
+                                ? 'You can create tasks at any time with your admin privileges'
+                                : 'Create a new task during the creation phase (Sat/Sun before 4:00 PM)'}
                         </p>
                     </CardHeader>
+
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-6">
+                            {/* Task Title */}
                             <div className="space-y-2">
                                 <Label htmlFor="title">Task Title *</Label>
                                 <Input
@@ -149,9 +164,11 @@ export default function NewTaskPage() {
                                     onChange={(e) => handleChange('title', e.target.value)}
                                     placeholder="Enter task title"
                                     required
+                                    className="text-sm sm:text-base"
                                 />
                             </div>
 
+                            {/* Description */}
                             <div className="space-y-2">
                                 <Label htmlFor="description">Description</Label>
                                 <Textarea
@@ -160,17 +177,19 @@ export default function NewTaskPage() {
                                     onChange={(e) => handleChange('description', e.target.value)}
                                     placeholder="Describe the task in detail"
                                     rows={4}
+                                    className="text-sm sm:text-base"
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Priority & Due Date */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="priority">Priority</Label>
                                     <Select
                                         value={formData.priority}
                                         onValueChange={(value) => handleChange('priority', value)}
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger className="text-sm sm:text-base">
                                             <SelectValue placeholder="Select priority" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -189,12 +208,12 @@ export default function NewTaskPage() {
                                             <Button
                                                 variant="outline"
                                                 className={cn(
-                                                    "w-full justify-start text-left font-normal",
-                                                    !dueDate && "text-muted-foreground"
+                                                    'w-full justify-start text-left font-normal text-sm sm:text-base',
+                                                    !dueDate && 'text-muted-foreground'
                                                 )}
                                             >
                                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {dueDate ? format(dueDate, "PPP") : "Pick a date"}
+                                                {dueDate ? format(dueDate, 'PPP') : 'Pick a date'}
                                             </Button>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-auto p-0">
@@ -209,15 +228,21 @@ export default function NewTaskPage() {
                                 </div>
                             </div>
 
-                            <div className="flex justify-end gap-4 pt-4">
+                            {/* Buttons */}
+                            <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 pt-4">
                                 <Button
                                     type="button"
                                     variant="outline"
                                     onClick={() => router.back()}
+                                    className="w-full sm:w-auto"
                                 >
                                     Cancel
                                 </Button>
-                                <Button type="submit" disabled={loading}>
+                                <Button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="w-full sm:w-auto"
+                                >
                                     <Save className="h-4 w-4 mr-2" />
                                     {loading ? 'Creating...' : 'Create Task'}
                                 </Button>

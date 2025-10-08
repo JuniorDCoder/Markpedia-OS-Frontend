@@ -101,7 +101,7 @@ export default function TaskDetailClient({ initialTask, taskId }: TaskDetailClie
 
     if (loading) {
         return (
-            <div className="p-6 max-w-4xl mx-auto">
+            <div className="p-6">
                 <div className="animate-pulse space-y-4">
                     <div className="h-8 bg-slate-200 rounded w-1/4"></div>
                     <div className="h-48 bg-slate-200 rounded"></div>
@@ -112,7 +112,7 @@ export default function TaskDetailClient({ initialTask, taskId }: TaskDetailClie
 
     if (!task) {
         return (
-            <div className="p-6 max-w-4xl mx-auto">
+            <div className="p-6">
                 <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>Task not found</AlertDescription>

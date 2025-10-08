@@ -128,15 +128,29 @@ export default function PIPFormClient({ mode, initialData }: Props) {
                         value={form.appealNote || ""}
                         onChange={(e) => handleChange("appealNote", e.target.value)}
                     />
-                    <div className="flex gap-4 justify-end pt-6 border-t">
-                        <Button type="button" variant="outline" asChild disabled={saving}>
+                    {/* Action Buttons - Fixed positioning */}
+                    <div className="flex flex-col sm:flex-row gap-3 justify-end pt-4 md:pt-6 border-t mt-4 md:mt-6">
+                        <Button type="button" variant="outline" asChild disabled={saving} className="order-2 sm:order-1">
                             <Link href={cancelHref}>
                                 Cancel
                             </Link>
                         </Button>
-                        <Button onClick={handleSubmit} disabled={saving}>
-                            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                            {mode === "create" ? "Create PIP" : "Update PIP"}
+                        <Button onClick={handleSubmit} disabled={saving} className="order-1 sm:order-2">
+                            {saving ? (
+                                <>
+                                    <Loader2 className="h-3 w-3 md:h-4 md:w-4 animate-spin mr-1 md:mr-2" />
+                                    <span className="text-sm md:text-base">
+                                        {mode === "create" ? "Creating..." : "Updating..."}
+                                    </span>
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                                    <span className="text-sm md:text-base">
+                                        {mode === "create" ? "Create PIP" : "Update PIP"}
+                                    </span>
+                                </>
+                            )}
                         </Button>
                     </div>
                 </CardContent>

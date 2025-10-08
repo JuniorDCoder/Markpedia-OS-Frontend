@@ -322,18 +322,23 @@ export default function ProblemsPage() {
     }
 
     return (
-        <div className="space-y-6 p-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight flex items-center">
-                        <AlertTriangle className="h-8 w-8 mr-3 text-amber-600" />
-                        Problems & RCA Management
-                    </h1>
-                    <p className="text-muted-foreground mt-2">
-                        Track problems, perform 5-Whys root cause analysis, and implement corrective/preventive actions
-                    </p>
+        <div className="space-y-4 p-4 sm:p-6">
+            {/* Header Section */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center">
+                        <AlertTriangle className="h-6 w-6 sm:h-8 sm:w-8 mr-2 sm:mr-3 text-amber-600 flex-shrink-0" />
+                        <div className="min-w-0">
+                            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight truncate">
+                                Problems & RCA Management
+                            </h1>
+                            <p className="text-muted-foreground text-sm sm:text-base mt-1 line-clamp-2">
+                                Track problems, perform 5-Whys root cause analysis, and implement corrective/preventive actions
+                            </p>
+                        </div>
+                    </div>
                 </div>
-                <Button asChild>
+                <Button asChild className="w-full sm:w-auto">
                     <Link href="/work/problems/new">
                         <Plus className="h-4 w-4 mr-2" />
                         Report Problem
@@ -343,41 +348,41 @@ export default function ProblemsPage() {
 
             {/* Filters */}
             <Card>
-                <CardContent className="pt-6">
-                    <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="flex-1 relative">
+                <CardContent className="pt-4 sm:pt-6">
+                    <div className="flex flex-col gap-3">
+                        <div className="relative">
                             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                             <Input
                                 placeholder="Search problems..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10"
+                                className="pl-10 text-sm sm:text-base"
                             />
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                             <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-[150px]">
+                                <SelectTrigger className="w-full sm:w-[150px] text-sm">
                                     <Filter className="h-4 w-4 mr-2" />
                                     <SelectValue placeholder="Status" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">All Status</SelectItem>
-                                    <SelectItem value="Open">Open</SelectItem>
-                                    <SelectItem value="Investigating">Investigating</SelectItem>
-                                    <SelectItem value="Resolved">Resolved</SelectItem>
-                                    <SelectItem value="Closed">Closed</SelectItem>
+                                    <SelectItem value="all" className="text-sm">All Status</SelectItem>
+                                    <SelectItem value="Open" className="text-sm">Open</SelectItem>
+                                    <SelectItem value="Investigating" className="text-sm">Investigating</SelectItem>
+                                    <SelectItem value="Resolved" className="text-sm">Resolved</SelectItem>
+                                    <SelectItem value="Closed" className="text-sm">Closed</SelectItem>
                                 </SelectContent>
                             </Select>
                             <Select value={severityFilter} onValueChange={setSeverityFilter}>
-                                <SelectTrigger className="w-[150px]">
+                                <SelectTrigger className="w-full sm:w-[150px] text-sm">
                                     <SelectValue placeholder="Severity" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">All Severity</SelectItem>
-                                    <SelectItem value="Low">Low</SelectItem>
-                                    <SelectItem value="Medium">Medium</SelectItem>
-                                    <SelectItem value="High">High</SelectItem>
-                                    <SelectItem value="Critical">Critical</SelectItem>
+                                    <SelectItem value="all" className="text-sm">All Severity</SelectItem>
+                                    <SelectItem value="Low" className="text-sm">Low</SelectItem>
+                                    <SelectItem value="Medium" className="text-sm">Medium</SelectItem>
+                                    <SelectItem value="High" className="text-sm">High</SelectItem>
+                                    <SelectItem value="Critical" className="text-sm">Critical</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -389,17 +394,19 @@ export default function ProblemsPage() {
             {filteredProblems.length === 0 ? (
                 <Card>
                     <CardContent className="pt-6">
-                        <div className="text-center py-12">
-                            <AlertTriangle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                            <h3 className="text-lg font-medium text-muted-foreground mb-2">No problems found</h3>
-                            <p className="text-sm text-muted-foreground mb-4">
+                        <div className="text-center py-8 sm:py-12">
+                            <AlertTriangle className="h-8 w-8 sm:h-12 sm:w-12 mx-auto text-muted-foreground mb-3 sm:mb-4" />
+                            <h3 className="text-base sm:text-lg font-medium text-muted-foreground mb-2">
+                                No problems found
+                            </h3>
+                            <p className="text-xs sm:text-sm text-muted-foreground mb-4">
                                 {searchTerm || statusFilter !== 'all' || severityFilter !== 'all'
                                     ? 'Try adjusting your search or filter criteria'
                                     : 'Great! No problems reported yet'
                                 }
                             </p>
                             {!searchTerm && statusFilter === 'all' && severityFilter === 'all' && (
-                                <Button asChild>
+                                <Button asChild size="sm" className="w-full sm:w-auto">
                                     <Link href="/work/problems/new">
                                         <Plus className="h-4 w-4 mr-2" />
                                         Report Problem
@@ -410,19 +417,19 @@ export default function ProblemsPage() {
                     </CardContent>
                 </Card>
             ) : (
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                     {filteredProblems.map(problem => (
                         <Card key={problem.id} className="hover:shadow-md transition-shadow">
                             <CardHeader className="pb-3 cursor-pointer" onClick={() => toggleExpand(problem.id)}>
-                                <div className="flex items-start justify-between">
-                                    <div className="space-y-2 flex-1">
-                                        <div className="flex items-center">
-                                            {expandedProblem === problem.id ? (
-                                                <ChevronDown className="h-5 w-5 mr-2 text-muted-foreground" />
-                                            ) : (
-                                                <ChevronRight className="h-5 w-5 mr-2 text-muted-foreground" />
-                                            )}
-                                            <CardTitle className="text-lg">
+                                <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                                    <div className="flex items-start space-x-2 flex-1 min-w-0">
+                                        {expandedProblem === problem.id ? (
+                                            <ChevronDown className="h-4 w-4 sm:h-5 sm:w-5 mt-1 flex-shrink-0 text-muted-foreground" />
+                                        ) : (
+                                            <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 mt-1 flex-shrink-0 text-muted-foreground" />
+                                        )}
+                                        <div className="min-w-0 flex-1">
+                                            <CardTitle className="text-base sm:text-lg truncate">
                                                 <Link
                                                     href={`/work/problems/${problem.id}`}
                                                     className="hover:underline"
@@ -431,21 +438,23 @@ export default function ProblemsPage() {
                                                     {problem.title}
                                                 </Link>
                                             </CardTitle>
-                                        </div>
-                                        <CardDescription>{problem.description}</CardDescription>
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <Badge variant="secondary" className={getStatusColor(problem.status)}>
-                                                {problem.status}
-                                            </Badge>
-                                            <Badge variant="outline" className={getSeverityColor(problem.severity)}>
-                                                {problem.severity}
-                                            </Badge>
-                                            <Badge variant="outline" className={getCategoryColor(problem.category)}>
-                                                {problem.category}
-                                            </Badge>
+                                            <CardDescription className="text-xs sm:text-sm line-clamp-2 mt-1">
+                                                {problem.description}
+                                            </CardDescription>
+                                            <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-2">
+                                                <Badge variant="secondary" className={getStatusColor(problem.status)}>
+                                                    <span className="text-xs">{problem.status}</span>
+                                                </Badge>
+                                                <Badge variant="outline" className={getSeverityColor(problem.severity)}>
+                                                    <span className="text-xs">{problem.severity}</span>
+                                                </Badge>
+                                                <Badge variant="outline" className={getCategoryColor(problem.category)}>
+                                                    <span className="text-xs">{problem.category}</span>
+                                                </Badge>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="flex flex-col items-end gap-2">
+                                    <div className="flex sm:flex-col items-center sm:items-end gap-2">
                                         {problem.status === 'Resolved' && (
                                             <Button
                                                 size="sm"
@@ -453,9 +462,10 @@ export default function ProblemsPage() {
                                                     e.stopPropagation();
                                                     closeProblem(problem.id);
                                                 }}
+                                                className="w-full sm:w-auto text-xs"
                                             >
-                                                <CheckCircle className="h-4 w-4 mr-2" />
-                                                Close Problem
+                                                <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                                                Close
                                             </Button>
                                         )}
                                         {problem.status === 'Closed' && (
@@ -466,59 +476,64 @@ export default function ProblemsPage() {
                                                     e.stopPropagation();
                                                     reopenProblem(problem.id);
                                                 }}
+                                                className="w-full sm:w-auto text-xs"
                                             >
-                                                <Clock className="h-4 w-4 mr-2" />
+                                                <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                                                 Reopen
                                             </Button>
                                         )}
                                     </div>
                                 </div>
                             </CardHeader>
-                            <CardContent>
-                                <div className="flex flex-wrap items-center justify-between text-sm text-muted-foreground mb-4">
+                            <CardContent className="pt-0">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs text-muted-foreground mb-3">
                                     <div className="flex items-center">
-                                        <User className="h-4 w-4 mr-1" />
-                                        Reported by {problem.reportedBy}
+                                        <User className="h-3 w-3 mr-1 flex-shrink-0" />
+                                        <span className="truncate">By {problem.reportedBy}</span>
                                     </div>
                                     <div className="flex items-center">
-                                        <User className="h-4 w-4 mr-1" />
-                                        {problem.assignedTo ? `Assigned to ${problem.assignedTo}` : 'Unassigned'}
+                                        <User className="h-3 w-3 mr-1 flex-shrink-0" />
+                                        <span className="truncate">
+                                            {problem.assignedTo ? `To ${problem.assignedTo}` : 'Unassigned'}
+                                        </span>
                                     </div>
                                     <div className="flex items-center">
-                                        <Calendar className="h-4 w-4 mr-1" />
-                                        Reported {new Date(problem.reportedDate).toLocaleDateString()}
+                                        <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
+                                        <span>Reported {new Date(problem.reportedDate).toLocaleDateString()}</span>
                                     </div>
                                     {problem.resolvedDate && (
                                         <div className="flex items-center">
-                                            <Calendar className="h-4 w-4 mr-1" />
-                                            Resolved {new Date(problem.resolvedDate).toLocaleDateString()}
+                                            <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
+                                            <span>Resolved {new Date(problem.resolvedDate).toLocaleDateString()}</span>
                                         </div>
                                     )}
                                 </div>
 
                                 {expandedProblem === problem.id && (
-                                    <div className="space-y-6 mt-4 border-t pt-4">
+                                    <div className="space-y-4 mt-3 border-t pt-3">
                                         {/* 5-Whys Analysis */}
                                         {problem.fiveWhysAnalysis && (
                                             <div>
-                                                <h4 className="font-medium mb-3 flex items-center">
-                                                    <FileText className="h-4 w-4 mr-2 text-blue-600" />
+                                                <h4 className="font-medium text-sm sm:text-base mb-2 flex items-center">
+                                                    <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-blue-600 flex-shrink-0" />
                                                     5-Whys Root Cause Analysis
                                                 </h4>
-                                                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                                                    <p className="font-medium mb-2">Problem Statement:</p>
-                                                    <p className="text-sm mb-4">{problem.fiveWhysAnalysis.problemStatement}</p>
+                                                <div className="bg-blue-50 p-3 sm:p-4 rounded-lg border border-blue-100 text-xs sm:text-sm">
+                                                    <p className="font-medium mb-1 sm:mb-2">Problem Statement:</p>
+                                                    <p className="mb-3">{problem.fiveWhysAnalysis.problemStatement}</p>
 
-                                                    <p className="font-medium mb-2">5-Whys Process:</p>
-                                                    <ol className="list-decimal pl-5 space-y-2 text-sm">
+                                                    <p className="font-medium mb-1 sm:mb-2">5-Whys Process:</p>
+                                                    <ol className="list-decimal pl-4 space-y-1">
                                                         {problem.fiveWhysAnalysis.whys.map((why, index) => (
-                                                            <li key={index}>{why}</li>
+                                                            <li key={index} className="leading-relaxed">
+                                                                {why}
+                                                            </li>
                                                         ))}
                                                     </ol>
 
-                                                    <div className="mt-4 p-3 bg-white rounded border">
-                                                        <p className="font-medium text-blue-800">Root Cause Identified:</p>
-                                                        <p>{problem.fiveWhysAnalysis.rootCause}</p>
+                                                    <div className="mt-3 p-2 sm:p-3 bg-white rounded border">
+                                                        <p className="font-medium text-blue-800 text-xs sm:text-sm">Root Cause Identified:</p>
+                                                        <p className="text-xs sm:text-sm">{problem.fiveWhysAnalysis.rootCause}</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -527,16 +542,16 @@ export default function ProblemsPage() {
                                         {/* Corrective Actions */}
                                         {problem.correctiveActions && problem.correctiveActions.length > 0 && (
                                             <div>
-                                                <h4 className="font-medium mb-3 flex items-center">
-                                                    <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                                                <h4 className="font-medium text-sm sm:text-base mb-2 flex items-center">
+                                                    <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-green-600 flex-shrink-0" />
                                                     Corrective Actions
                                                 </h4>
-                                                <div className="space-y-3">
+                                                <div className="space-y-2">
                                                     {problem.correctiveActions.map(action => (
-                                                        <div key={action.id} className="flex items-center justify-between p-3 bg-green-50 rounded border border-green-100">
-                                                            <div className="flex-1">
-                                                                <p className="font-medium">{action.description}</p>
-                                                                <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-muted-foreground">
+                                                        <div key={action.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-2 sm:p-3 bg-green-50 rounded border border-green-100 gap-2">
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="font-medium text-xs sm:text-sm">{action.description}</p>
+                                                                <div className="flex flex-wrap items-center gap-1 mt-1 text-xs text-muted-foreground">
                                                                     <span>Assigned to: {action.assignedTo}</span>
                                                                     <span>•</span>
                                                                     <span>Due: {new Date(action.dueDate).toLocaleDateString()}</span>
@@ -547,17 +562,17 @@ export default function ProblemsPage() {
                                                                     value={action.status}
                                                                     onValueChange={(value) => updateActionStatus(problem.id, action.id, 'corrective', value)}
                                                                 >
-                                                                    <SelectTrigger className="w-[130px]">
+                                                                    <SelectTrigger className="w-[120px] sm:w-[130px] text-xs">
                                                                         <SelectValue placeholder="Status" />
                                                                     </SelectTrigger>
                                                                     <SelectContent>
-                                                                        <SelectItem value="Not Started">Not Started</SelectItem>
-                                                                        <SelectItem value="In Progress">In Progress</SelectItem>
-                                                                        <SelectItem value="Completed">Completed</SelectItem>
+                                                                        <SelectItem value="Not Started" className="text-xs">Not Started</SelectItem>
+                                                                        <SelectItem value="In Progress" className="text-xs">In Progress</SelectItem>
+                                                                        <SelectItem value="Completed" className="text-xs">Completed</SelectItem>
                                                                     </SelectContent>
                                                                 </Select>
                                                                 <Badge className={getActionStatusColor(action.status)}>
-                                                                    {action.status}
+                                                                    <span className="text-xs">{action.status}</span>
                                                                 </Badge>
                                                             </div>
                                                         </div>
@@ -569,16 +584,16 @@ export default function ProblemsPage() {
                                         {/* Preventive Actions */}
                                         {problem.preventiveActions && problem.preventiveActions.length > 0 && (
                                             <div>
-                                                <h4 className="font-medium mb-3 flex items-center">
-                                                    <AlertTriangle className="h-4 w-4 mr-2 text-amber-600" />
+                                                <h4 className="font-medium text-sm sm:text-base mb-2 flex items-center">
+                                                    <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-amber-600 flex-shrink-0" />
                                                     Preventive Actions
                                                 </h4>
-                                                <div className="space-y-3">
+                                                <div className="space-y-2">
                                                     {problem.preventiveActions.map(action => (
-                                                        <div key={action.id} className="flex items-center justify-between p-3 bg-amber-50 rounded border border-amber-100">
-                                                            <div className="flex-1">
-                                                                <p className="font-medium">{action.description}</p>
-                                                                <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-muted-foreground">
+                                                        <div key={action.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-2 sm:p-3 bg-amber-50 rounded border border-amber-100 gap-2">
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="font-medium text-xs sm:text-sm">{action.description}</p>
+                                                                <div className="flex flex-wrap items-center gap-1 mt-1 text-xs text-muted-foreground">
                                                                     <span>Assigned to: {action.assignedTo}</span>
                                                                     <span>•</span>
                                                                     <span>Due: {new Date(action.dueDate).toLocaleDateString()}</span>
@@ -589,17 +604,17 @@ export default function ProblemsPage() {
                                                                     value={action.status}
                                                                     onValueChange={(value) => updateActionStatus(problem.id, action.id, 'preventive', value)}
                                                                 >
-                                                                    <SelectTrigger className="w-[130px]">
+                                                                    <SelectTrigger className="w-[120px] sm:w-[130px] text-xs">
                                                                         <SelectValue placeholder="Status" />
                                                                     </SelectTrigger>
                                                                     <SelectContent>
-                                                                        <SelectItem value="Not Started">Not Started</SelectItem>
-                                                                        <SelectItem value="In Progress">In Progress</SelectItem>
-                                                                        <SelectItem value="Completed">Completed</SelectItem>
+                                                                        <SelectItem value="Not Started" className="text-xs">Not Started</SelectItem>
+                                                                        <SelectItem value="In Progress" className="text-xs">In Progress</SelectItem>
+                                                                        <SelectItem value="Completed" className="text-xs">Completed</SelectItem>
                                                                     </SelectContent>
                                                                 </Select>
                                                                 <Badge className={getActionStatusColor(action.status)}>
-                                                                    {action.status}
+                                                                    <span className="text-xs">{action.status}</span>
                                                                 </Badge>
                                                             </div>
                                                         </div>
@@ -608,13 +623,13 @@ export default function ProblemsPage() {
                                             </div>
                                         )}
 
-                                        <div className="flex justify-end gap-2 pt-4">
-                                            <Button asChild variant="outline" size="sm">
+                                        <div className="flex flex-col sm:flex-row justify-end gap-2 pt-3">
+                                            <Button asChild variant="outline" size="sm" className="w-full sm:w-auto text-xs">
                                                 <Link href={`/work/problems/${problem.id}`}>
                                                     View Details
                                                 </Link>
                                             </Button>
-                                            <Button asChild size="sm">
+                                            <Button asChild size="sm" className="w-full sm:w-auto text-xs">
                                                 <Link href={`/work/problems/${problem.id}/edit`}>
                                                     Edit Problem
                                                 </Link>

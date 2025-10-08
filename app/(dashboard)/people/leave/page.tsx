@@ -119,18 +119,19 @@ export default function LeavePage() {
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight flex items-center">
-                        <Calendar className="h-8 w-8 mr-3" />
-                        Leave Requests
+        <div className="space-y-6 px-4 sm:px-6 lg:px-8 py-4">
+            {/* Header Section - Responsive */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2 sm:gap-3">
+                        <Calendar className="h-6 w-6 sm:h-8 sm:w-8 flex-shrink-0" />
+                        <span className="truncate">Leave Requests</span>
                     </h1>
-                    <p className="text-muted-foreground mt-2">
+                    <p className="text-muted-foreground mt-2 text-sm sm:text-base">
                         Manage employee leave requests and approvals
                     </p>
                 </div>
-                <Button asChild>
+                <Button asChild className="w-full sm:w-auto">
                     <Link href="/people/leave/new">
                         <Plus className="h-4 w-4 mr-2" />
                         Request Leave
@@ -138,68 +139,71 @@ export default function LeavePage() {
                 </Button>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid gap-4 md:grid-cols-4">
+            {/* Stats Cards - Responsive Grid */}
+            <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Requests</CardTitle>
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-xs sm:text-sm font-medium">Total Requests</CardTitle>
+                        <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{leaveRequests.length}</div>
+                        <div className="text-xl sm:text-2xl font-bold">{leaveRequests.length}</div>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Pending</CardTitle>
-                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-xs sm:text-sm font-medium">Pending</CardTitle>
+                        <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">
+                        <div className="text-xl sm:text-2xl font-bold">
                             {leaveRequests.filter(r => r.status === 'Pending').length}
                         </div>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Approved</CardTitle>
-                        <Check className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-xs sm:text-sm font-medium">Approved</CardTitle>
+                        <Check className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">
+                        <div className="text-xl sm:text-2xl font-bold">
                             {leaveRequests.filter(r => r.status === 'Approved').length}
                         </div>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Days</CardTitle>
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-xs sm:text-sm font-medium">Total Days</CardTitle>
+                        <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">
+                        <div className="text-xl sm:text-2xl font-bold">
                             {leaveRequests.reduce((sum, r) => sum + r.days, 0)}
                         </div>
                     </CardContent>
                 </Card>
             </div>
 
-            {/* Filters */}
+            {/* Filters - Responsive Layout */}
             <Card>
                 <CardContent className="pt-6">
-                    <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="flex-1 relative">
+                    <div className="flex flex-col gap-4">
+                        {/* Search Bar */}
+                        <div className="relative">
                             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                             <Input
                                 placeholder="Search by reason or employee name..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10"
+                                className="pl-10 text-sm"
                             />
                         </div>
-                        <div className="flex gap-2">
+
+                        {/* Filter Dropdowns */}
+                        <div className="flex flex-col sm:flex-row gap-2">
                             <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-[150px]">
+                                <SelectTrigger className="w-full sm:w-[150px] text-sm">
                                     <SelectValue placeholder="Status" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -210,7 +214,7 @@ export default function LeavePage() {
                                 </SelectContent>
                             </Select>
                             <Select value={typeFilter} onValueChange={setTypeFilter}>
-                                <SelectTrigger className="w-[150px]">
+                                <SelectTrigger className="w-full sm:w-[150px] text-sm">
                                     <SelectValue placeholder="Type" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -231,17 +235,19 @@ export default function LeavePage() {
             {filteredRequests.length === 0 ? (
                 <Card>
                     <CardContent className="pt-6">
-                        <div className="text-center py-12">
+                        <div className="text-center py-12 px-4">
                             <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                            <h3 className="text-lg font-medium text-muted-foreground mb-2">No leave requests found</h3>
-                            <p className="text-sm text-muted-foreground mb-4">
+                            <h3 className="text-base sm:text-lg font-medium text-muted-foreground mb-2">
+                                No leave requests found
+                            </h3>
+                            <p className="text-xs sm:text-sm text-muted-foreground mb-4">
                                 {searchTerm || statusFilter !== 'all' || typeFilter !== 'all'
                                     ? 'Try adjusting your search or filter criteria'
                                     : 'No leave requests have been submitted yet'
                                 }
                             </p>
                             {!searchTerm && statusFilter === 'all' && typeFilter === 'all' && (
-                                <Button asChild>
+                                <Button asChild className="w-full sm:w-auto">
                                     <Link href="/people/leave/new">
                                         <Plus className="h-4 w-4 mr-2" />
                                         Request Leave
@@ -255,35 +261,40 @@ export default function LeavePage() {
                 <div className="space-y-4">
                     {filteredRequests.map(request => (
                         <Card key={request.id} className="hover:shadow-md transition-shadow">
-                            <CardHeader>
-                                <div className="flex items-start justify-between">
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-2">
-                                            <Badge variant="outline" className={getTypeColor(request.type)}>
+                            <CardHeader className="pb-3 sm:pb-6">
+                                <div className="flex flex-col gap-3 sm:gap-0 sm:flex-row sm:items-start sm:justify-between">
+                                    <div className="space-y-2 flex-1 min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <Badge variant="outline" className={`${getTypeColor(request.type)} text-xs`}>
                                                 {request.type}
                                             </Badge>
-                                            <Badge variant="secondary" className={getStatusColor(request.status)}>
+                                            <Badge variant="secondary" className={`${getStatusColor(request.status)} text-xs`}>
                                                 {request.status}
                                             </Badge>
                                         </div>
-                                        <CardTitle className="text-lg">
+                                        <CardTitle className="text-base sm:text-lg">
                                             {request.days} day{request.days !== 1 ? 's' : ''} leave request
                                         </CardTitle>
-                                        <CardDescription className="flex items-center gap-2">
-                                            <User className="h-4 w-4" />
-                                            {request.userName || 'Unknown User'} - {request.reason}
+                                        <CardDescription className="flex items-start gap-2 text-xs sm:text-sm">
+                                            <User className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                                            <span className="break-words">
+                                                {request.userName || 'Unknown User'} - {request.reason}
+                                            </span>
                                         </CardDescription>
                                     </div>
-                                    <div className="flex gap-2">
+
+                                    {/* Action Buttons - Responsive */}
+                                    <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:ml-4">
                                         {/* View Button - Always visible */}
                                         <Button
                                             size="sm"
                                             variant="ghost"
                                             asChild
+                                            className="text-xs"
                                         >
                                             <Link href={`/people/leave/${request.id}`}>
-                                                <Eye className="h-4 w-4 mr-1" />
-                                                View
+                                                <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                                                <span className="hidden sm:inline">View</span>
                                             </Link>
                                         </Button>
 
@@ -293,10 +304,11 @@ export default function LeavePage() {
                                                 size="sm"
                                                 variant="ghost"
                                                 asChild
+                                                className="text-xs"
                                             >
                                                 <Link href={`/people/leave/${request.id}/edit`}>
-                                                    <Edit className="h-4 w-4 mr-1" />
-                                                    Edit
+                                                    <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                                                    <span className="hidden sm:inline">Edit</span>
                                                 </Link>
                                             </Button>
                                         )}
@@ -308,19 +320,19 @@ export default function LeavePage() {
                                                     size="sm"
                                                     variant="outline"
                                                     onClick={() => handleApproval(request.id, 'approve')}
-                                                    className="text-green-600 hover:text-green-700"
+                                                    className="text-green-600 hover:text-green-700 text-xs"
                                                 >
-                                                    <Check className="h-4 w-4 mr-1" />
-                                                    Approve
+                                                    <Check className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                                    <span className="hidden sm:inline">Approve</span>
                                                 </Button>
                                                 <Button
                                                     size="sm"
                                                     variant="outline"
                                                     onClick={() => handleApproval(request.id, 'reject')}
-                                                    className="text-red-600 hover:text-red-700"
+                                                    className="text-red-600 hover:text-red-700 text-xs"
                                                 >
-                                                    <X className="h-4 w-4 mr-1" />
-                                                    Reject
+                                                    <X className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                                    <span className="hidden sm:inline">Reject</span>
                                                 </Button>
                                             </>
                                         )}
@@ -328,46 +340,56 @@ export default function LeavePage() {
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                    <div>
-                                        <div className="font-medium text-muted-foreground">Employee</div>
+                                {/* Details Grid - Responsive */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-xs sm:text-sm">
+                                    <div className="flex items-center sm:block">
+                                        <div className="font-medium text-muted-foreground min-w-[100px] sm:min-w-0 sm:mb-1">
+                                            Employee
+                                        </div>
                                         <div className="flex items-center">
-                                            <User className="h-3 w-3 mr-1" />
-                                            {request.userName || 'Unknown User'}
+                                            <User className="h-3 w-3 mr-1 flex-shrink-0" />
+                                            <span className="truncate">{request.userName || 'Unknown User'}</span>
                                         </div>
                                     </div>
-                                    <div>
-                                        <div className="font-medium text-muted-foreground">Start Date</div>
+                                    <div className="flex items-center sm:block">
+                                        <div className="font-medium text-muted-foreground min-w-[100px] sm:min-w-0 sm:mb-1">
+                                            Start Date
+                                        </div>
                                         <div className="flex items-center">
-                                            <Calendar className="h-3 w-3 mr-1" />
+                                            <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
                                             {new Date(request.startDate).toLocaleDateString()}
                                         </div>
                                     </div>
-                                    <div>
-                                        <div className="font-medium text-muted-foreground">End Date</div>
+                                    <div className="flex items-center sm:block">
+                                        <div className="font-medium text-muted-foreground min-w-[100px] sm:min-w-0 sm:mb-1">
+                                            End Date
+                                        </div>
                                         <div className="flex items-center">
-                                            <Calendar className="h-3 w-3 mr-1" />
+                                            <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
                                             {new Date(request.endDate).toLocaleDateString()}
                                         </div>
                                     </div>
-                                    <div>
-                                        <div className="font-medium text-muted-foreground">Requested</div>
+                                    <div className="flex items-center sm:block">
+                                        <div className="font-medium text-muted-foreground min-w-[100px] sm:min-w-0 sm:mb-1">
+                                            Requested
+                                        </div>
                                         <div className="flex items-center">
-                                            <Clock className="h-3 w-3 mr-1" />
+                                            <Clock className="h-3 w-3 mr-1 flex-shrink-0" />
                                             {new Date(request.createdAt).toLocaleDateString()}
                                         </div>
                                     </div>
                                 </div>
 
+                                {/* Approval Info */}
                                 {request.approvedBy && (
                                     <div className="mt-4 p-3 bg-muted rounded-lg">
-                                        <div className="text-sm">
-                      <span className="font-medium">
-                        {request.status} by {request.approvedByName || 'manager'}
-                      </span>
+                                        <div className="text-xs sm:text-sm">
+                                            <span className="font-medium">
+                                                {request.status} by {request.approvedByName || 'manager'}
+                                            </span>
                                             <span className="text-muted-foreground ml-2">
-                        on {new Date(request.updatedAt).toLocaleDateString()}
-                      </span>
+                                                on {new Date(request.updatedAt).toLocaleDateString()}
+                                            </span>
                                         </div>
                                     </div>
                                 )}

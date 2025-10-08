@@ -38,61 +38,133 @@ export default function WarningsListPage() {
 
     if (loading) return <TableSkeleton />;
 
-    return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold">Warnings & PIPs</h1>
-                    <p className="text-muted-foreground">Manage employee disciplinary actions & improvement plans</p>
+    const WarningCard = ({ warning }: { warning: Warning }) => (
+        <div
+            key={warning.id}
+            className="flex flex-col sm:flex-row sm:items-center justify-between p-3 md:p-4 border rounded-lg hover:bg-accent/50 transition gap-3"
+        >
+            <div className="flex-1 min-w-0">
+                <div className="font-medium text-sm md:text-base mb-1 flex items-center gap-1 md:gap-2 flex-wrap">
+                    <span className="line-clamp-1">{warning.employeeName}</span>
+                    <Badge variant="outline" className="text-xs">{warning.level}</Badge>
+                    {warning.acknowledgment && <Badge className="bg-green-100 text-green-700 text-xs">Acknowledged</Badge>}
                 </div>
-                <Button asChild>
+                <div className="text-xs md:text-sm text-muted-foreground flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                    <span className="flex items-center">
+                        <User className="h-3 w-3 mr-1 flex-shrink-0" />
+                        By: {warning.issuedBy}
+                    </span>
+                    <span className="flex items-center">
+                        <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
+                        {new Date(warning.dateIssued).toLocaleDateString()}
+                    </span>
+                </div>
+            </div>
+            <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+                <Badge className="text-xs">{warning.status}</Badge>
+                <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
+                        <Link href={`/people/warnings/${warning.id}`}>
+                            <Eye className="h-3 w-3 md:h-4 md:w-4" />
+                        </Link>
+                    </Button>
+                    <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
+                        <Link href={`/people/warnings/${warning.id}/edit`}>
+                            <Edit className="h-3 w-3 md:h-4 md:w-4" />
+                        </Link>
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive">
+                        <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+
+    const PIPCard = ({ pip }: { pip: PIP }) => (
+        <div
+            key={pip.id}
+            className="flex flex-col sm:flex-row sm:items-center justify-between p-3 md:p-4 border rounded-lg hover:bg-accent/50 transition gap-3"
+        >
+            <div className="flex-1 min-w-0">
+                <div className="font-medium text-sm md:text-base mb-1 flex items-center gap-1 md:gap-2 flex-wrap">
+                    <span className="line-clamp-1">{pip.employeeName}</span>
+                    <Badge variant="outline" className="text-xs">{pip.duration}-Day</Badge>
+                    {pip.appealNote && <Badge className="bg-yellow-100 text-yellow-700 text-xs">Appealed</Badge>}
+                </div>
+                <div className="text-xs md:text-sm text-muted-foreground flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                    <span className="flex items-center">
+                        <User className="h-3 w-3 mr-1 flex-shrink-0" />
+                        Manager: {pip.manager}
+                    </span>
+                    <span className="flex items-center">
+                        <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
+                        Start: {new Date(pip.startDate).toLocaleDateString()}
+                    </span>
+                </div>
+            </div>
+            <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+                <Badge className="text-xs">{pip.status}</Badge>
+                <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
+                        <Link href={`/people/warnings/pip/${pip.id}`}>
+                            <Eye className="h-3 w-3 md:h-4 md:w-4" />
+                        </Link>
+                    </Button>
+                    <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
+                        <Link href={`/people/warnings/pip/${pip.id}/edit`}>
+                            <Edit className="h-3 w-3 md:h-4 md:w-4" />
+                        </Link>
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive">
+                        <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="space-y-4 md:space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                    <h1 className="text-xl md:text-2xl lg:text-3xl font-bold tracking-tight">
+                        Warnings & PIPs
+                    </h1>
+                    <p className="text-muted-foreground text-xs md:text-sm mt-1">
+                        Manage employee disciplinary actions & improvement plans
+                    </p>
+                </div>
+                <Button asChild size="sm" className="hidden sm:flex flex-shrink-0">
                     <Link href="/people/warnings/new">
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Warning/PIP
+                        <Plus className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                        <span className="hidden md:inline">New Warning/PIP</span>
+                        <span className="md:hidden">New</span>
+                    </Link>
+                </Button>
+                <Button asChild size="icon" className="sm:hidden flex-shrink-0">
+                    <Link href="/people/warnings/new">
+                        <Plus className="h-4 w-4" />
                     </Link>
                 </Button>
             </div>
 
             {/* Warnings List */}
             <Card>
-                <CardHeader>
-                    <CardTitle>Warnings</CardTitle>
-                    <CardDescription>Verbal, Written, Final stages with acknowledgment</CardDescription>
+                <CardHeader className="pb-3">
+                    <CardTitle className="text-lg md:text-xl">Warnings</CardTitle>
+                    <CardDescription className="text-sm">
+                        Verbal, Written, Final stages with acknowledgment
+                    </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-0">
                     {warnings.length === 0 ? (
-                        <p className="text-muted-foreground">No warnings issued yet.</p>
+                        <p className="text-muted-foreground text-sm py-4 text-center">No warnings issued yet.</p>
                     ) : (
-                        <div className="space-y-3">
-                            {warnings.map((w) => (
-                                <div
-                                    key={w.id}
-                                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition"
-                                >
-                                    <div>
-                                        <div className="font-medium flex items-center gap-2">
-                                            {w.employeeName}
-                                            <Badge variant="outline">{w.level}</Badge>
-                                            {w.acknowledgment && <Badge className="bg-green-100 text-green-700">Acknowledged</Badge>}
-                                        </div>
-                                        <p className="text-sm text-muted-foreground flex gap-4">
-                                            <span className="flex items-center"><User className="h-3 w-3 mr-1" /> By: {w.issuedBy}</span>
-                                            <span className="flex items-center"><Calendar className="h-3 w-3 mr-1" /> {new Date(w.dateIssued).toLocaleDateString()}</span>
-                                        </p>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <Badge>{w.status}</Badge>
-                                        <Button variant="ghost" size="sm" asChild>
-                                            <Link href={`/people/warnings/${w.id}`}><Eye className="h-4 w-4" /></Link>
-                                        </Button>
-                                        <Button variant="ghost" size="sm" asChild>
-                                            <Link href={`/people/warnings/${w.id}/edit`}><Edit className="h-4 w-4" /></Link>
-                                        </Button>
-                                        <Button variant="ghost" size="sm" className="text-destructive">
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </div>
+                        <div className="space-y-2 md:space-y-3">
+                            {warnings.map((warning) => (
+                                <WarningCard key={warning.id} warning={warning} />
                             ))}
                         </div>
                     )}
@@ -101,44 +173,19 @@ export default function WarningsListPage() {
 
             {/* PIP List */}
             <Card>
-                <CardHeader>
-                    <CardTitle>Performance Improvement Plans (PIPs)</CardTitle>
-                    <CardDescription>30 / 60 / 90 day improvement programs</CardDescription>
+                <CardHeader className="pb-3">
+                    <CardTitle className="text-lg md:text-xl">Performance Improvement Plans (PIPs)</CardTitle>
+                    <CardDescription className="text-sm">
+                        30 / 60 / 90 day improvement programs
+                    </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-0">
                     {pips.length === 0 ? (
-                        <p className="text-muted-foreground">No PIPs created yet.</p>
+                        <p className="text-muted-foreground text-sm py-4 text-center">No PIPs created yet.</p>
                     ) : (
-                        <div className="space-y-3">
-                            {pips.map((p) => (
-                                <div
-                                    key={p.id}
-                                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition"
-                                >
-                                    <div>
-                                        <div className="font-medium flex items-center gap-2">
-                                            {p.employeeName}
-                                            <Badge variant="outline">{p.duration}-Day</Badge>
-                                            {p.appealNote && <Badge className="bg-yellow-100 text-yellow-700">Appealed</Badge>}
-                                        </div>
-                                        <p className="text-sm text-muted-foreground flex gap-4">
-                                            <span className="flex items-center"><User className="h-3 w-3 mr-1" /> Manager: {p.manager}</span>
-                                            <span className="flex items-center"><Calendar className="h-3 w-3 mr-1" /> Start: {new Date(p.startDate).toLocaleDateString()}</span>
-                                        </p>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <Badge>{p.status}</Badge>
-                                        <Button variant="ghost" size="sm" asChild>
-                                            <Link href={`/people/warnings/pip/${p.id}`}><Eye className="h-4 w-4" /></Link>
-                                        </Button>
-                                        <Button variant="ghost" size="sm" asChild>
-                                            <Link href={`/people/warnings/pip/${p.id}/edit`}><Edit className="h-4 w-4" /></Link>
-                                        </Button>
-                                        <Button variant="ghost" size="sm" className="text-destructive">
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </div>
+                        <div className="space-y-2 md:space-y-3">
+                            {pips.map((pip) => (
+                                <PIPCard key={pip.id} pip={pip} />
                             ))}
                         </div>
                     )}
