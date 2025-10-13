@@ -2,17 +2,17 @@ import {DataType} from "csstype";
 import Attachment = DataType.Attachment;
 
 export interface User {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: 'CEO' | 'Admin' | 'Manager' | 'Employee' | 'CXO';
-  department?: string;
-  position?: string;
-  avatar?: string;
-  isActive: boolean;
-  createdAt: string;
-  lastLogin?: string;
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: 'CEO' | 'Admin' | 'Manager' | 'Employee' | 'CXO';
+    department?: string;
+    position?: string;
+    avatar?: string;
+    isActive: boolean;
+    createdAt: string;
+    lastLogin?: string;
     permissions?: string[]; // e.g., ['view_reports', 'manage_users']
 }
 
@@ -30,6 +30,118 @@ export interface Employee {
     isActive: boolean;
 }
 
+// Add these new interfaces for Dashboard
+export interface DepartmentPerformance {
+    id: string;
+    name: string;
+    kpiFocus: string;
+    status: string;
+    trend: '📈' | '📉' | '↔';
+    comments: string;
+    okrProgress?: number;
+    healthScore?: number;
+}
+
+export interface RiskIndicator {
+    id: string;
+    category: string;
+    indicator: string;
+    level: 'Low' | 'Medium' | 'High' | 'Critical';
+    status: '🟢' | '🟠' | '🔴' | '⚠️';
+    lastUpdated: string;
+    assignedTo?: string;
+}
+
+export interface AIInsight {
+    id: string;
+    category: 'Performance' | 'Finance' | 'Risk' | 'HR' | 'Innovation' | 'Operations';
+    insight: string;
+    confidence: number;
+    impact: 'Low' | 'Medium' | 'High';
+    recommendedActions?: string[];
+    generatedAt: string;
+}
+
+export interface ExecutiveDecision {
+    id: string;
+    type: 'Decision' | 'Alert' | 'Issue' | 'Task';
+    description: string;
+    assignedTo: string;
+    status: '✅ Done' | '⚠️ In Review' | '🟢 Resolved' | '⏳ Pending' | '🚨 Critical';
+    priority: 'Low' | 'Medium' | 'High' | 'Critical';
+    createdAt: string;
+    dueDate?: string;
+    relatedDepartment?: string;
+}
+
+export interface FinancialOverview {
+    totalRevenue: number;
+    operatingExpenses: number;
+    grossProfitMargin: number;
+    monthlyCashflow: number;
+    receivables: number;
+    payables: number;
+    accountBalances: number;
+    lastUpdated: string;
+}
+
+export interface PeopleAnalytics {
+    totalEmployees: number;
+    activeStaff: number;
+    attendanceRate: number;
+    punctualityIndex: number;
+    topPerformers: number;
+    warningRatio: number;
+    employeeSatisfaction: number;
+    turnoverRate: number;
+}
+
+export interface OperationalMetrics {
+    activeBuyersSellers: number;
+    averageDeliveryTime: number;
+    escrowTransactions: number;
+    ticketsClosed: number;
+    systemUptime: number;
+    newFeaturesReleased: number;
+    disputesResolved: number;
+}
+
+// Update the existing KPI interface to be more comprehensive
+export interface KPI {
+    id: string;
+    title: string;
+    value: string | number;
+    change: number;
+    changeType: 'increase' | 'decrease';
+    icon: string;
+    color: string;
+    target?: number;
+    unit?: string;
+    period?: 'daily' | 'weekly' | 'monthly' | 'quarterly';
+}
+
+// Add Dashboard-specific interfaces
+export interface DashboardData {
+    executiveSummary: {
+        departmentsActive: number;
+        totalEmployees: number;
+        monthlyRevenue: number;
+        transactionsCompleted: number;
+        growthRate: number;
+        systemUptime: number;
+        organizationalHealth: number;
+    };
+    departmentPerformance: DepartmentPerformance[];
+    financialOverview: FinancialOverview;
+    operationalAnalytics: OperationalMetrics;
+    peopleAnalytics: PeopleAnalytics;
+    riskIndicators: RiskIndicator[];
+    aiInsights: AIInsight[];
+    executiveDecisions: ExecutiveDecision[];
+    lastUpdated: string;
+}
+
+// Keep all your existing interfaces below (they remain unchanged)
 export interface OrganigramNode {
     id: string;
     employeeId: string;
@@ -53,11 +165,10 @@ export interface OrganigramSnapshot {
     createdBy: string;
 }
 
-
 export interface AuthState {
-  user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
+    user: User | null;
+    isAuthenticated: boolean;
+    isLoading: boolean;
     hasPermission: (permission: string) => boolean;
 }
 
@@ -82,16 +193,16 @@ export interface Project {
 }
 
 export interface Task {
-  id: string;
-  title: string;
-  description: string;
-  status: 'To Do' | 'In Progress' | 'Review' | 'Done';
-  priority: 'Low' | 'Medium' | 'High' | 'Critical';
-  assignedTo: string;
-  projectId?: string;
-  dueDate: string;
-  createdAt: string;
-  updatedAt: string;
+    id: string;
+    title: string;
+    description: string;
+    status: 'To Do' | 'In Progress' | 'Review' | 'Done';
+    priority: 'Low' | 'Medium' | 'High' | 'Critical';
+    assignedTo: string;
+    projectId?: string;
+    dueDate: string;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface AttendanceRecord {
@@ -106,10 +217,11 @@ export interface AttendanceRecord {
     createdAt?: string;
     updatedAt?: string;
 }
+
 export interface LeaveRequest {
     id: string;
     userId: string;
-    userName?: string; // Add this
+    userName?: string;
     type: 'Annual' | 'Sick' | 'Personal' | 'Maternity' | 'Emergency';
     startDate: string;
     endDate: string;
@@ -132,24 +244,14 @@ export interface CreateLeaveRequest {
 }
 
 export interface CashbookEntry {
-  id: string;
-  type: 'Income' | 'Expense';
-  amount: number;
-  description: string;
-  category: string;
-  date: string;
-  createdBy: string;
-  proofUrl?: string;
-}
-
-export interface KPI {
-  id: string;
-  title: string;
-  value: string | number;
-  change: number;
-  changeType: 'increase' | 'decrease';
-  icon: string;
-  color: string;
+    id: string;
+    type: 'Income' | 'Expense';
+    amount: number;
+    description: string;
+    category: string;
+    date: string;
+    createdBy: string;
+    proofUrl?: string;
 }
 
 export interface Meeting {
@@ -167,9 +269,9 @@ export interface Meeting {
     actionItems: ActionItem[];
     createdBy: string;
     status: 'Scheduled' | 'In Progress' | 'Completed' | 'Cancelled';
-    otterAIId?: string; // Otter AI meeting ID
-    transcript?: string; // Full transcript from Otter AI
-    summary?: string; // AI-generated summary
+    otterAIId?: string;
+    transcript?: string;
+    summary?: string;
 }
 
 export interface Decision {
@@ -248,20 +350,20 @@ export interface Problem {
 }
 
 export interface JobDescription {
-  id: string;
-  title: string;
-  department: string;
-  level: string;
-  summary: string;
-  responsibilities: string[];
-  requirements: string[];
-  qualifications: string[];
-  benefits: string[];
-  version: number;
-  status: 'Draft' | 'Active' | 'Archived';
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
+    id: string;
+    title: string;
+    department: string;
+    level: string;
+    summary: string;
+    responsibilities: string[];
+    requirements: string[];
+    qualifications: string[];
+    benefits: string[];
+    version: number;
+    status: 'Draft' | 'Active' | 'Archived';
+    createdBy: string;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface Department {
@@ -334,12 +436,6 @@ export interface TeamMember {
     role?: Role;
     createdAt: string;
     updatedAt: string;
-}
-
-export interface Department {
-    id: string;
-    name: string;
-    description: string;
 }
 
 export interface Role {
@@ -419,13 +515,13 @@ export interface CreateMoneyRequest {
 }
 
 export interface GMVEntry {
-  id: string;
-  date: string;
-  amount: number;
-  source: string;
-  description: string;
-  category: string;
-  createdBy: string;
+    id: string;
+    date: string;
+    amount: number;
+    source: string;
+    description: string;
+    category: string;
+    createdBy: string;
 }
 
 export interface Goal {
@@ -457,6 +553,7 @@ export interface KeyResult {
     unit: string;
     status: 'Not Started' | 'In Progress' | 'At Risk' | 'Completed';
 }
+
 export interface JournalEntry {
     id: string;
     title: string;
@@ -485,104 +582,55 @@ export interface QuickCapture {
     processed: boolean;
     convertedTo?: 'task' | 'goal' | 'meeting' | null;
 }
-export interface Decision {
-  id: string;
-  title: string;
-  description: string;
-  context: string;
-  decision: string;
-  rationale: string;
-  impact: string;
-  stakeholders: string[];
-  effectiveDate: string;
-  reviewDate?: string;
-  status: 'Draft' | 'Active' | 'Superseded';
-  createdBy: string;
-  createdAt: string;
-}
-
-export interface JournalEntry {
-  id: string;
-  title: string;
-  content: string;
-  tags: string[];
-  mood?: 'Great' | 'Good' | 'Neutral' | 'Challenging' | 'Difficult';
-  createdBy: string;
-  createdAt: string;
-  isPrivate: boolean;
-}
 
 export interface Innovation {
-  id: string;
-  title: string;
-  description: string;
-  category: 'Product' | 'Process' | 'Technology' | 'Business Model';
-  stage: 'Idea' | 'Pilot' | 'Scale' | 'Implemented' | 'Discontinued';
-  submittedBy: string;
-  submittedDate: string;
-  estimatedImpact: 'Low' | 'Medium' | 'High';
-  estimatedEffort: 'Low' | 'Medium' | 'High';
-  status: 'Under Review' | 'Approved' | 'In Development' | 'Testing' | 'Deployed';
-  assignedTo?: string;
-  feedback?: string;
-}
-
-export interface OrganigramNode {
     id: string;
-    employeeId: string;
-    position: {
-        x: number;
-        y: number;
-    };
-    size: {
-        width: number;
-        height: number;
-    };
-    children: string[];
-}
-
-export interface OrganigramSnapshot {
-    id: string;
-    name: string;
-    description?: string;
-    nodes: OrganigramNode[];
-    createdAt: string;
-    createdBy: string;
+    title: string;
+    description: string;
+    category: 'Product' | 'Process' | 'Technology' | 'Business Model';
+    stage: 'Idea' | 'Pilot' | 'Scale' | 'Implemented' | 'Discontinued';
+    submittedBy: string;
+    submittedDate: string;
+    estimatedImpact: 'Low' | 'Medium' | 'High';
+    estimatedEffort: 'Low' | 'Medium' | 'High';
+    status: 'Under Review' | 'Approved' | 'In Development' | 'Testing' | 'Deployed';
+    assignedTo?: string;
+    feedback?: string;
 }
 
 export interface Policy {
-  id: string;
-  title: string;
-  description: string;
-  content: string;
-  category: string;
-  version: number;
-  status: 'Draft' | 'Active' | 'Archived';
-  effectiveDate: string;
-  reviewDate: string;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
-  acknowledgments: PolicyAcknowledgment[];
+    id: string;
+    title: string;
+    description: string;
+    content: string;
+    category: string;
+    version: number;
+    status: 'Draft' | 'Active' | 'Archived';
+    effectiveDate: string;
+    reviewDate: string;
+    createdBy: string;
+    createdAt: string;
+    updatedAt: string;
+    acknowledgments: PolicyAcknowledgment[];
 }
 
 export interface PolicyAcknowledgment {
-  userId: string;
-  acknowledgedAt: string;
-  version: number;
+    userId: string;
+    acknowledgedAt: string;
+    version: number;
 }
 
 export interface SOP {
-  id: string;
-  title: string;
-  description: string;
-  department: string;
-  steps: SOPStep[];
-  version: number;
-  status: 'Draft' | 'Active' | 'Archived';
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
+    id: string;
+    title: string;
+    description: string;
+    department: string;
+    steps: SOPStep[];
+    version: number;
+    status: 'Draft' | 'Active' | 'Archived';
+    createdBy: string;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface ChecklistItem {
@@ -590,134 +638,130 @@ export interface ChecklistItem {
     description: string;
     completed: boolean;
     order: number;
-    // Optional fields you might want to add:
     required?: boolean;
     notes?: string;
     completedAt?: string;
     completedBy?: string;
-    estimatedTime?: number; // in minutes
+    estimatedTime?: number;
     attachments?: Attachment[];
 }
 
 export interface SOPStep {
-  id: string;
-  title: string;
-  description: string;
-  order: number;
-  checklistItems: ChecklistItem[];
-  isRequired: boolean;
-  estimatedTime?: number;
-  resources?: string[];
+    id: string;
+    title: string;
+    description: string;
+    order: number;
+    checklistItems: ChecklistItem[];
+    isRequired: boolean;
+    estimatedTime?: number;
+    resources?: string[];
 }
 
 export interface Post {
-  id: string;
-  content: string;
-  authorId: string;
-  authorName: string;
-  authorAvatar?: string;
-  createdAt: string;
-  updatedAt?: string;
-  likes: string[];
-  comments: Comment[];
-  attachments?: string[];
-  isPoll?: boolean;
-  pollOptions?: PollOption[];
-  status: 'Published' | 'Draft' | 'Archived';
+    id: string;
+    content: string;
+    authorId: string;
+    authorName: string;
+    authorAvatar?: string;
+    createdAt: string;
+    updatedAt?: string;
+    likes: string[];
+    comments: Comment[];
+    attachments?: string[];
+    isPoll?: boolean;
+    pollOptions?: PollOption[];
+    status: 'Published' | 'Draft' | 'Archived';
 }
 
 export interface Comment {
-  id: string;
-  content: string;
-  authorId: string;
-  authorName: string;
-  authorAvatar?: string;
-  createdAt: string;
-  likes: string[];
+    id: string;
+    content: string;
+    authorId: string;
+    authorName: string;
+    authorAvatar?: string;
+    createdAt: string;
+    likes: string[];
 }
 
 export interface PollOption {
-  id: string;
-  text: string;
-  votes: string[];
+    id: string;
+    text: string;
+    votes: string[];
 }
 
 export interface Recognition {
-  id: string;
-  recipientId: string;
-  recipientName: string;
-  nominatedBy: string;
-  nominatorName: string;
-  category: 'Excellence' | 'Innovation' | 'Teamwork' | 'Leadership' | 'Customer Service';
-  description: string;
-  month: string;
-  year: number;
-  status: 'Nominated' | 'Winner' | 'Archived';
-  votes: string[];
-  createdAt: string;
+    id: string;
+    recipientId: string;
+    recipientName: string;
+    nominatedBy: string;
+    nominatorName: string;
+    category: 'Excellence' | 'Innovation' | 'Teamwork' | 'Leadership' | 'Customer Service';
+    description: string;
+    month: string;
+    year: number;
+    status: 'Nominated' | 'Winner' | 'Archived';
+    votes: string[];
+    createdAt: string;
 }
 
 export interface Channel {
-  id: string;
-  name: string;
-  description?: string;
-  type: 'Public' | 'Private' | 'Direct';
-  members: string[];
-  createdBy: string;
-  createdAt: string;
-  lastActivity: string;
+    id: string;
+    name: string;
+    description?: string;
+    type: 'Public' | 'Private' | 'Direct';
+    members: string[];
+    createdBy: string;
+    createdAt: string;
+    lastActivity: string;
 }
 
 export interface Message {
-  id: string;
-  channelId: string;
-  content: string;
-  authorId: string;
-  authorName: string;
-  authorAvatar?: string;
-  createdAt: string;
-  updatedAt?: string;
-  attachments?: string[];
-  mentions?: string[];
-  reactions?: MessageReaction[];
-  threadId?: string;
-  isEdited?: boolean;
+    id: string;
+    channelId: string;
+    content: string;
+    authorId: string;
+    authorName: string;
+    authorAvatar?: string;
+    createdAt: string;
+    updatedAt?: string;
+    attachments?: string[];
+    mentions?: string[];
+    reactions?: MessageReaction[];
+    threadId?: string;
+    isEdited?: boolean;
 }
 
 export interface MessageReaction {
-  emoji: string;
-  users: string[];
+    emoji: string;
+    users: string[];
 }
 
 export interface CalendarEvent {
-  id: string;
-  title: string;
-  description?: string;
-  startDate: string;
-  endDate: string;
-  startTime?: string;
-  endTime?: string;
-  type: 'Meeting' | 'Training' | 'Holiday' | 'Deadline' | 'All-Hands' | 'Personal';
-  location?: string;
-  attendees?: string[];
-  isAllDay: boolean;
-  isRecurring: boolean;
-  recurrenceRule?: string;
-  createdBy: string;
-  createdAt: string;
+    id: string;
+    title: string;
+    description?: string;
+    startDate: string;
+    endDate: string;
+    startTime?: string;
+    endTime?: string;
+    type: 'Meeting' | 'Training' | 'Holiday' | 'Deadline' | 'All-Hands' | 'Personal';
+    location?: string;
+    attendees?: string[];
+    isAllDay: boolean;
+    isRecurring: boolean;
+    recurrenceRule?: string;
+    createdBy: string;
+    createdAt: string;
 }
 
 export interface AgendaItem {
-  id: string;
-  title: string;
-  description?: string;
-  date: string;
-  time?: string;
-  priority: 'Low' | 'Medium' | 'High';
-  status: 'Pending' | 'In Progress' | 'Completed';
-  category: 'Meeting' | 'Task' | 'Review' | 'Decision';
-  createdBy: string;
-}
-
-export class Department {
+    id: string;
+    title: string;
+    description?: string;
+    date: string;
+    time?: string;
+    priority: 'Low' | 'Medium' | 'High';
+    status: 'Pending' | 'In Progress' | 'Completed';
+    category: 'Meeting' | 'Task' | 'Review' | 'Decision';
+    createdBy: string;
 }
