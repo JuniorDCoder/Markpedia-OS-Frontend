@@ -11,13 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, ArrowLeft, Save, Users, Building, AlertTriangle } from 'lucide-react';
+import { CalendarIcon, ArrowLeft, Save, Users, Building, Target, Plus, X, DollarSign } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { projectService } from '@/services/api';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
-import { DollarSign } from 'lucide-react';
 
 export default function NewProjectPage() {
     const { user } = useAuthStore();
@@ -25,24 +24,26 @@ export default function NewProjectPage() {
     const [loading, setLoading] = useState(false);
     const [startDate, setStartDate] = useState<Date>();
     const [endDate, setEndDate] = useState<Date>();
-    const [stakeholders, setStakeholders] = useState<string[]>([]);
-    const [newStakeholder, setNewStakeholder] = useState('');
 
     const [formData, setFormData] = useState({
-        name: '',
-        description: '',
-        priority: 'Medium',
-        status: 'Planning',
-        riskLevel: 'Low',
+        title: '',
         department: '',
+        owner: '',
+        purpose: '',
+        strategicObjective: '',
+        linkedOKR: '',
+        priority: 'Medium',
+        status: 'Planned',
         budget: 0,
-        spent: 0,
         progress: 0,
-        assignedTo: [user.id],
-        startDate: undefined as Date | undefined,
-        endDate: undefined as Date | undefined,
-        stakeholders: [] as string[],
     });
+
+    const [kpis, setKpis] = useState([{ objective: '', deliverable: '', kpi: '' }]);
+    const [milestones, setMilestones] = useState([{ milestone: '', date: '', status: '⏳' as '✅' | '⏳' | '❌' }]);
+    const [team, setTeam] = useState([{ role: '', name: '', responsibility: '' }]);
+    const [tasks, setTasks] = useState([{ task: '', owner: '', dueDate: '', status: 'Not Started' as 'Not Started' | 'In Progress' | 'Done' | 'Delayed' }]);
+    const [budgetBreakdown, setBudgetBreakdown] = useState([{ category: '', description: '', amount: 0, status: 'Pending' as 'Approved' | 'Pending' | 'In Progress' | 'Reserved' }]);
+    const [risks, setRisks] = useState([{ risk: '', impact: 'Medium' as 'Low' | 'Medium' | 'High', likelihood: 'Medium' as 'Low' | 'Medium' | 'High', mitigation: '' }]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -51,9 +52,17 @@ export default function NewProjectPage() {
         try {
             await projectService.createProject({
                 ...formData,
-                startDate: startDate || new Date(),
-                endDate: endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default: 30 days from now
-                stakeholders: stakeholders,
+                startDate: startDate?.toISOString() || new Date().toISOString(),
+                endDate: endDate?.toISOString() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                kpis: kpis.filter(kpi => kpi.objective || kpi.deliverable || kpi.kpi),
+                milestones: milestones.filter(milestone => milestone.milestone),
+                team: team.filter(member => member.role || member.name),
+                tasks: tasks.filter(task => task.task),
+                budgetBreakdown: budgetBreakdown.filter(item => item.category),
+                risks: risks.filter(risk => risk.risk),
+                spent: 0,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
             });
             toast.success('Project created successfully');
             router.push('/work/projects');
@@ -64,23 +73,32 @@ export default function NewProjectPage() {
         }
     };
 
-    const handleChange = (field: string, value: string) => {
+    const handleChange = (field: string, value: string | number) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
-    const addStakeholder = () => {
-        if (newStakeholder.trim() && !stakeholders.includes(newStakeholder.trim())) {
-            setStakeholders([...stakeholders, newStakeholder.trim()]);
-            setNewStakeholder('');
-        }
+    const addArrayItem = (array: any[], setArray: any, defaultItem: any) => {
+        setArray([...array, defaultItem]);
     };
 
-    const removeStakeholder = (email: string) => {
-        setStakeholders(stakeholders.filter(s => s !== email));
+    const updateArrayItem = (array: any[], setArray: any, index: number, field: string, value: any) => {
+        const newArray = [...array];
+        newArray[index] = { ...newArray[index], [field]: value };
+        setArray(newArray);
     };
+
+    const removeArrayItem = (array: any[], setArray: any, index: number) => {
+        const newArray = array.filter((_, i) => i !== index);
+        setArray(newArray);
+    };
+
+    const departments = [
+        'Trust & Safety', 'Tech Department', 'Engineering', 'Marketing',
+        'Sales', 'HR', 'Finance', 'Operations', 'IT', 'Design'
+    ];
 
     return (
-        <div className="p-6 max-w-4xl mx-auto">
+        <div className="p-6 max-w-6xl mx-auto">
             <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Projects
@@ -96,228 +114,336 @@ export default function NewProjectPage() {
                         <CardTitle>Create New Project</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            <div className="space-y-2">
-                                <Label htmlFor="name">Project Name *</Label>
-                                <Input
-                                    id="name"
-                                    value={formData.name}
-                                    onChange={(e) => handleChange('name', e.target.value)}
-                                    placeholder="Enter project name"
-                                    required
-                                />
-                            </div>
+                        <form onSubmit={handleSubmit} className="space-y-8">
+                            {/* Basic Information */}
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-semibold">Basic Information</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="title">Project Title *</Label>
+                                        <Input
+                                            id="title"
+                                            value={formData.title}
+                                            onChange={(e) => handleChange('title', e.target.value)}
+                                            placeholder="Enter project title"
+                                            required
+                                        />
+                                    </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="description">Description</Label>
-                                <Textarea
-                                    id="description"
-                                    value={formData.description}
-                                    onChange={(e) => handleChange('description', e.target.value)}
-                                    placeholder="Describe the project in detail"
-                                    rows={4}
-                                />
-                            </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="department">Department *</Label>
+                                        <Select
+                                            value={formData.department}
+                                            onValueChange={(value) => handleChange('department', value)}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select department" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {departments.map(dept => (
+                                                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="status">Status</Label>
-                                    <Select
-                                        value={formData.status}
-                                        onValueChange={(value) => handleChange('status', value)}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select status" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Planning">Planning</SelectItem>
-                                            <SelectItem value="In Progress">In Progress</SelectItem>
-                                            <SelectItem value="On Hold">On Hold</SelectItem>
-                                            <SelectItem value="Completed">Completed</SelectItem>
-                                            <SelectItem value="At Risk">At Risk</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="owner">Project Owner *</Label>
+                                        <Input
+                                            id="owner"
+                                            value={formData.owner}
+                                            onChange={(e) => handleChange('owner', e.target.value)}
+                                            placeholder="Enter project owner"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="priority">Priority</Label>
+                                        <Select
+                                            value={formData.priority}
+                                            onValueChange={(value) => handleChange('priority', value)}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select priority" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Low">Low</SelectItem>
+                                                <SelectItem value="Medium">Medium</SelectItem>
+                                                <SelectItem value="High">High</SelectItem>
+                                                <SelectItem value="Critical">Critical</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="priority">Priority</Label>
-                                    <Select
-                                        value={formData.priority}
-                                        onValueChange={(value) => handleChange('priority', value)}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select priority" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Low">Low</SelectItem>
-                                            <SelectItem value="Medium">Medium</SelectItem>
-                                            <SelectItem value="High">High</SelectItem>
-                                            <SelectItem value="Critical">Critical</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="riskLevel">Risk Level</Label>
-                                    <Select
-                                        value={formData.riskLevel}
-                                        onValueChange={(value) => handleChange('riskLevel', value)}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select risk level" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Low">Low</SelectItem>
-                                            <SelectItem value="Medium">Medium</SelectItem>
-                                            <SelectItem value="High">High</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="department">Department</Label>
-                                    <Select
-                                        value={formData.department}
-                                        onValueChange={(value) => handleChange('department', value)}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select department" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Engineering">Engineering</SelectItem>
-                                            <SelectItem value="Marketing">Marketing</SelectItem>
-                                            <SelectItem value="Sales">Sales</SelectItem>
-                                            <SelectItem value="HR">Human Resources</SelectItem>
-                                            <SelectItem value="Finance">Finance</SelectItem>
-                                            <SelectItem value="Operations">Operations</SelectItem>
-                                            <SelectItem value="IT">IT</SelectItem>
-                                            <SelectItem value="Design">Design</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="budget">Budget ($)</Label>
-                                    <Input
-                                        id="budget"
-                                        type="number"
-                                        value={formData.budget}
-                                        onChange={(e) => handleChange('budget', e.target.value)}
-                                        placeholder="Enter project budget"
-                                        min="0"
+                                    <Label htmlFor="purpose">Purpose *</Label>
+                                    <Textarea
+                                        id="purpose"
+                                        value={formData.purpose}
+                                        onChange={(e) => handleChange('purpose', e.target.value)}
+                                        placeholder="Describe the project purpose and objectives"
+                                        rows={3}
+                                        required
                                     />
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="spent">Amount Spent ($)</Label>
-                                    <Input
-                                        id="spent"
-                                        type="number"
-                                        value={formData.spent}
-                                        onChange={(e) => handleChange('spent', e.target.value)}
-                                        placeholder="Enter amount spent"
-                                        min="0"
-                                    />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="strategicObjective">Strategic Objective</Label>
+                                        <Input
+                                            id="strategicObjective"
+                                            value={formData.strategicObjective}
+                                            onChange={(e) => handleChange('strategicObjective', e.target.value)}
+                                            placeholder="Company strategic objective"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="linkedOKR">Linked OKR</Label>
+                                        <Input
+                                            id="linkedOKR"
+                                            value={formData.linkedOKR}
+                                            onChange={(e) => handleChange('linkedOKR', e.target.value)}
+                                            placeholder="e.g., 95% Verified Sellers by Q1 2026"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label>Start Date</Label>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    className={cn(
+                                                        "w-full justify-start text-left font-normal",
+                                                        !startDate && "text-muted-foreground"
+                                                    )}
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {startDate ? format(startDate, "PPP") : "Pick a date"}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={startDate}
+                                                    onSelect={setStartDate}
+                                                    initialFocus
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label>End Date</Label>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    className={cn(
+                                                        "w-full justify-start text-left font-normal",
+                                                        !endDate && "text-muted-foreground"
+                                                    )}
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {endDate ? format(endDate, "PPP") : "Pick a date"}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={endDate}
+                                                    onSelect={setEndDate}
+                                                    initialFocus
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="budget">Total Budget ($)</Label>
+                                        <Input
+                                            id="budget"
+                                            type="number"
+                                            value={formData.budget}
+                                            onChange={(e) => handleChange('budget', Number(e.target.value))}
+                                            placeholder="Enter total budget"
+                                            min="0"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="progress">Progress (%)</Label>
+                                        <Input
+                                            id="progress"
+                                            type="number"
+                                            value={formData.progress}
+                                            onChange={(e) => handleChange('progress', Number(e.target.value))}
+                                            placeholder="0"
+                                            min="0"
+                                            max="100"
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>Start Date</Label>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                className={cn(
-                                                    "w-full justify-start text-left font-normal",
-                                                    !startDate && "text-muted-foreground"
-                                                )}
-                                            >
-                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {startDate ? format(startDate, "PPP") : "Pick a date"}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                            <Calendar
-                                                mode="single"
-                                                selected={startDate}
-                                                onSelect={setStartDate}
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label>End Date</Label>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                className={cn(
-                                                    "w-full justify-start text-left font-normal",
-                                                    !endDate && "text-muted-foreground"
-                                                )}
-                                            >
-                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {endDate ? format(endDate, "PPP") : "Pick a date"}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                            <Calendar
-                                                mode="single"
-                                                selected={endDate}
-                                                onSelect={setEndDate}
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="stakeholders">Stakeholders</Label>
-                                <div className="flex gap-2">
-                                    <Input
-                                        id="stakeholders"
-                                        value={newStakeholder}
-                                        onChange={(e) => setNewStakeholder(e.target.value)}
-                                        placeholder="Enter stakeholder email"
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault();
-                                                addStakeholder();
-                                            }
-                                        }}
-                                    />
-                                    <Button type="button" onClick={addStakeholder}>
-                                        <Users className="h-4 w-4 mr-2" />
-                                        Add
+                            {/* Objectives & KPIs */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-lg font-semibold">Objectives & KPIs</h3>
+                                    <Button type="button" variant="outline" size="sm" onClick={() => addArrayItem(kpis, setKpis, { objective: '', deliverable: '', kpi: '' })}>
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Add KPI
                                     </Button>
                                 </div>
-                                {stakeholders.length > 0 && (
-                                    <div className="mt-2 space-y-1">
-                                        {stakeholders.map((email) => (
-                                            <div key={email} className="flex items-center justify-between bg-slate-100 px-3 py-1 rounded">
-                                                <span className="text-sm">{email}</span>
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => removeStakeholder(email)}
-                                                >
-                                                    ×
-                                                </Button>
-                                            </div>
-                                        ))}
+                                {kpis.map((kpi, index) => (
+                                    <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg">
+                                        <div className="space-y-2">
+                                            <Label>Objective</Label>
+                                            <Input
+                                                value={kpi.objective}
+                                                onChange={(e) => updateArrayItem(kpis, setKpis, index, 'objective', e.target.value)}
+                                                placeholder="e.g., Streamline seller KYC"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Deliverable</Label>
+                                            <Input
+                                                value={kpi.deliverable}
+                                                onChange={(e) => updateArrayItem(kpis, setKpis, index, 'deliverable', e.target.value)}
+                                                placeholder="e.g., New KYC form integrated"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>KPI</Label>
+                                            <Input
+                                                value={kpi.kpi}
+                                                onChange={(e) => updateArrayItem(kpis, setKpis, index, 'kpi', e.target.value)}
+                                                placeholder="e.g., 100% active sellers verified"
+                                            />
+                                        </div>
+                                        <div className="md:col-span-3 flex justify-end">
+                                            <Button type="button" variant="ghost" size="sm" onClick={() => removeArrayItem(kpis, setKpis, index)}>
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                     </div>
-                                )}
+                                ))}
                             </div>
 
-                            <div className="flex justify-end gap-4 pt-4">
+                            {/* Team Members */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-lg font-semibold">Team & Stakeholders</h3>
+                                    <Button type="button" variant="outline" size="sm" onClick={() => addArrayItem(team, setTeam, { role: '', name: '', responsibility: '' })}>
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Add Member
+                                    </Button>
+                                </div>
+                                {team.map((member, index) => (
+                                    <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg">
+                                        <div className="space-y-2">
+                                            <Label>Role</Label>
+                                            <Input
+                                                value={member.role}
+                                                onChange={(e) => updateArrayItem(team, setTeam, index, 'role', e.target.value)}
+                                                placeholder="e.g., Project Manager"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Name</Label>
+                                            <Input
+                                                value={member.name}
+                                                onChange={(e) => updateArrayItem(team, setTeam, index, 'name', e.target.value)}
+                                                placeholder="e.g., Joe Tassi"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Responsibility</Label>
+                                            <Input
+                                                value={member.responsibility}
+                                                onChange={(e) => updateArrayItem(team, setTeam, index, 'responsibility', e.target.value)}
+                                                placeholder="e.g., Overall coordination"
+                                            />
+                                        </div>
+                                        <div className="md:col-span-3 flex justify-end">
+                                            <Button type="button" variant="ghost" size="sm" onClick={() => removeArrayItem(team, setTeam, index)}>
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Risks */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-lg font-semibold">Risk Register</h3>
+                                    <Button type="button" variant="outline" size="sm" onClick={() => addArrayItem(risks, setRisks, { risk: '', impact: 'Medium', likelihood: 'Medium', mitigation: '' })}>
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Add Risk
+                                    </Button>
+                                </div>
+                                {risks.map((risk, index) => (
+                                    <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg">
+                                        <div className="space-y-2">
+                                            <Label>Risk</Label>
+                                            <Input
+                                                value={risk.risk}
+                                                onChange={(e) => updateArrayItem(risks, setRisks, index, 'risk', e.target.value)}
+                                                placeholder="e.g., Delay in dev integration"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Impact</Label>
+                                            <Select value={risk.impact} onValueChange={(value: 'Low' | 'Medium' | 'High') => updateArrayItem(risks, setRisks, index, 'impact', value)}>
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Low">Low</SelectItem>
+                                                    <SelectItem value="Medium">Medium</SelectItem>
+                                                    <SelectItem value="High">High</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Likelihood</Label>
+                                            <Select value={risk.likelihood} onValueChange={(value: 'Low' | 'Medium' | 'High') => updateArrayItem(risks, setRisks, index, 'likelihood', value)}>
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Low">Low</SelectItem>
+                                                    <SelectItem value="Medium">Medium</SelectItem>
+                                                    <SelectItem value="High">High</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Mitigation</Label>
+                                            <Input
+                                                value={risk.mitigation}
+                                                onChange={(e) => updateArrayItem(risks, setRisks, index, 'mitigation', e.target.value)}
+                                                placeholder="e.g., Assign backup dev"
+                                            />
+                                        </div>
+                                        <div className="md:col-span-4 flex justify-end">
+                                            <Button type="button" variant="ghost" size="sm" onClick={() => removeArrayItem(risks, setRisks, index)}>
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="flex justify-end gap-4 pt-6">
                                 <Button
                                     type="button"
                                     variant="outline"

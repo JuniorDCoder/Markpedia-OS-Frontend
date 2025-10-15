@@ -10,11 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { meetingService } from '@/services/api';
-import { Meeting, Decision, ActionItem } from '@/types';
+import { Meeting, Decision, ActionItem, AgendaItem, DiscussionItem, RiskItem } from '@/types';
 import {
     ArrowLeft,
     Download,
-    Play,
     CheckCircle,
     AlertCircle,
     Edit,
@@ -26,8 +25,13 @@ import {
     Clock,
     MapPin,
     FileText,
-    Bot,
-    RefreshCw
+    Building,
+    User,
+    ShieldAlert,
+    Paperclip,
+    Target,
+    RefreshCw,
+    Trash2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -42,9 +46,13 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
     const [loading, setLoading] = useState(!initialMeeting);
     const [editing, setEditing] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [syncing, setSyncing] = useState(false);
-    const [newDecision, setNewDecision] = useState('');
-    const [newActionItem, setNewActionItem] = useState({ description: '', assignedTo: '', dueDate: '' });
+
+    // New item states
+    const [newAgendaItem, setNewAgendaItem] = useState({ item: '', presenter: '', duration: '' });
+    const [newDiscussionItem, setNewDiscussionItem] = useState({ agendaItem: '', summary: '', agreements: '' });
+    const [newDecision, setNewDecision] = useState({ description: '', responsible: '', approvedBy: '', deadline: '' });
+    const [newActionItem, setNewActionItem] = useState({ description: '', assignedTo: '', department: '', dueDate: '', status: 'Pending' as const });
+    const [newRiskItem, setNewRiskItem] = useState({ risk: '', impact: 'Medium' as 'Low' | 'Medium' | 'High', mitigation: '', owner: '' });
 
     useEffect(() => {
         if (!initialMeeting) {
@@ -80,43 +88,68 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
         }
     };
 
-    const syncWithOtterAI = async () => {
+    const addAgendaItem = async () => {
+        if (!newAgendaItem.item.trim() || !meeting) return;
+
         try {
-            setSyncing(true);
-            const updatedMeeting = await meetingService.syncWithOtterAI(meetingId);
+            const agendaItem: AgendaItem = {
+                id: `agenda-${Date.now()}`,
+                item: newAgendaItem.item,
+                presenter: newAgendaItem.presenter,
+                duration: newAgendaItem.duration,
+                order: meeting.agenda.length + 1
+            };
+
+            const updatedMeeting = {
+                ...meeting,
+                agenda: [...meeting.agenda, agendaItem]
+            };
             setMeeting(updatedMeeting);
-            toast.success('Meeting synced with Otter AI successfully');
+            setNewAgendaItem({ item: '', presenter: '', duration: '' });
+            toast.success('Agenda item added successfully');
         } catch (error) {
-            toast.error('Failed to sync with Otter AI');
-        } finally {
-            setSyncing(false);
+            toast.error('Failed to add agenda item');
         }
     };
 
-    const createTasksFromActionItems = async () => {
+    const addDiscussionItem = async () => {
+        if (!newDiscussionItem.agendaItem.trim() || !meeting) return;
+
         try {
-            await meetingService.createTasksFromActionItems(meetingId);
-            toast.success('Tasks created from action items successfully');
-            loadMeeting(); // Reload to show updated status
+            const discussionItem: DiscussionItem = {
+                id: `discussion-${Date.now()}`,
+                agendaItem: newDiscussionItem.agendaItem,
+                summary: newDiscussionItem.summary,
+                agreements: newDiscussionItem.agreements
+            };
+
+            const updatedMeeting = {
+                ...meeting,
+                discussion: [...meeting.discussion, discussionItem]
+            };
+            setMeeting(updatedMeeting);
+            setNewDiscussionItem({ agendaItem: '', summary: '', agreements: '' });
+            toast.success('Discussion item added successfully');
         } catch (error) {
-            toast.error('Failed to create tasks from action items');
+            toast.error('Failed to add discussion item');
         }
     };
 
     const addDecision = async () => {
-        if (!newDecision.trim() || !meeting) return;
+        if (!newDecision.description.trim() || !meeting) return;
 
         try {
             const decision: Decision = {
-                id: Date.now().toString(),
-                description: newDecision,
-                madeBy: 'Current User', // This would come from auth context
-                timestamp: new Date().toISOString(),
+                id: `decision-${Date.now()}`,
+                description: newDecision.description,
+                responsible: newDecision.responsible,
+                approvedBy: newDecision.approvedBy,
+                deadline: newDecision.deadline
             };
 
             const updatedMeeting = await meetingService.addDecision(meetingId, decision);
             setMeeting(updatedMeeting);
-            setNewDecision('');
+            setNewDecision({ description: '', responsible: '', approvedBy: '', deadline: '' });
             toast.success('Decision added successfully');
         } catch (error) {
             toast.error('Failed to add decision');
@@ -128,20 +161,44 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
 
         try {
             const actionItem: ActionItem = {
-                id: Date.now().toString(),
+                id: `action-${Date.now()}`,
                 description: newActionItem.description,
                 assignedTo: newActionItem.assignedTo,
+                department: newActionItem.department,
                 dueDate: newActionItem.dueDate,
-                status: 'Not Started',
-                createdAt: new Date().toISOString(),
+                status: newActionItem.status
             };
 
             const updatedMeeting = await meetingService.addActionItem(meetingId, actionItem);
             setMeeting(updatedMeeting);
-            setNewActionItem({ description: '', assignedTo: '', dueDate: '' });
+            setNewActionItem({ description: '', assignedTo: '', department: '', dueDate: '', status: 'Pending' });
             toast.success('Action item added successfully');
         } catch (error) {
             toast.error('Failed to add action item');
+        }
+    };
+
+    const addRiskItem = async () => {
+        if (!newRiskItem.risk.trim() || !meeting) return;
+
+        try {
+            const riskItem: RiskItem = {
+                id: `risk-${Date.now()}`,
+                risk: newRiskItem.risk,
+                impact: newRiskItem.impact,
+                mitigation: newRiskItem.mitigation,
+                owner: newRiskItem.owner
+            };
+
+            const updatedMeeting = {
+                ...meeting,
+                risks: [...meeting.risks, riskItem]
+            };
+            setMeeting(updatedMeeting);
+            setNewRiskItem({ risk: '', impact: 'Medium', mitigation: '', owner: '' });
+            toast.success('Risk item added successfully');
+        } catch (error) {
+            toast.error('Failed to add risk item');
         }
     };
 
@@ -157,18 +214,55 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
         }
     };
 
+    const removeItem = (type: 'agenda' | 'discussion' | 'decision' | 'action' | 'risk', id: string) => {
+        if (!meeting) return;
+
+        const updatedMeeting = { ...meeting };
+        switch (type) {
+            case 'agenda':
+                updatedMeeting.agenda = updatedMeeting.agenda.filter(item => item.id !== id);
+                break;
+            case 'discussion':
+                updatedMeeting.discussion = updatedMeeting.discussion.filter(item => item.id !== id);
+                break;
+            case 'decision':
+                updatedMeeting.decisions = updatedMeeting.decisions.filter(item => item.id !== id);
+                break;
+            case 'action':
+                updatedMeeting.actionItems = updatedMeeting.actionItems.filter(item => item.id !== id);
+                break;
+            case 'risk':
+                updatedMeeting.risks = updatedMeeting.risks.filter(item => item.id !== id);
+                break;
+        }
+        setMeeting(updatedMeeting);
+    };
+
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'Completed':
-                return 'bg-green-100 text-green-800';
+                return 'bg-green-100 text-green-800 border-green-200';
             case 'In Progress':
-                return 'bg-blue-100 text-blue-800';
-            case 'Not Started':
-                return 'bg-yellow-100 text-yellow-800';
+                return 'bg-blue-100 text-blue-800 border-blue-200';
+            case 'Pending':
+                return 'bg-yellow-100 text-yellow-800 border-yellow-200';
             case 'Cancelled':
-                return 'bg-red-100 text-red-800';
+                return 'bg-red-100 text-red-800 border-red-200';
             default:
-                return 'bg-gray-100 text-gray-800';
+                return 'bg-gray-100 text-gray-800 border-gray-200';
+        }
+    };
+
+    const getRiskImpactColor = (impact: string) => {
+        switch (impact) {
+            case 'High':
+                return 'bg-red-100 text-red-800 border-red-200';
+            case 'Medium':
+                return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            case 'Low':
+                return 'bg-green-100 text-green-800 border-green-200';
+            default:
+                return 'bg-gray-100 text-gray-800 border-gray-200';
         }
     };
 
@@ -196,12 +290,12 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
     return (
         <div className="space-y-6 p-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                    <Button variant="ghost" size="icon" onClick={() => router.push('/work/minutes')} className="mr-2">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                <div className="flex items-start gap-3">
+                    <Button variant="ghost" size="icon" onClick={() => router.push('/work/minutes')} className="mt-1">
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
-                    <div>
+                    <div className="space-y-2">
                         <h1 className="text-3xl font-bold tracking-tight">
                             {editing ? (
                                 <Input
@@ -213,17 +307,17 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
                                 meeting.title
                             )}
                         </h1>
-                        <p className="text-muted-foreground mt-1">
-                            {editing ? (
-                                <Input
-                                    value={meeting.description || ''}
-                                    onChange={(e) => setMeeting({ ...meeting, description: e.target.value })}
-                                    placeholder="Meeting description"
-                                />
-                            ) : (
-                                meeting.description || 'No description provided'
-                            )}
-                        </p>
+                        <div className="flex flex-wrap gap-2">
+                            {meeting.department.map((dept) => (
+                                <Badge key={dept} variant="outline" className="flex items-center gap-1">
+                                    <Building className="h-3 w-3" />
+                                    {dept}
+                                </Badge>
+                            ))}
+                            <Badge variant="secondary" className={getStatusColor(meeting.status)}>
+                                {meeting.status}
+                            </Badge>
+                        </div>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -239,150 +333,238 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
                             </Button>
                         </>
                     ) : (
-                        <>
-                            {meeting.otterAIId && (
-                                <Button variant="outline" onClick={syncWithOtterAI} disabled={syncing}>
-                                    <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-                                    {syncing ? 'Syncing...' : 'Sync with Otter AI'}
-                                </Button>
-                            )}
-                            <Button variant="outline" onClick={() => setEditing(true)}>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                            </Button>
-                        </>
+                        <Button variant="outline" onClick={() => setEditing(true)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                        </Button>
                     )}
                 </div>
             </div>
 
-            {/* Meeting Info */}
+            {/* Meeting Information */}
             <Card>
                 <CardHeader>
                     <CardTitle>Meeting Information</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="flex items-center">
-                            <Calendar className="h-5 w-5 mr-3 text-muted-foreground" />
-                            <div>
-                                <p className="text-sm font-medium">Date</p>
-                                <p className="text-sm text-muted-foreground">
-                                    {new Date(meeting.date).toLocaleDateString()}
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex items-center">
-                            <Clock className="h-5 w-5 mr-3 text-muted-foreground" />
-                            <div>
-                                <p className="text-sm font-medium">Time</p>
-                                <p className="text-sm text-muted-foreground">
-                                    {meeting.startTime} - {meeting.endTime || 'End time not set'}
-                                </p>
-                            </div>
-                        </div>
-                        {meeting.location && (
-                            <div className="flex items-center">
-                                <MapPin className="h-5 w-5 mr-3 text-muted-foreground" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3">
+                                <Calendar className="h-5 w-5 text-muted-foreground" />
                                 <div>
-                                    <p className="text-sm font-medium">Location</p>
-                                    <p className="text-sm text-muted-foreground">{meeting.location}</p>
+                                    <p className="text-sm font-medium">Date & Time</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        {new Date(meeting.date).toLocaleDateString()} • {meeting.startTime} - {meeting.endTime}
+                                    </p>
                                 </div>
                             </div>
-                        )}
-                        <div className="flex items-center">
-                            <Users className="h-5 w-5 mr-3 text-muted-foreground" />
-                            <div>
-                                <p className="text-sm font-medium">Attendees</p>
-                                <p className="text-sm text-muted-foreground">
-                                    {meeting.attendees.length} people
-                                </p>
+                            <div className="flex items-center gap-3">
+                                <MapPin className="h-5 w-5 text-muted-foreground" />
+                                <div>
+                                    <p className="text-sm font-medium">Platform & Location</p>
+                                    <p className="text-sm text-muted-foreground">{meeting.platform}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3">
+                                <User className="h-5 w-5 text-muted-foreground" />
+                                <div>
+                                    <p className="text-sm font-medium">Called By</p>
+                                    <p className="text-sm text-muted-foreground">{meeting.calledBy}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <User className="h-5 w-5 text-muted-foreground" />
+                                <div>
+                                    <p className="text-sm font-medium">Facilitator</p>
+                                    <p className="text-sm text-muted-foreground">{meeting.facilitator}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3">
+                                <FileText className="h-5 w-5 text-muted-foreground" />
+                                <div>
+                                    <p className="text-sm font-medium">Minute Taker</p>
+                                    <p className="text-sm text-muted-foreground">{meeting.minuteTaker}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Users className="h-5 w-5 text-muted-foreground" />
+                                <div>
+                                    <p className="text-sm font-medium">Attendance</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        {meeting.participants.length} present • {meeting.absent.length} absent
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    {editing && (
-                        <div className="mt-4 space-y-2">
-                            <Label htmlFor="location">Location</Label>
-                            <Input
-                                id="location"
-                                value={meeting.location || ''}
-                                onChange={(e) => setMeeting({ ...meeting, location: e.target.value })}
-                                placeholder="Meeting location"
+
+                    {/* Purpose */}
+                    <div className="mt-6">
+                        <Label className="text-sm font-medium">Purpose of Meeting</Label>
+                        {editing ? (
+                            <Textarea
+                                value={meeting.purpose}
+                                onChange={(e) => setMeeting({ ...meeting, purpose: e.target.value })}
+                                className="mt-2"
+                                rows={3}
                             />
-                        </div>
-                    )}
+                        ) : (
+                            <p className="text-sm text-muted-foreground mt-2">{meeting.purpose}</p>
+                        )}
+                    </div>
                 </CardContent>
             </Card>
-
-            {/* Otter AI Integration */}
-            {meeting.otterAIId && (
-                <Card className="bg-blue-50 border-blue-200">
-                    <CardContent className="p-4 flex items-center justify-between">
-                        <div className="flex items-center">
-                            <Bot className="h-6 w-6 text-blue-600 mr-3" />
-                            <div>
-                                <h3 className="font-semibold text-blue-800">Otter AI Integration Active</h3>
-                                <p className="text-sm text-blue-600">
-                                    This meeting is connected to Otter AI for automatic transcription
-                                </p>
-                            </div>
-                        </div>
-                        <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">
-                            Connected
-                        </Badge>
-                    </CardContent>
-                </Card>
-            )}
 
             {/* Agenda */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Agenda</CardTitle>
-                    <CardDescription>Topics to be discussed in this meeting</CardDescription>
+                    <CardTitle className="flex items-center">
+                        <Target className="h-5 w-5 mr-2" />
+                        Agenda
+                        <Badge variant="secondary" className="ml-2">
+                            {meeting.agenda.length}
+                        </Badge>
+                    </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    {editing ? (
-                        <div className="space-y-2">
-                            {meeting.agenda.map((item, index) => (
-                                <div key={index} className="flex items-center space-x-2">
+                    <div className="space-y-4">
+                        {meeting.agenda.map((item) => (
+                            <div key={item.id} className="flex items-start justify-between p-3 bg-gray-50 rounded border">
+                                <div className="flex-1">
+                                    <div className="flex items-start justify-between">
+                                        <p className="font-medium">{item.item}</p>
+                                        {editing && (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => removeItem('agenda', item.id)}
+                                                className="h-8 w-8 ml-2"
+                                            >
+                                                <Trash2 className="h-4 w-4 text-red-500" />
+                                            </Button>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
+                                        <span>Presenter: {item.presenter}</span>
+                                        <span>Duration: {item.duration}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+
+                        {meeting.agenda.length === 0 && (
+                            <p className="text-muted-foreground text-sm text-center py-4">No agenda items yet.</p>
+                        )}
+
+                        <div className="border-t pt-4">
+                            <h4 className="font-medium mb-3">Add Agenda Item</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <Input
+                                    placeholder="Agenda item"
+                                    value={newAgendaItem.item}
+                                    onChange={(e) => setNewAgendaItem({ ...newAgendaItem, item: e.target.value })}
+                                />
+                                <Input
+                                    placeholder="Presenter"
+                                    value={newAgendaItem.presenter}
+                                    onChange={(e) => setNewAgendaItem({ ...newAgendaItem, presenter: e.target.value })}
+                                />
+                                <div className="flex gap-2">
                                     <Input
-                                        value={item}
-                                        onChange={(e) => {
-                                            const newAgenda = [...meeting.agenda];
-                                            newAgenda[index] = e.target.value;
-                                            setMeeting({ ...meeting, agenda: newAgenda });
-                                        }}
-                                        placeholder={`Agenda item ${index + 1}`}
+                                        placeholder="Duration"
+                                        value={newAgendaItem.duration}
+                                        onChange={(e) => setNewAgendaItem({ ...newAgendaItem, duration: e.target.value })}
                                     />
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => {
-                                            const newAgenda = meeting.agenda.filter((_, i) => i !== index);
-                                            setMeeting({ ...meeting, agenda: newAgenda });
-                                        }}
-                                    >
-                                        <X className="h-4 w-4" />
+                                    <Button onClick={addAgendaItem} disabled={!newAgendaItem.item.trim()}>
+                                        <Plus className="h-4 w-4" />
                                     </Button>
                                 </div>
-                            ))}
-                            <Button
-                                variant="outline"
-                                onClick={() => setMeeting({ ...meeting, agenda: [...meeting.agenda, ''] })}
-                            >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Agenda Item
-                            </Button>
+                            </div>
                         </div>
-                    ) : (
-                        <ul className="space-y-2">
-                            {meeting.agenda.map((item, index) => (
-                                <li key={index} className="flex items-start">
-                                    <span className="mr-2 text-muted-foreground">{index + 1}.</span>
-                                    <span>{item}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Discussion & Agreements */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center">
+                        <FileText className="h-5 w-5 mr-2" />
+                        Discussion & Agreements
+                        <Badge variant="secondary" className="ml-2">
+                            {meeting.discussion.length}
+                        </Badge>
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-4">
+                        {meeting.discussion.map((item) => (
+                            <div key={item.id} className="p-3 bg-blue-50 rounded border border-blue-100">
+                                <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                        <h4 className="font-medium text-blue-900">{item.agendaItem}</h4>
+                                        <div className="mt-2 space-y-2">
+                                            <div>
+                                                <p className="text-sm font-medium">Discussion:</p>
+                                                <p className="text-sm text-muted-foreground">{item.summary}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-medium">Agreements:</p>
+                                                <p className="text-sm text-muted-foreground">{item.agreements}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {editing && (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => removeItem('discussion', item.id)}
+                                            className="h-8 w-8 ml-2"
+                                        >
+                                            <Trash2 className="h-4 w-4 text-red-500" />
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+
+                        {meeting.discussion.length === 0 && (
+                            <p className="text-muted-foreground text-sm text-center py-4">No discussion items yet.</p>
+                        )}
+
+                        <div className="border-t pt-4">
+                            <h4 className="font-medium mb-3">Add Discussion Item</h4>
+                            <div className="space-y-3">
+                                <Input
+                                    placeholder="Agenda item"
+                                    value={newDiscussionItem.agendaItem}
+                                    onChange={(e) => setNewDiscussionItem({ ...newDiscussionItem, agendaItem: e.target.value })}
+                                />
+                                <Textarea
+                                    placeholder="Discussion summary"
+                                    value={newDiscussionItem.summary}
+                                    onChange={(e) => setNewDiscussionItem({ ...newDiscussionItem, summary: e.target.value })}
+                                    rows={2}
+                                />
+                                <Textarea
+                                    placeholder="Agreements reached"
+                                    value={newDiscussionItem.agreements}
+                                    onChange={(e) => setNewDiscussionItem({ ...newDiscussionItem, agreements: e.target.value })}
+                                    rows={2}
+                                />
+                                <Button onClick={addDiscussionItem} disabled={!newDiscussionItem.agendaItem.trim()}>
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Add Discussion
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
                 </CardContent>
             </Card>
 
@@ -391,85 +573,127 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
                 <CardHeader>
                     <CardTitle className="flex items-center">
                         <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
-                        Decisions
+                        Decisions Made
                         <Badge variant="secondary" className="ml-2">
                             {meeting.decisions.length}
                         </Badge>
                     </CardTitle>
-                    <CardDescription>Decisions made during this meeting</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
-                        {meeting.decisions.map(decision => (
+                        {meeting.decisions.map((decision) => (
                             <div key={decision.id} className="p-3 bg-green-50 rounded border border-green-100">
-                                <p className="font-medium">{decision.description}</p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    By {decision.madeBy} • {new Date(decision.timestamp).toLocaleString()}
-                                </p>
+                                <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                        <p className="font-medium">{decision.description}</p>
+                                        <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
+                                            <span>Responsible: {decision.responsible}</span>
+                                            <span>Approved by: {decision.approvedBy}</span>
+                                            <span>Deadline: {new Date(decision.deadline).toLocaleDateString()}</span>
+                                        </div>
+                                    </div>
+                                    {editing && (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => removeItem('decision', decision.id)}
+                                            className="h-8 w-8 ml-2"
+                                        >
+                                            <Trash2 className="h-4 w-4 text-red-500" />
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
                         ))}
 
                         {meeting.decisions.length === 0 && (
-                            <p className="text-muted-foreground text-sm">No decisions recorded yet.</p>
+                            <p className="text-muted-foreground text-sm text-center py-4">No decisions recorded yet.</p>
                         )}
 
-                        <div className="border-t pt-4 mt-4">
-                            <Label htmlFor="new-decision" className="mb-2 block">Add New Decision</Label>
-                            <div className="flex space-x-2">
+                        <div className="border-t pt-4">
+                            <h4 className="font-medium mb-3">Add New Decision</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <Input
-                                    id="new-decision"
-                                    placeholder="Describe the decision made"
-                                    value={newDecision}
-                                    onChange={(e) => setNewDecision(e.target.value)}
+                                    placeholder="Decision description"
+                                    value={newDecision.description}
+                                    onChange={(e) => setNewDecision({ ...newDecision, description: e.target.value })}
                                 />
-                                <Button onClick={addDecision} disabled={!newDecision.trim()}>
-                                    Add
-                                </Button>
+                                <Input
+                                    placeholder="Responsible person"
+                                    value={newDecision.responsible}
+                                    onChange={(e) => setNewDecision({ ...newDecision, responsible: e.target.value })}
+                                />
+                                <Input
+                                    placeholder="Approved by"
+                                    value={newDecision.approvedBy}
+                                    onChange={(e) => setNewDecision({ ...newDecision, approvedBy: e.target.value })}
+                                />
+                                <div className="flex gap-2">
+                                    <Input
+                                        type="date"
+                                        value={newDecision.deadline}
+                                        onChange={(e) => setNewDecision({ ...newDecision, deadline: e.target.value })}
+                                    />
+                                    <Button onClick={addDecision} disabled={!newDecision.description.trim()}>
+                                        <Plus className="h-4 w-4" />
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </CardContent>
             </Card>
 
-            {/* Action Items */}
+            {/* Action Plan */}
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center">
                         <AlertCircle className="h-5 w-5 mr-2 text-orange-600" />
-                        Action Items
+                        Action Plan
                         <Badge variant="secondary" className="ml-2">
                             {meeting.actionItems.length}
                         </Badge>
                     </CardTitle>
-                    <CardDescription>Tasks assigned during this meeting</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
-                        {meeting.actionItems.map(item => (
+                        {meeting.actionItems.map((item) => (
                             <div key={item.id} className="p-3 bg-orange-50 rounded border border-orange-100">
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">
                                         <p className="font-medium">{item.description}</p>
-                                        <div className="flex items-center mt-1 text-xs text-muted-foreground">
+                                        <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-muted-foreground">
                                             <span>Assignee: {item.assignedTo}</span>
-                                            <span className="mx-2">•</span>
+                                            <span>Department: {item.department}</span>
                                             <span>Due: {new Date(item.dueDate).toLocaleDateString()}</span>
                                         </div>
                                     </div>
-                                    <Select
-                                        value={item.status}
-                                        onValueChange={(value) => updateActionItemStatus(item.id, value)}
-                                    >
-                                        <SelectTrigger className="w-[130px] ml-2">
-                                            <SelectValue placeholder="Status" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Not Started">Not Started</SelectItem>
-                                            <SelectItem value="In Progress">In Progress</SelectItem>
-                                            <SelectItem value="Completed">Completed</SelectItem>
-                                            <SelectItem value="Cancelled">Cancelled</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <div className="flex items-center gap-2 ml-4">
+                                        <Select
+                                            value={item.status}
+                                            onValueChange={(value) => updateActionItemStatus(item.id, value)}
+                                        >
+                                            <SelectTrigger className="w-[130px]">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Pending">Pending</SelectItem>
+                                                <SelectItem value="In Progress">In Progress</SelectItem>
+                                                <SelectItem value="Completed">Completed</SelectItem>
+                                                <SelectItem value="Cancelled">Cancelled</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {editing && (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => removeItem('action', item.id)}
+                                                className="h-8 w-8"
+                                            >
+                                                <Trash2 className="h-4 w-4 text-red-500" />
+                                            </Button>
+                                        )}
+                                    </div>
                                 </div>
                                 <Badge variant="outline" className={`mt-2 ${getStatusColor(item.status)}`}>
                                     {item.status}
@@ -478,110 +702,155 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
                         ))}
 
                         {meeting.actionItems.length === 0 && (
-                            <p className="text-muted-foreground text-sm">No action items yet.</p>
+                            <p className="text-muted-foreground text-sm text-center py-4">No action items yet.</p>
                         )}
 
-                        <div className="border-t pt-4 mt-4">
-                            <h4 className="font-medium mb-2">Add New Action Item</h4>
-                            <div className="space-y-2">
+                        <div className="border-t pt-4">
+                            <h4 className="font-medium mb-3">Add Action Item</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <Input
-                                    placeholder="What needs to be done?"
+                                    placeholder="Action description"
                                     value={newActionItem.description}
                                     onChange={(e) => setNewActionItem({ ...newActionItem, description: e.target.value })}
                                 />
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                    <Input
-                                        placeholder="Assigned to"
-                                        value={newActionItem.assignedTo}
-                                        onChange={(e) => setNewActionItem({ ...newActionItem, assignedTo: e.target.value })}
-                                    />
+                                <Input
+                                    placeholder="Assigned to"
+                                    value={newActionItem.assignedTo}
+                                    onChange={(e) => setNewActionItem({ ...newActionItem, assignedTo: e.target.value })}
+                                />
+                                <Input
+                                    placeholder="Department"
+                                    value={newActionItem.department}
+                                    onChange={(e) => setNewActionItem({ ...newActionItem, department: e.target.value })}
+                                />
+                                <div className="flex gap-2">
                                     <Input
                                         type="date"
                                         value={newActionItem.dueDate}
                                         onChange={(e) => setNewActionItem({ ...newActionItem, dueDate: e.target.value })}
                                     />
+                                    <Button onClick={addActionItem} disabled={!newActionItem.description.trim()}>
+                                        <Plus className="h-4 w-4" />
+                                    </Button>
                                 </div>
-                                <Button onClick={addActionItem} disabled={!newActionItem.description.trim()}>
-                                    Add Action Item
-                                </Button>
                             </div>
                         </div>
-
-                        {meeting.actionItems.length > 0 && (
-                            <div className="mt-4">
-                                <Button variant="outline" onClick={createTasksFromActionItems}>
-                                    <CheckCircle className="h-4 w-4 mr-2" />
-                                    Create Tasks from Action Items
-                                </Button>
-                            </div>
-                        )}
                     </div>
                 </CardContent>
             </Card>
 
-            {/* Minutes and Transcript */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Minutes */}
+            {/* Risks & Challenges */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center">
+                        <ShieldAlert className="h-5 w-5 mr-2 text-red-600" />
+                        Risks & Challenges
+                        <Badge variant="secondary" className="ml-2">
+                            {meeting.risks.length}
+                        </Badge>
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-4">
+                        {meeting.risks.map((risk) => (
+                            <div key={risk.id} className="p-3 bg-red-50 rounded border border-red-100">
+                                <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <p className="font-medium">{risk.risk}</p>
+                                            <Badge variant="outline" className={getRiskImpactColor(risk.impact)}>
+                                                {risk.impact} Impact
+                                            </Badge>
+                                        </div>
+                                        <div className="space-y-1 text-sm text-muted-foreground">
+                                            <p><span className="font-medium">Mitigation:</span> {risk.mitigation}</p>
+                                            <p><span className="font-medium">Owner:</span> {risk.owner}</p>
+                                        </div>
+                                    </div>
+                                    {editing && (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => removeItem('risk', risk.id)}
+                                            className="h-8 w-8 ml-2"
+                                        >
+                                            <Trash2 className="h-4 w-4 text-red-500" />
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+
+                        {meeting.risks.length === 0 && (
+                            <p className="text-muted-foreground text-sm text-center py-4">No risks identified yet.</p>
+                        )}
+
+                        <div className="border-t pt-4">
+                            <h4 className="font-medium mb-3">Add Risk Item</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <Input
+                                    placeholder="Risk description"
+                                    value={newRiskItem.risk}
+                                    onChange={(e) => setNewRiskItem({ ...newRiskItem, risk: e.target.value })}
+                                />
+                                <Select
+                                    value={newRiskItem.impact}
+                                    onValueChange={(value: 'Low' | 'Medium' | 'High') => setNewRiskItem({ ...newRiskItem, impact: value })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Low">Low Impact</SelectItem>
+                                        <SelectItem value="Medium">Medium Impact</SelectItem>
+                                        <SelectItem value="High">High Impact</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Input
+                                    placeholder="Mitigation plan"
+                                    value={newRiskItem.mitigation}
+                                    onChange={(e) => setNewRiskItem({ ...newRiskItem, mitigation: e.target.value })}
+                                />
+                                <div className="flex gap-2">
+                                    <Input
+                                        placeholder="Owner"
+                                        value={newRiskItem.owner}
+                                        onChange={(e) => setNewRiskItem({ ...newRiskItem, owner: e.target.value })}
+                                    />
+                                    <Button onClick={addRiskItem} disabled={!newRiskItem.risk.trim()}>
+                                        <Plus className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Attachments */}
+            {meeting.attachments.length > 0 && (
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center">
-                            <FileText className="h-5 w-5 mr-2" />
-                            Meeting Minutes
+                            <Paperclip className="h-5 w-5 mr-2" />
+                            Attachments
+                            <Badge variant="secondary" className="ml-2">
+                                {meeting.attachments.length}
+                            </Badge>
                         </CardTitle>
-                        <CardDescription>Notes from the meeting</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {editing ? (
-                            <Textarea
-                                placeholder="Enter meeting minutes..."
-                                value={meeting.minutes || ''}
-                                onChange={(e) => setMeeting({ ...meeting, minutes: e.target.value })}
-                                rows={8}
-                            />
-                        ) : meeting.minutes ? (
-                            <div className="whitespace-pre-wrap">{meeting.minutes}</div>
-                        ) : (
-                            <p className="text-muted-foreground">No minutes recorded yet.</p>
-                        )}
+                        <div className="flex flex-wrap gap-2">
+                            {meeting.attachments.map((attachment, index) => (
+                                <Badge key={index} variant="outline" className="flex items-center gap-1">
+                                    <Paperclip className="h-3 w-3" />
+                                    {attachment}
+                                </Badge>
+                            ))}
+                        </div>
                     </CardContent>
                 </Card>
-
-                {/* Transcript and Summary */}
-                <div className="space-y-6">
-                    {meeting.transcript && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Full Transcript</CardTitle>
-                                <CardDescription>Automatically generated transcript</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="whitespace-pre-wrap text-sm max-h-60 overflow-y-auto">
-                                    {meeting.transcript}
-                                </div>
-                                <Button variant="outline" className="w-full mt-4">
-                                    <Download className="h-4 w-4 mr-2" />
-                                    Download Transcript
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {meeting.summary && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center">
-                                    <Bot className="h-5 w-5 mr-2 text-blue-600" />
-                                    AI Summary
-                                </CardTitle>
-                                <CardDescription>AI-generated meeting summary</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="whitespace-pre-wrap">{meeting.summary}</p>
-                            </CardContent>
-                        </Card>
-                    )}
-                </div>
-            </div>
+            )}
         </div>
     );
 }

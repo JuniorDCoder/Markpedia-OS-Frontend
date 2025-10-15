@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { useAuthStore } from '@/store/auth';
 import { taskService } from '@/services/api';
 import { Task } from '@/types';
@@ -18,7 +19,14 @@ import {
     CheckCircle2,
     FileText,
     Edit,
-    Trash2
+    Trash2,
+    Target,
+    Building,
+    PlayCircle,
+    PauseCircle,
+    CheckCircle,
+    AlertTriangle,
+    Crown
 } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -44,7 +52,6 @@ export default function TaskDetailClient({ initialTask, taskId }: TaskDetailClie
     const [loading, setLoading] = useState(!initialTask);
 
     useEffect(() => {
-        // If no initial task was provided, fetch it
         if (!initialTask) {
             loadTask();
         }
@@ -74,73 +81,59 @@ export default function TaskDetailClient({ initialTask, taskId }: TaskDetailClie
     };
 
     const validateTask = async () => {
-        // Check if it's validation phase (Sun 16:00–Mon 08:00)
         const now = new Date();
         const dayOfWeek = now.getDay();
         const hour = now.getHours();
-        const isValidationPhase = (dayOfWeek === 0 && hour > 16) || (dayOfWeek === 1 && hour < 8);
+        const isValidationPhase = (dayOfWeek === 0 && hour >= 16) || (dayOfWeek === 1 && hour < 8);
 
         if (!isValidationPhase) {
-            toast.error('Tasks can only be validated during validation window (Sun 4:00 PM - Mon 8:00 AM)');
+            toast.error('Tasks can only be validated during validation window (Sunday 4:00 PM - Monday 8:00 AM)');
             return;
         }
 
-        if (!['manager', 'ceo', 'cxo'].includes(user.role.toLowerCase())) {
+        if (!['manager', 'ceo', 'cxo', 'admin'].includes(user.role.toLowerCase())) {
             toast.error('Only managers and executives can validate tasks');
             return;
         }
 
         try {
-            await taskService.validateTask(taskId, { validatedBy: user.id });
+            await taskService.validateTask(taskId, user.id);
             toast.success('Task validated successfully');
-            loadTask(); // Reload task data
+            loadTask();
         } catch (error) {
             toast.error('Failed to validate task');
         }
     };
 
-    if (loading) {
-        return (
-            <div className="p-6">
-                <div className="animate-pulse space-y-4">
-                    <div className="h-8 bg-slate-200 rounded w-1/4"></div>
-                    <div className="h-48 bg-slate-200 rounded"></div>
-                </div>
-            </div>
-        );
-    }
-
-    if (!task) {
-        return (
-            <div className="p-6">
-                <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>Task not found</AlertDescription>
-                </Alert>
-                <Button className="mt-4" onClick={() => router.push('/work/tasks')}>
-                    Back to Tasks
-                </Button>
-            </div>
-        );
-    }
-
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'Done': return 'bg-emerald-100 text-emerald-800';
-            case 'In Progress': return 'bg-blue-100 text-blue-800';
-            case 'Review': return 'bg-amber-100 text-amber-800';
-            case 'To Do': return 'bg-slate-100 text-slate-800';
-            default: return 'bg-slate-100 text-slate-800';
+            case 'Done': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+            case 'In Progress': return 'bg-blue-100 text-blue-800 border-blue-200';
+            case 'Approved': return 'bg-green-100 text-green-800 border-green-200';
+            case 'Draft': return 'bg-slate-100 text-slate-800 border-slate-200';
+            case 'Overdue': return 'bg-red-100 text-red-800 border-red-200';
+            default: return 'bg-slate-100 text-slate-800 border-slate-200';
+        }
+    };
+
+    const getStatusIcon = (status: string) => {
+        switch (status) {
+            case 'Done': return <CheckCircle className="h-4 w-4" />;
+            case 'In Progress': return <PlayCircle className="h-4 w-4" />;
+            case 'Approved': return <CheckCircle2 className="h-4 w-4" />;
+            case 'Draft': return <FileText className="h-4 w-4" />;
+            case 'Overdue': return <AlertTriangle className="h-4 w-4" />;
+            default: return <FileText className="h-4 w-4" />;
         }
     };
 
     const getPriorityColor = (priority: string) => {
         switch (priority) {
-            case 'Critical': return 'bg-red-100 text-red-800';
-            case 'High': return 'bg-orange-100 text-orange-800';
-            case 'Medium': return 'bg-yellow-100 text-yellow-800';
-            case 'Low': return 'bg-green-100 text-green-800';
-            default: return 'bg-slate-100 text-slate-800';
+            case 'Critical': return 'bg-red-100 text-red-800 border-red-200';
+            case 'High': return 'bg-orange-100 text-orange-800 border-orange-200';
+            case 'Medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            case 'Low': return 'bg-green-100 text-green-800 border-green-200';
+            default: return 'bg-slate-100 text-slate-800 border-slate-200';
         }
     };
 
@@ -148,124 +141,306 @@ export default function TaskDetailClient({ initialTask, taskId }: TaskDetailClie
         const now = new Date();
         const dayOfWeek = now.getDay();
         const hour = now.getHours();
-        const isValidationPhase = (dayOfWeek === 0 && hour > 16) || (dayOfWeek === 1 && hour < 8);
+        const isValidationPhase = (dayOfWeek === 0 && hour >= 16) || (dayOfWeek === 1 && hour < 8);
 
-        return isValidationPhase && ['manager', 'ceo', 'cxo'].includes(user.role.toLowerCase()) && !task.validatedBy;
+        return isValidationPhase &&
+            ['manager', 'ceo', 'cxo', 'admin'].includes(user.role.toLowerCase()) &&
+            !task?.validated_by;
     };
 
-    return (
-        <div className="p-6 max-w-4xl mx-auto">
-            <div className="flex items-center justify-between mb-6">
-                <Button variant="ghost" onClick={() => router.back()}>
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Tasks
-                </Button>
-
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                            <Link href={`/work/tasks/${task.id}/edit`}>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                            </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={deleteTask} className="text-red-600">
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </div>
-
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-            >
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <h1 className="text-3xl font-bold tracking-tight">{task.title}</h1>
-                    <div className="flex flex-wrap gap-2">
-                        <Badge className={getStatusColor(task.status)}>{task.status}</Badge>
-                        <Badge className={getPriorityColor(task.priority)}>{task.priority}</Badge>
-                        {task.validatedBy && (
-                            <Badge className="bg-green-100 text-green-800 flex items-center">
-                                <CheckCircle2 className="h-3 w-3 mr-1" />
-                                Validated
-                            </Badge>
-                        )}
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-slate-50/30 p-3 sm:p-6">
+                <div className="max-w-6xl mx-auto">
+                    <div className="animate-pulse space-y-6">
+                        <div className="h-8 bg-slate-200 rounded w-1/4"></div>
+                        <div className="h-48 bg-slate-200 rounded"></div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="h-64 bg-slate-200 rounded"></div>
+                            <div className="h-64 bg-slate-200 rounded"></div>
+                        </div>
                     </div>
                 </div>
+            </div>
+        );
+    }
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center">
-                            <FileText className="h-5 w-5 mr-2" />
-                            Task Details
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div>
-                            <h3 className="text-sm font-medium text-muted-foreground">Description</h3>
-                            <p className="mt-1">{task.description || 'No description provided'}</p>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="flex items-center">
-                                <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                                <span className="text-sm">
-                  Due: {task.dueDate ? format(new Date(task.dueDate), 'PPP') : 'No due date'}
-                </span>
-                            </div>
-
-                            <div className="flex items-center">
-                                <User className="h-4 w-4 mr-2 text-muted-foreground" />
-                                <span className="text-sm">
-                  Assignee: {task.assigneeId === user.id ? 'You' : 'Team Member'}
-                </span>
-                            </div>
-
-                            {task.createdAt && (
-                                <div className="flex items-center">
-                                    <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-                                    <span className="text-sm">
-                    Created: {format(new Date(task.createdAt), 'PPP')}
-                  </span>
-                                </div>
-                            )}
-
-                            {task.validatedAt && (
-                                <div className="flex items-center">
-                                    <CheckCircle2 className="h-4 w-4 mr-2 text-muted-foreground" />
-                                    <span className="text-sm">
-                    Validated: {format(new Date(task.validatedAt), 'PPP')}
-                  </span>
-                                </div>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {canValidate() && (
-                    <Alert className="bg-blue-50 border-blue-200">
-                        <AlertCircle className="h-4 w-4 text-blue-600" />
-                        <AlertDescription className="text-blue-800">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                <p>This task is ready for validation during the validation window.</p>
-                                <Button onClick={validateTask} size="sm">
-                                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                                    Validate Task
-                                </Button>
-                            </div>
-                        </AlertDescription>
+    if (!task) {
+        return (
+            <div className="min-h-screen bg-slate-50/30 p-3 sm:p-6">
+                <div className="max-w-2xl mx-auto">
+                    <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>Task not found</AlertDescription>
                     </Alert>
-                )}
-            </motion.div>
+                    <Button className="mt-4 w-full sm:w-auto" onClick={() => router.push('/work/tasks')}>
+                        Back to Tasks
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-slate-50/30 p-3 sm:p-6">
+            <div className="max-w-6xl mx-auto">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <Button
+                        variant="ghost"
+                        onClick={() => router.back()}
+                        className="w-full sm:w-auto justify-center sm:justify-start order-2 sm:order-1"
+                    >
+                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        Back to Tasks
+                    </Button>
+
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="icon" className="order-1 sm:order-2">
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                                <Link href={`/work/tasks/${task.id}/edit`}>
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit Task
+                                </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={deleteTask} className="text-red-600">
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete Task
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="space-y-6"
+                >
+                    {/* Task Header */}
+                    <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 p-6 bg-white rounded-xl border shadow-sm">
+                        <div className="flex-1 space-y-3">
+                            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
+                                {task.title}
+                            </h1>
+                            <p className="text-slate-600 text-lg leading-relaxed">
+                                {task.description}
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                                <Badge className={getStatusColor(task.status)}>
+                                    {getStatusIcon(task.status)}
+                                    <span className="ml-1">{task.status}</span>
+                                </Badge>
+                                <Badge className={getPriorityColor(task.priority)}>
+                                    {task.priority} Priority
+                                </Badge>
+                                {task.validated_by && (
+                                    <Badge className="bg-green-100 text-green-800 border-green-200 flex items-center">
+                                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                                        Validated
+                                    </Badge>
+                                )}
+                                {task.linked_okr && (
+                                    <Badge className="bg-purple-100 text-purple-800 border-purple-200 flex items-center">
+                                        <Target className="h-3 w-3 mr-1" />
+                                        OKR Linked
+                                    </Badge>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Left Column - Details */}
+                        <div className="lg:col-span-2 space-y-6">
+                            {/* Progress & Expected Output */}
+                            <Card>
+                                <CardHeader className="pb-4">
+                                    <CardTitle className="text-lg flex items-center">
+                                        <FileText className="h-5 w-5 mr-2" />
+                                        Progress & Deliverables
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="font-medium">Progress</span>
+                                            <span className="font-semibold">{task.progress}%</span>
+                                        </div>
+                                        <Progress value={task.progress} className="h-3" />
+                                    </div>
+
+                                    {task.expected_output && (
+                                        <div>
+                                            <h4 className="font-medium text-sm text-slate-700 mb-2">Expected Output</h4>
+                                            <p className="text-slate-600 text-sm bg-slate-50 p-3 rounded-lg border">
+                                                {task.expected_output}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {task.proof_of_completion && Object.keys(task.proof_of_completion).length > 0 && (
+                                        <div>
+                                            <h4 className="font-medium text-sm text-slate-700 mb-2">Proof of Completion</h4>
+                                            <div className="text-slate-600 text-sm bg-slate-50 p-3 rounded-lg border">
+                                                {task.proof_of_completion.attachments?.map((attachment, index) => (
+                                                    <div key={index} className="flex items-center py-1">
+                                                        <FileText className="h-4 w-4 mr-2 text-slate-400" />
+                                                        {attachment}
+                                                    </div>
+                                                ))}
+                                                {task.proof_of_completion.notes && (
+                                                    <p className="mt-2 italic">"{task.proof_of_completion.notes}"</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            {/* OKR Linkage */}
+                            {task.linked_okr && task.linked_okr.objective && (
+                                <Card>
+                                    <CardHeader className="pb-4">
+                                        <CardTitle className="text-lg flex items-center">
+                                            <Target className="h-5 w-5 mr-2" />
+                                            OKR Linkage
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-3">
+                                        <div>
+                                            <h4 className="font-medium text-sm text-slate-700">Objective</h4>
+                                            <p className="text-slate-600">{task.linked_okr.objective}</p>
+                                        </div>
+                                        <div>
+                                            <h4 className="font-medium text-sm text-slate-700">Key Result</h4>
+                                            <p className="text-slate-600">{task.linked_okr.key_result}</p>
+                                        </div>
+                                        {task.linked_okr.weight > 0 && (
+                                            <div>
+                                                <h4 className="font-medium text-sm text-slate-700">OKR Weight</h4>
+                                                <p className="text-slate-600">{(task.linked_okr.weight * 100).toFixed(0)}%</p>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </div>
+
+                        {/* Right Column - Metadata */}
+                        <div className="space-y-6">
+                            {/* Task Information */}
+                            <Card>
+                                <CardHeader className="pb-4">
+                                    <CardTitle className="text-lg">Task Information</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="flex items-center justify-between py-2 border-b">
+                                        <span className="text-sm text-slate-600">Start Date</span>
+                                        <span className="text-sm font-medium flex items-center">
+                                            <Calendar className="h-4 w-4 mr-1" />
+                                            {format(new Date(task.start_date), 'MMM dd, yyyy')}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between py-2 border-b">
+                                        <span className="text-sm text-slate-600">Due Date</span>
+                                        <span className="text-sm font-medium flex items-center">
+                                            <Calendar className="h-4 w-4 mr-1" />
+                                            {format(new Date(task.due_date), 'MMM dd, yyyy')}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between py-2 border-b">
+                                        <span className="text-sm text-slate-600">Owner</span>
+                                        <span className="text-sm font-medium flex items-center">
+                                            <User className="h-4 w-4 mr-1" />
+                                            {task.owner_id === user.id ? 'You' : 'Team Member'}
+                                        </span>
+                                    </div>
+                                    {task.department_id && (
+                                        <div className="flex items-center justify-between py-2 border-b">
+                                            <span className="text-sm text-slate-600">Department</span>
+                                            <span className="text-sm font-medium flex items-center">
+                                                <Building className="h-4 w-4 mr-1" />
+                                                {task.department_id}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {task.validated_by && (
+                                        <div className="flex items-center justify-between py-2">
+                                            <span className="text-sm text-slate-600">Validated</span>
+                                            <span className="text-sm font-medium flex items-center">
+                                                <CheckCircle2 className="h-4 w-4 mr-1 text-green-600" />
+                                                {format(new Date(task.validated_at!), 'MMM dd, yyyy')}
+                                            </span>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            {/* Manager Comments */}
+                            {task.manager_comments && (
+                                <Card>
+                                    <CardHeader className="pb-4">
+                                        <CardTitle className="text-lg flex items-center">
+                                            <Crown className="h-5 w-5 mr-2" />
+                                            Manager Comments
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p className="text-slate-600 text-sm italic bg-amber-50 p-3 rounded-lg border">
+                                            "{task.manager_comments}"
+                                        </p>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* Performance Score */}
+                            {task.performance_score && (
+                                <Card>
+                                    <CardHeader className="pb-4">
+                                        <CardTitle className="text-lg">Performance Score</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-center">
+                                            <div className="text-3xl font-bold text-slate-900">
+                                                {task.performance_score}
+                                            </div>
+                                            <div className="text-sm text-slate-500 mt-1">out of 100</div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* Validation Alert */}
+                            {canValidate() && (
+                                <Alert className="bg-blue-50 border-blue-200">
+                                    <AlertCircle className="h-4 w-4 text-blue-600" />
+                                    <AlertDescription className="text-blue-800">
+                                        <div className="space-y-3">
+                                            <p className="text-sm font-medium">
+                                                This task is ready for validation
+                                            </p>
+                                            <Button
+                                                onClick={validateTask}
+                                                size="sm"
+                                                className="w-full bg-blue-600 hover:bg-blue-700"
+                                            >
+                                                <CheckCircle2 className="h-4 w-4 mr-2" />
+                                                Validate Task
+                                            </Button>
+                                        </div>
+                                    </AlertDescription>
+                                </Alert>
+                            )}
+                        </div>
+                    </div>
+                </motion.div>
+            </div>
         </div>
     );
 }

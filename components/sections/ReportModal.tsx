@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, FileText, Upload, Download } from 'lucide-react';
+import { X, FileText, Upload, Download, Target, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Task } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 
 interface ReportModalProps {
     isOpen: boolean;
@@ -61,6 +62,17 @@ export default function ReportModal({ isOpen, onClose, tasks, onSubmitReport }: 
         }
     };
 
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case 'Done': return 'bg-emerald-100 text-emerald-800';
+            case 'In Progress': return 'bg-blue-100 text-blue-800';
+            case 'Approved': return 'bg-green-100 text-green-800';
+            case 'Draft': return 'bg-slate-100 text-slate-800';
+            case 'Overdue': return 'bg-red-100 text-red-800';
+            default: return 'bg-slate-100 text-slate-800';
+        }
+    };
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -74,24 +86,49 @@ export default function ReportModal({ isOpen, onClose, tasks, onSubmitReport }: 
                 <div className="space-y-6 py-4">
                     <div>
                         <Label htmlFor="task-select">Select Task to Report On</Label>
-                        <div className="grid gap-2 mt-2">
+                        <div className="grid gap-3 mt-2">
                             {tasks.map(task => (
                                 <Card
                                     key={task.id}
-                                    className={`cursor-pointer transition-all ${
-                                        selectedTaskId === task.id ? 'border-blue-500 bg-blue-50' : ''
+                                    className={`cursor-pointer transition-all border-2 ${
+                                        selectedTaskId === task.id ? 'border-blue-500 bg-blue-50' : 'border-transparent'
                                     }`}
                                     onClick={() => setSelectedTaskId(task.id)}
                                 >
                                     <CardContent className="p-4">
-                                        <div className="flex items-center justify-between">
-                                            <div>
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
                                                 <h4 className="font-medium">{task.title}</h4>
-                                                <p className="text-sm text-muted-foreground line-clamp-1">
+                                                <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
                                                     {task.description}
                                                 </p>
+                                                <div className="flex items-center gap-2 mt-2">
+                                                    <Badge className={getStatusColor(task.status)}>
+                                                        {task.status}
+                                                    </Badge>
+                                                    <Badge variant="outline">
+                                                        {task.priority}
+                                                    </Badge>
+                                                    {task.linked_okr && (
+                                                        <Badge variant="outline" className="bg-purple-50 text-purple-700">
+                                                            <Target className="h-3 w-3 mr-1" />
+                                                            OKR Linked
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                                                    <div className="flex items-center">
+                                                        <Calendar className="h-3 w-3 mr-1" />
+                                                        Due: {new Date(task.due_date).toLocaleDateString()}
+                                                    </div>
+                                                    <div className="flex items-center">
+                                                        Progress: {task.progress}%
+                                                    </div>
+                                                </div>
+                                                <div className="mt-2">
+                                                    <Progress value={task.progress} className="h-2" />
+                                                </div>
                                             </div>
-                                            <Badge>{task.status}</Badge>
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -102,15 +139,19 @@ export default function ReportModal({ isOpen, onClose, tasks, onSubmitReport }: 
                     {selectedTask && (
                         <>
                             <div>
-                                <Label htmlFor="report-content">Report Details</Label>
+                                <Label htmlFor="report-content">Report Details *</Label>
                                 <Textarea
                                     id="report-content"
-                                    placeholder="Describe your progress, challenges, and next steps for this task..."
+                                    placeholder="Describe your progress, challenges faced, deliverables completed, and next steps..."
                                     value={reportContent}
                                     onChange={(e) => setReportContent(e.target.value)}
                                     rows={6}
                                     className="mt-2"
+                                    required
                                 />
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Include specific details about what was accomplished and any proof of completion.
+                                </p>
                             </div>
 
                             <div>
@@ -139,6 +180,9 @@ export default function ReportModal({ isOpen, onClose, tasks, onSubmitReport }: 
                                         </Button>
                                     )}
                                 </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Upload screenshots, documents, or any proof of task completion
+                                </p>
                             </div>
 
                             <div className="flex justify-end gap-4 pt-4">

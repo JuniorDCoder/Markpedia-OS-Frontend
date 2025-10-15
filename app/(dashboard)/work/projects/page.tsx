@@ -31,11 +31,12 @@ import {
     AlertTriangle,
     User,
     Building,
-    AlertCircle,
     CheckCircle,
     PauseCircle,
     PlayCircle,
     Target,
+    DollarSign,
+    Flag,
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -87,24 +88,35 @@ export default function ProjectsPage() {
 
     const projectStats = useMemo(() => {
         const total = projects.length;
+        const active = projects.filter((p) => p.status === 'Active').length;
         const completed = projects.filter((p) => p.status === 'Completed').length;
-        const inProgress = projects.filter((p) => p.status === 'In Progress').length;
-        const atRisk = projects.filter((p) => p.status === 'At Risk').length;
+        const planned = projects.filter((p) => p.status === 'Planned').length;
         const onHold = projects.filter((p) => p.status === 'On Hold').length;
-        const planning = projects.filter((p) => p.status === 'Planning').length;
+        const archived = projects.filter((p) => p.status === 'Archived').length;
+
         const highPriority = projects.filter((p) => p.priority === 'High' || p.priority === 'Critical').length;
-        const overdue = projects.filter((p) => new Date(p.endDate) < new Date() && p.status !== 'Completed').length;
+        const delayed = projects.filter((p) => {
+            const overdueTasks = p.tasks.filter(task =>
+                new Date(task.dueDate) < new Date() && task.status !== 'Done'
+            );
+            return overdueTasks.length > 0;
+        }).length;
+
+        const totalBudget = projects.reduce((sum, p) => sum + p.budget, 0);
+        const totalSpent = projects.reduce((sum, p) => sum + (p.spent || 0), 0);
+        const budgetUtilization = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
         const avgProgress = total > 0 ? Math.round(projects.reduce((sum, p) => sum + p.progress, 0) / total) : 0;
 
         return {
             total,
+            active,
             completed,
-            inProgress,
-            atRisk,
+            planned,
             onHold,
-            planning,
+            archived,
             highPriority,
-            overdue,
+            delayed,
+            budgetUtilization,
             avgProgress,
         };
     }, [projects]);
@@ -112,8 +124,9 @@ export default function ProjectsPage() {
     const filteredProjects = useMemo(() => {
         return projects.filter((project) => {
             const matchesSearch =
-                project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                project.description.toLowerCase().includes(searchTerm.toLowerCase());
+                project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                project.purpose.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                project.department.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesStatus = statusFilter === 'all' || project.status === statusFilter;
             const matchesPriority = priorityFilter === 'all' || project.priority === priorityFilter;
             return matchesSearch && matchesStatus && matchesPriority;
@@ -124,16 +137,33 @@ export default function ProjectsPage() {
         switch (status) {
             case 'Completed':
                 return 'bg-emerald-100 text-emerald-800';
-            case 'In Progress':
+            case 'Active':
                 return 'bg-blue-100 text-blue-800';
             case 'On Hold':
                 return 'bg-amber-100 text-amber-800';
-            case 'Planning':
+            case 'Planned':
                 return 'bg-slate-100 text-slate-800';
-            case 'At Risk':
-                return 'bg-red-100 text-red-800';
+            case 'Archived':
+                return 'bg-gray-100 text-gray-800';
             default:
                 return 'bg-slate-100 text-slate-800';
+        }
+    };
+
+    const getStatusIcon = (status: string) => {
+        switch (status) {
+            case 'Completed':
+                return <CheckCircle className="h-4 w-4" />;
+            case 'Active':
+                return <PlayCircle className="h-4 w-4" />;
+            case 'On Hold':
+                return <PauseCircle className="h-4 w-4" />;
+            case 'Planned':
+                return <Clock className="h-4 w-4" />;
+            case 'Archived':
+                return <Briefcase className="h-4 w-4" />;
+            default:
+                return <Briefcase className="h-4 w-4" />;
         }
     };
 
@@ -152,17 +182,13 @@ export default function ProjectsPage() {
         }
     };
 
-    const getRiskLevelColor = (risk: string) => {
-        switch (risk) {
-            case 'High':
-                return 'bg-red-100 text-red-800';
-            case 'Medium':
-                return 'bg-yellow-100 text-yellow-800';
-            case 'Low':
-                return 'bg-green-100 text-green-800';
-            default:
-                return 'bg-slate-100 text-slate-800';
-        }
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        }).format(amount);
     };
 
     if (loading) return <TableSkeleton />;
@@ -174,10 +200,10 @@ export default function ProjectsPage() {
                 <div className="space-y-1">
                     <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center">
                         <Briefcase className="h-7 w-7 sm:h-8 sm:w-8 mr-2 text-blue-600" />
-                        Project Portfolio
+                        Project Management System
                     </h1>
                     <p className="text-sm sm:text-base text-muted-foreground">
-                        Manage and track all company projects with stakeholders and risk assessment
+                        Centralized system to plan, track, and report all projects aligned with strategic objectives
                     </p>
                 </div>
                 <Button asChild size="lg" className="w-full sm:w-auto shadow-sm">
@@ -188,18 +214,45 @@ export default function ProjectsPage() {
                 </Button>
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-4">
+            {/* Stats Grid - Updated to match MARKPEDIA OS */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {[
-                    { icon: <Briefcase className="h-5 w-5 text-blue-600" />, value: projectStats.total, label: 'Total Projects', color: 'blue' },
-                    { icon: <PauseCircle className="h-5 w-5 text-amber-600" />, value: projectStats.onHold, label: 'On Hold', color: 'amber' },
-                    { icon: <Target className="h-5 w-5 text-orange-600" />, value: projectStats.highPriority, label: 'High Priority', color: 'orange' },
-                    { icon: <Clock className="h-5 w-5 text-red-600" />, value: projectStats.overdue, label: 'Overdue', color: 'red' },
-                    { icon: <BarChart3 className="h-5 w-5 text-slate-600" />, value: projectStats.avgProgress, label: '% Prg.', color: 'slate' },
+                    {
+                        icon: <PlayCircle className="h-5 w-5 text-blue-600" />,
+                        value: projectStats.active,
+                        label: 'Active Projects',
+                        color: 'blue'
+                    },
+                    {
+                        icon: <CheckCircle className="h-5 w-5 text-emerald-600" />,
+                        value: projectStats.completed,
+                        label: 'Completed',
+                        color: 'emerald'
+                    },
+                    {
+                        icon: <Clock className="h-5 w-5 text-red-600" />,
+                        value: projectStats.delayed,
+                        label: 'Delayed',
+                        color: 'red'
+                    },
+                    {
+                        icon: <DollarSign className="h-5 w-5 text-purple-600" />,
+                        value: `${projectStats.budgetUtilization}%`,
+                        label: 'Budget Used',
+                        color: 'purple'
+                    },
+                    {
+                        icon: <BarChart3 className="h-5 w-5 text-slate-600" />,
+                        value: `${projectStats.avgProgress}%`,
+                        label: 'Progress Rate',
+                        color: 'slate'
+                    },
                 ].map((stat, i) => (
-                    <Card key={i} className={`bg-${stat.color}-50 border-${stat.color}-200`}>
+                    <Card key={i} className={`border-${stat.color}-200`}>
                         <CardContent className="p-3 sm:p-4 flex items-center gap-2">
-                            <div className={`rounded-full bg-${stat.color}-100 p-2`}>{stat.icon}</div>
+                            <div className={`rounded-full bg-${stat.color}-100 p-2`}>
+                                {stat.icon}
+                            </div>
                             <div>
                                 <p className="text-lg font-bold leading-tight">{stat.value}</p>
                                 <p className={`text-xs text-${stat.color}-600`}>{stat.label}</p>
@@ -216,7 +269,7 @@ export default function ProjectsPage() {
                         <div className="flex-1 relative w-full">
                             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                             <Input
-                                placeholder="Search projects by name or description..."
+                                placeholder="Search projects by title, purpose, or department..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="pl-10 w-full"
@@ -230,16 +283,17 @@ export default function ProjectsPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">All Status</SelectItem>
-                                    <SelectItem value="Planning">Planning</SelectItem>
-                                    <SelectItem value="In Progress">In Progress</SelectItem>
+                                    <SelectItem value="Planned">Planned</SelectItem>
+                                    <SelectItem value="Active">Active</SelectItem>
                                     <SelectItem value="On Hold">On Hold</SelectItem>
                                     <SelectItem value="Completed">Completed</SelectItem>
-                                    <SelectItem value="At Risk">At Risk</SelectItem>
+                                    <SelectItem value="Archived">Archived</SelectItem>
                                 </SelectContent>
                             </Select>
 
                             <Select value={priorityFilter} onValueChange={setPriorityFilter}>
                                 <SelectTrigger className="w-[130px] sm:w-[140px]">
+                                    <Flag className="h-4 w-4 mr-1 sm:mr-2" />
                                     <SelectValue placeholder="Priority" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -314,18 +368,17 @@ export default function ProjectsPage() {
                                                         href={`/work/projects/${project.id}`}
                                                         className="hover:underline hover:text-blue-600 transition-colors"
                                                     >
-                                                        {project.name}
+                                                        {project.title}
                                                     </Link>
                                                 </CardTitle>
                                                 <div className="flex flex-wrap items-center gap-2">
-                                                    <Badge className={getStatusColor(project.status)}>{project.status}</Badge>
-                                                    <Badge className={getPriorityColor(project.priority)}>{project.priority}</Badge>
-                                                    {project.riskLevel && (
-                                                        <Badge className={getRiskLevelColor(project.riskLevel)}>
-                                                            <AlertTriangle className="h-3 w-3 mr-1" />
-                                                            {project.riskLevel} Risk
-                                                        </Badge>
-                                                    )}
+                                                    <Badge className={getStatusColor(project.status)}>
+                                                        {getStatusIcon(project.status)}
+                                                        <span className="ml-1">{project.status}</span>
+                                                    </Badge>
+                                                    <Badge className={getPriorityColor(project.priority)}>
+                                                        {project.priority}
+                                                    </Badge>
                                                 </div>
                                             </div>
                                             <DropdownMenu>
@@ -362,7 +415,9 @@ export default function ProjectsPage() {
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </div>
-                                        <CardDescription className="line-clamp-2 text-sm">{project.description}</CardDescription>
+                                        <CardDescription className="line-clamp-2 text-sm">
+                                            {project.purpose}
+                                        </CardDescription>
                                     </CardHeader>
                                     <CardContent className="space-y-4 text-sm">
                                         <div>
@@ -372,29 +427,43 @@ export default function ProjectsPage() {
                                             </div>
                                             <Progress value={project.progress} />
                                         </div>
+
                                         <div className="grid grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
                                             <div className="flex items-center">
                                                 <Calendar className="h-4 w-4 mr-1" />
                                                 {new Date(project.endDate).toLocaleDateString()}
                                             </div>
                                             <div className="flex items-center">
-                                                <Users className="h-4 w-4 mr-1" />
-                                                {project.assignedTo.length} member
-                                                {project.assignedTo.length !== 1 && 's'}
+                                                <DollarSign className="h-4 w-4 mr-1" />
+                                                {formatCurrency(project.budget)}
                                             </div>
                                         </div>
-                                        {project.department && (
-                                            <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
+
+                                        <div className="grid grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
+                                            <div className="flex items-center">
                                                 <Building className="h-4 w-4 mr-1" />
                                                 {project.department}
                                             </div>
-                                        )}
-                                        {project.stakeholders && project.stakeholders.length > 0 && (
+                                            <div className="flex items-center">
+                                                <User className="h-4 w-4 mr-1" />
+                                                {project.owner}
+                                            </div>
+                                        </div>
+
+                                        {/* Linked OKR */}
+                                        <div className="text-xs sm:text-sm text-muted-foreground">
+                                            <div className="flex items-start">
+                                                <Target className="h-4 w-4 mr-1 mt-0.5 flex-shrink-0" />
+                                                <span className="line-clamp-2">{project.linkedOKR}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Risks */}
+                                        {project.risks && project.risks.length > 0 && (
                                             <div className="text-xs sm:text-sm text-muted-foreground">
                                                 <div className="flex items-center">
-                                                    <User className="h-4 w-4 mr-1" />
-                                                    {project.stakeholders.length} stakeholder
-                                                    {project.stakeholders.length !== 1 && 's'}
+                                                    <AlertTriangle className="h-4 w-4 mr-1" />
+                                                    {project.risks.length} risk{project.risks.length !== 1 ? 's' : ''}
                                                 </div>
                                             </div>
                                         )}
@@ -424,33 +493,34 @@ export default function ProjectsPage() {
                                         <div className="flex-1 space-y-1">
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <h3 className="font-medium hover:text-blue-600 transition">
-                                                    <Link href={`/work/projects/${project.id}`}>{project.name}</Link>
+                                                    <Link href={`/work/projects/${project.id}`}>{project.title}</Link>
                                                 </h3>
-                                                <Badge className={getStatusColor(project.status)}>{project.status}</Badge>
-                                                <Badge className={getPriorityColor(project.priority)}>{project.priority}</Badge>
-                                                {project.riskLevel && (
-                                                    <Badge className={getRiskLevelColor(project.riskLevel)}>
-                                                        <AlertTriangle className="h-3 w-3 mr-1" />
-                                                        {project.riskLevel}
-                                                    </Badge>
-                                                )}
+                                                <Badge className={getStatusColor(project.status)}>
+                                                    {getStatusIcon(project.status)}
+                                                    <span className="ml-1">{project.status}</span>
+                                                </Badge>
+                                                <Badge className={getPriorityColor(project.priority)}>
+                                                    {project.priority}
+                                                </Badge>
                                             </div>
-                                            <p className="text-xs sm:text-sm text-muted-foreground line-clamp-1">{project.description}</p>
+                                            <p className="text-xs sm:text-sm text-muted-foreground line-clamp-1">{project.purpose}</p>
                                             <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                                                 <div className="flex items-center">
                                                     <Calendar className="h-3 w-3 mr-1" />
                                                     Due {new Date(project.endDate).toLocaleDateString()}
                                                 </div>
                                                 <div className="flex items-center">
-                                                    <Users className="h-3 w-3 mr-1" />
-                                                    {project.assignedTo.length} member{project.assignedTo.length !== 1 && 's'}
+                                                    <Building className="h-3 w-3 mr-1" />
+                                                    {project.department}
                                                 </div>
-                                                {project.department && (
-                                                    <div className="flex items-center">
-                                                        <Building className="h-3 w-3 mr-1" />
-                                                        {project.department}
-                                                    </div>
-                                                )}
+                                                <div className="flex items-center">
+                                                    <User className="h-3 w-3 mr-1" />
+                                                    {project.owner}
+                                                </div>
+                                                <div className="flex items-center">
+                                                    <DollarSign className="h-3 w-3 mr-1" />
+                                                    {formatCurrency(project.budget)}
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2 sm:gap-4">

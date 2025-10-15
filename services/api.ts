@@ -8,7 +8,7 @@ import {
     CashbookEntry,
     Meeting,
     OtterAIWebhookPayload,
-    Decision, ActionItem, Problem, JobDescription, Department, Framework
+    Decision, ActionItem, Problem, JobDescription, Department, Framework, ProblemAnalytics, ProblemKPI
 } from '@/types';
 
 const api = axios.create({
@@ -84,222 +84,515 @@ const mockUsers: User[] = [
 const mockProjects: Project[] = [
     {
         id: '1',
-        name: 'Website Redesign',
-        description: 'Complete redesign of company website with modern UI/UX',
-        status: 'In Progress',
+        title: 'Seller Verification Upgrade',
+        department: 'Trust & Safety',
+        owner: 'Head of Compliance',
+        purpose: 'Improve trust and platform credibility through enhanced seller verification',
+        startDate: '2025-10-10',
+        endDate: '2026-01-15',
+        status: 'Active',
         priority: 'High',
-        riskLevel: 'Medium',
-        department: 'Marketing',
-        startDate: '2024-01-15',
-        endDate: '2024-03-15',
-        assignedTo: ['2', '3'],
-        createdBy: '1',
-        progress: 65,
-        stakeholders: ['client@example.com', 'marketing@company.com', 'ceo@company.com'],
-        createdAt: '2024-01-10',
-        updatedAt: '2024-01-20',
+        budget: 15000,
+        spent: 6000,
+        strategicObjective: 'Improve trust and platform credibility',
+        linkedOKR: '95% Verified Sellers by Q1 2026',
+        kpis: [
+            {
+                objective: 'Streamline seller KYC',
+                deliverable: 'New KYC form integrated',
+                kpi: '100% active sellers verified'
+            },
+            {
+                objective: 'Reduce fraud incidents',
+                deliverable: 'Updated verification algorithm',
+                kpi: '80% reduction in fake profiles'
+            },
+            {
+                objective: 'Automate approvals',
+                deliverable: 'Workflow in backend',
+                kpi: '<24h approval turnaround'
+            }
+        ],
+        milestones: [
+            {
+                milestone: 'KYC workflow design complete',
+                date: '2025-10-20',
+                status: '✅'
+            },
+            {
+                milestone: 'Backend integration tested',
+                date: '2025-11-15',
+                status: '⏳'
+            },
+            {
+                milestone: 'Policy approval & training done',
+                date: '2025-12-05',
+                status: '⏳'
+            },
+            {
+                milestone: 'Feature live on Markpedia',
+                date: '2026-01-15',
+                status: '⏳'
+            }
+        ],
+        team: [
+            {
+                role: 'Project Manager',
+                name: 'Joe Tassi',
+                responsibility: 'Overall coordination'
+            },
+            {
+                role: 'Developer',
+                name: 'Enow Divine',
+                responsibility: 'API integration'
+            },
+            {
+                role: 'QA Tester',
+                name: 'Cyrille Atem',
+                responsibility: 'Quality checks'
+            },
+            {
+                role: 'Legal Advisor',
+                name: 'Merina Biwoni',
+                responsibility: 'Policy compliance'
+            },
+            {
+                role: 'Strategy Rep',
+                name: 'Ngu Divine',
+                responsibility: 'CEO Oversight'
+            }
+        ],
+        tasks: [
+            {
+                task: 'Create KYC schema',
+                owner: 'Enow',
+                dueDate: '2025-10-20',
+                status: 'Done'
+            },
+            {
+                task: 'Build frontend form',
+                owner: 'Cyrille',
+                dueDate: '2025-11-10',
+                status: 'In Progress'
+            },
+            {
+                task: 'Test sandbox flow',
+                owner: 'Ulrich',
+                dueDate: '2025-12-15',
+                status: 'Not Started'
+            },
+            {
+                task: 'Deploy to production',
+                owner: 'Guy A',
+                dueDate: '2026-01-10',
+                status: 'Not Started'
+            }
+        ],
+        budgetBreakdown: [
+            {
+                category: 'Development',
+                description: 'API + front-end',
+                amount: 6000,
+                status: 'Approved'
+            },
+            {
+                category: 'Legal',
+                description: 'Policy drafting',
+                amount: 2000,
+                status: 'Pending'
+            },
+            {
+                category: 'Training',
+                description: 'Seller awareness sessions',
+                amount: 3000,
+                status: 'In Progress'
+            },
+            {
+                category: 'Miscellaneous',
+                description: 'Communication, printing',
+                amount: 4000,
+                status: 'Reserved'
+            }
+        ],
+        risks: [
+            {
+                risk: 'Delay in dev integration',
+                impact: 'High',
+                likelihood: 'Medium',
+                mitigation: 'Assign backup dev'
+            },
+            {
+                risk: 'Policy review delays',
+                impact: 'Medium',
+                likelihood: 'High',
+                mitigation: 'Fast-track legal approval'
+            },
+            {
+                risk: 'Seller pushback',
+                impact: 'Medium',
+                likelihood: 'Medium',
+                mitigation: 'Awareness campaigns'
+            }
+        ],
+        progress: 40,
+        createdAt: '2025-09-15',
+        updatedAt: '2025-10-25'
     },
     {
         id: '2',
-        name: 'Mobile App Development',
-        description: 'Develop mobile application for customer engagement',
-        status: 'Planning',
-        priority: 'Medium',
-        riskLevel: 'Low',
-        department: 'Engineering',
-        startDate: '2024-02-01',
-        endDate: '2024-06-01',
-        assignedTo: ['2', '4', '5'],
-        createdBy: '1',
-        progress: 15,
-        stakeholders: ['product@company.com', 'design@company.com'],
-        createdAt: '2024-01-25',
-        updatedAt: '2024-01-25',
-    },
-    {
-        id: '3',
-        name: 'Q2 Marketing Campaign',
-        description: 'Quarterly marketing campaign for new product launch',
-        status: 'At Risk',
-        priority: 'Critical',
-        riskLevel: 'High',
-        department: 'Marketing',
-        startDate: '2024-03-01',
-        endDate: '2024-04-15',
-        assignedTo: ['3', '6'],
-        createdBy: '2',
-        progress: 30,
-        stakeholders: ['sales@company.com', 'external-agency@partner.com'],
-        createdAt: '2024-02-10',
-        updatedAt: '2024-02-20',
-    },
-    {
-        id: '4',
-        name: 'Database Migration',
-        description: 'Migrate from legacy database to new cloud infrastructure',
-        status: 'On Hold',
+        title: 'AI Escrow System v2',
+        department: 'Tech Department',
+        owner: 'Head of Technology',
+        purpose: 'Automate escrow release flow and improve transaction trust',
+        startDate: '2025-10-01',
+        endDate: '2026-01-31',
+        status: 'Active',
         priority: 'High',
-        riskLevel: 'Medium',
-        department: 'IT',
-        startDate: '2024-01-20',
-        endDate: '2024-05-30',
-        assignedTo: ['4', '7'],
-        createdBy: '3',
-        progress: 40,
-        stakeholders: ['it-director@company.com', 'compliance@company.com'],
-        createdAt: '2024-01-15',
-        updatedAt: '2024-02-01',
-    },
-    {
-        id: '5',
-        name: 'Employee Training Program',
-        description: 'Develop and implement new employee onboarding training',
-        status: 'Completed',
-        priority: 'Low',
-        riskLevel: 'Low',
-        department: 'HR',
-        startDate: '2024-01-01',
-        endDate: '2024-01-31',
-        assignedTo: ['5', '8'],
-        createdBy: '4',
-        progress: 100,
-        stakeholders: ['hr@company.com', 'management@company.com'],
-        createdAt: '2023-12-15',
-        updatedAt: '2024-02-01',
-    },
+        budget: 25000,
+        spent: 12000,
+        strategicObjective: 'Improve transaction security and automation',
+        linkedOKR: 'Improve transaction trust by 50%',
+        kpis: [
+            {
+                objective: 'Automate escrow release',
+                deliverable: 'AI-powered release system',
+                kpi: '100% automation of escrow release flow'
+            },
+            {
+                objective: 'Enhance security',
+                deliverable: 'Enhanced fraud detection',
+                kpi: '0% failed transactions'
+            }
+        ],
+        milestones: [
+            {
+                milestone: 'AI model training complete',
+                date: '2025-10-15',
+                status: '✅'
+            },
+            {
+                milestone: 'API integration',
+                date: '2025-11-20',
+                status: '✅'
+            },
+            {
+                milestone: 'Security audit',
+                date: '2025-12-10',
+                status: '✅'
+            },
+            {
+                milestone: 'User acceptance testing',
+                date: '2025-12-20',
+                status: '✅'
+            },
+            {
+                milestone: 'Production deployment',
+                date: '2026-01-15',
+                status: '⏳'
+            },
+            {
+                milestone: 'Post-launch review',
+                date: '2026-01-31',
+                status: '⏳'
+            }
+        ],
+        team: [
+            {
+                role: 'Project Manager',
+                name: 'Sarah Chen',
+                responsibility: 'Project coordination'
+            },
+            {
+                role: 'AI Engineer',
+                name: 'Alex Kim',
+                responsibility: 'Machine learning models'
+            },
+            {
+                role: 'Backend Developer',
+                name: 'Mike Rodriguez',
+                responsibility: 'System integration'
+            },
+            {
+                role: 'Security Specialist',
+                name: 'Lisa Wang',
+                responsibility: 'Security compliance'
+            }
+        ],
+        tasks: [
+            {
+                task: 'Design AI architecture',
+                owner: 'Alex',
+                dueDate: '2025-10-10',
+                status: 'Done'
+            },
+            {
+                task: 'Develop core APIs',
+                owner: 'Mike',
+                dueDate: '2025-11-15',
+                status: 'Done'
+            },
+            {
+                task: 'Implement security protocols',
+                owner: 'Lisa',
+                dueDate: '2025-12-05',
+                status: 'Done'
+            },
+            {
+                task: 'Integration testing',
+                owner: 'Sarah',
+                dueDate: '2025-12-15',
+                status: 'In Progress'
+            },
+            {
+                task: 'Deploy to staging',
+                owner: 'Mike',
+                dueDate: '2026-01-05',
+                status: 'Not Started'
+            }
+        ],
+        budgetBreakdown: [
+            {
+                category: 'AI Development',
+                description: 'Model training and integration',
+                amount: 12000,
+                status: 'Approved'
+            },
+            {
+                category: 'Infrastructure',
+                description: 'Server and cloud costs',
+                amount: 8000,
+                status: 'Approved'
+            },
+            {
+                category: 'Security',
+                description: 'Audit and compliance',
+                amount: 3000,
+                status: 'In Progress'
+            },
+            {
+                category: 'Training',
+                description: 'Team and user training',
+                amount: 2000,
+                status: 'Pending'
+            }
+        ],
+        risks: [
+            {
+                risk: 'Integration delays',
+                impact: 'Medium',
+                likelihood: 'Medium',
+                mitigation: 'Extended testing phase'
+            },
+            {
+                risk: 'API downtime',
+                impact: 'Low',
+                likelihood: 'Low',
+                mitigation: 'Backup systems in place'
+            }
+        ],
+        progress: 65,
+        createdAt: '2025-09-10',
+        updatedAt: '2025-10-20'
+    }
 ];
 
+// Updated mock tasks matching MARKPEDIA OS structure
 const mockTasks: Task[] = [
     {
         id: '1',
         title: 'Design Homepage Mockups',
-        description: 'Create wireframes and mockups for new homepage design',
+        description: 'Create wireframes and mockups for new homepage design with focus on user experience',
         status: 'In Progress',
         priority: 'High',
-        assignedTo: '2',
-        projectId: '1',
-        dueDate: '2024-01-25',
-        createdAt: '2024-01-15',
-        updatedAt: '2024-01-20',
-        validatedBy: '1',
-        validatedAt: '2024-01-18',
-        weeklyRhythmStatus: 'implementation',
-        reportSubmitted: true,
-        reportDue: '2024-01-26',
+        owner_id: '2',
+        manager_id: '1',
+        department_id: 'design',
+        project_id: '1',
+        expected_output: 'High-fidelity mockups in Figma with design specifications',
+        proof_of_completion: {
+            attachments: ['mockup_v1.fig'],
+            links: ['https://figma.com/file/example'],
+            notes: 'Initial mockups completed, awaiting feedback'
+        },
+        progress: 75,
+        start_date: '2024-01-15',
+        due_date: '2024-01-25',
+        linked_okr: {
+            objective: 'Improve user engagement',
+            key_result: 'Increase homepage conversion by 15%',
+            weight: 0.8
+        },
+        performance_score: 85,
+        manager_comments: 'Good progress, ensure mobile responsiveness',
+        created_at: '2024-01-15T08:00:00Z',
+        updated_at: '2024-01-20T14:30:00Z',
+        weekly_rhythm_status: 'implementation',
+        validated_by: '1',
+        validated_at: '2024-01-16T10:00:00Z',
+        report_submitted: false
     },
     {
         id: '2',
         title: 'Setup Development Environment',
-        description: 'Configure development tools and environment',
+        description: 'Configure development tools, CI/CD pipeline, and testing environment',
         status: 'Done',
         priority: 'Medium',
-        assignedTo: '3',
-        projectId: '1',
-        dueDate: '2024-01-18',
-        createdAt: '2024-01-15',
-        updatedAt: '2024-01-17',
-        validatedBy: '1',
-        validatedAt: '2024-01-17',
-        weeklyRhythmStatus: 'implementation',
-        reportSubmitted: true,
-        reportDue: '2024-01-19',
+        owner_id: '3',
+        manager_id: '1',
+        department_id: 'engineering',
+        project_id: '1',
+        expected_output: 'Fully configured dev environment with documentation',
+        proof_of_completion: {
+            attachments: ['setup_guide.pdf', 'environment_config.yml'],
+            links: ['https://github.com/company/dev-setup'],
+            notes: 'Environment ready for team onboarding'
+        },
+        progress: 100,
+        start_date: '2024-01-15',
+        due_date: '2024-01-18',
+        completed_date: '2024-01-17',
+        linked_okr: {
+            objective: 'Improve development efficiency',
+            key_result: 'Reduce setup time by 50%',
+            weight: 0.6
+        },
+        performance_score: 92,
+        manager_comments: 'Excellent documentation and setup process',
+        created_at: '2024-01-15T09:00:00Z',
+        updated_at: '2024-01-17T16:45:00Z',
+        weekly_rhythm_status: 'implementation',
+        validated_by: '1',
+        validated_at: '2024-01-16T11:30:00Z',
+        report_submitted: true,
+        report_due: '2024-01-19'
     },
     {
         id: '3',
-        title: 'API Integration',
-        description: 'Integrate third-party API services',
-        status: 'Review',
+        title: 'API Integration for Payment System',
+        description: 'Integrate Stripe API for payment processing and subscription management',
+        status: 'Approved',
         priority: 'High',
-        assignedTo: '4',
-        projectId: '2',
-        dueDate: '2024-02-15',
-        createdAt: '2024-01-25',
-        updatedAt: '2024-02-05',
-        weeklyRhythmStatus: 'implementation',
-        reportSubmitted: false,
-        reportDue: '2024-02-16',
+        owner_id: '4',
+        manager_id: '1',
+        department_id: 'engineering',
+        project_id: '2',
+        expected_output: 'Fully functional payment integration with error handling',
+        progress: 20,
+        start_date: '2024-01-25',
+        due_date: '2024-02-15',
+        linked_okr: {
+            objective: 'Enable monetization features',
+            key_result: 'Implement payment processing system',
+            weight: 1.0
+        },
+        created_at: '2024-01-25T10:00:00Z',
+        updated_at: '2024-02-05T15:20:00Z',
+        weekly_rhythm_status: 'implementation',
+        validated_by: '1',
+        validated_at: '2024-01-26T09:15:00Z',
+        report_submitted: false,
+        report_due: '2024-02-16'
     },
     {
         id: '4',
-        title: 'User Testing',
-        description: 'Conduct user testing sessions and gather feedback',
-        status: 'To Do',
+        title: 'User Testing Session Planning',
+        description: 'Plan and schedule user testing sessions for new feature validation',
+        status: 'Draft',
         priority: 'Medium',
-        assignedTo: '5',
-        projectId: '2',
-        dueDate: '2024-03-01',
-        createdAt: '2024-01-30',
-        updatedAt: '2024-01-30',
-        weeklyRhythmStatus: 'creation',
-        reportSubmitted: false,
-        reportDue: '2024-03-02',
+        owner_id: '5',
+        manager_id: '2',
+        department_id: 'product',
+        project_id: '2',
+        expected_output: 'Testing plan with participant list and schedule',
+        progress: 0,
+        start_date: '2024-01-30',
+        due_date: '2024-03-01',
+        created_at: '2024-01-30T14:00:00Z',
+        updated_at: '2024-01-30T14:00:00Z',
+        weekly_rhythm_status: 'creation',
+        report_submitted: false,
+        report_due: '2024-03-02'
     },
     {
         id: '5',
-        title: 'Campaign Strategy Document',
-        description: 'Create comprehensive strategy document for marketing campaign',
+        title: 'Q2 Marketing Campaign Strategy',
+        description: 'Develop comprehensive marketing strategy for Q2 product launch',
         status: 'In Progress',
         priority: 'Critical',
-        assignedTo: '3',
-        projectId: '3',
-        dueDate: '2024-02-15',
-        createdAt: '2024-02-10',
-        updatedAt: '2024-02-12',
-        weeklyRhythmStatus: 'implementation',
-        reportSubmitted: false,
-        reportDue: '2024-02-16',
+        owner_id: '3',
+        manager_id: '3',
+        department_id: 'marketing',
+        project_id: '3',
+        expected_output: 'Complete campaign strategy document with budget allocation',
+        progress: 60,
+        start_date: '2024-02-10',
+        due_date: '2024-02-15',
+        linked_okr: {
+            objective: 'Increase market awareness',
+            key_result: 'Achieve 10K new user signups',
+            weight: 0.9
+        },
+        manager_comments: 'Focus on digital channels and influencer partnerships',
+        created_at: '2024-02-10T08:30:00Z',
+        updated_at: '2024-02-12T11:45:00Z',
+        weekly_rhythm_status: 'implementation',
+        validated_by: '3',
+        validated_at: '2024-02-11T10:00:00Z',
+        report_submitted: false,
+        report_due: '2024-02-16'
     },
     {
         id: '6',
-        title: 'Database Backup Verification',
-        description: 'Verify all database backups before migration',
+        title: 'Database Migration Validation',
+        description: 'Verify all database backups and perform pre-migration testing',
         status: 'Done',
         priority: 'High',
-        assignedTo: '4',
-        projectId: '4',
-        dueDate: '2024-01-25',
-        createdAt: '2024-01-15',
-        updatedAt: '2024-01-24',
-        validatedBy: '3',
-        validatedAt: '2024-01-24',
-        weeklyRhythmStatus: 'implementation',
-        reportSubmitted: true,
-        reportDue: '2024-01-26',
+        owner_id: '4',
+        manager_id: '1',
+        department_id: 'engineering',
+        project_id: '4',
+        expected_output: 'Migration validation report with risk assessment',
+        proof_of_completion: {
+            attachments: ['validation_report.pdf', 'backup_verification.log'],
+            links: [],
+            notes: 'All backups verified, ready for migration'
+        },
+        progress: 100,
+        start_date: '2024-01-15',
+        due_date: '2024-01-25',
+        completed_date: '2024-01-24',
+        performance_score: 88,
+        manager_comments: 'Thorough testing and documentation',
+        created_at: '2024-01-15T11:00:00Z',
+        updated_at: '2024-01-24T17:30:00Z',
+        weekly_rhythm_status: 'implementation',
+        validated_by: '1',
+        validated_at: '2024-01-16T14:20:00Z',
+        report_submitted: true,
+        report_due: '2024-01-26'
     },
     {
         id: '7',
-        title: 'Training Material Development',
-        description: 'Develop training materials and documentation',
-        status: 'Done',
-        priority: 'Low',
-        assignedTo: '5',
-        projectId: '5',
-        dueDate: '2024-01-20',
-        createdAt: '2024-01-01',
-        updatedAt: '2024-01-19',
-        validatedBy: '4',
-        validatedAt: '2024-01-19',
-        weeklyRhythmStatus: 'implementation',
-        reportSubmitted: true,
-        reportDue: '2024-01-21',
-    },
-    {
-        id: '8',
-        title: 'Training Session Scheduling',
-        description: 'Schedule training sessions for all departments',
-        status: 'Done',
+        title: 'Employee Training Program Development',
+        description: 'Create comprehensive onboarding and training materials for new hires',
+        status: 'Overdue',
         priority: 'Medium',
-        assignedTo: '8',
-        projectId: '5',
-        dueDate: '2024-01-25',
-        createdAt: '2024-01-05',
-        updatedAt: '2024-01-24',
-        validatedBy: '4',
-        validatedAt: '2024-01-24',
-        weeklyRhythmStatus: 'implementation',
-        reportSubmitted: true,
-        reportDue: '2024-01-26',
-    },
+        owner_id: '5',
+        manager_id: '4',
+        department_id: 'hr',
+        project_id: '5',
+        expected_output: 'Complete training curriculum and materials',
+        progress: 90,
+        start_date: '2024-01-01',
+        due_date: '2024-01-20',
+        manager_comments: 'Please complete remaining modules ASAP',
+        created_at: '2024-01-01T09:00:00Z',
+        updated_at: '2024-01-22T10:15:00Z',
+        weekly_rhythm_status: 'implementation',
+        validated_by: '4',
+        validated_at: '2024-01-02T11:00:00Z',
+        report_submitted: false
+    }
 ];
 
 const mockJobDescriptions: JobDescription[] = [
@@ -609,6 +902,387 @@ const mockFrameworks: Framework[] = [
     }
 ];
 
+// Mock data matching the Markpedia OS template structure
+const mockMeetings: Meeting[] = [
+    {
+        id: '1',
+        title: 'Quarterly Strategy Review - Q4 2025',
+        date: '2025-10-08',
+        startTime: '10:00',
+        endTime: '12:30',
+        platform: 'Markpedia HQ Boardroom / Zoom',
+        location: 'Boardroom A',
+        department: ['Executive', 'Finance', 'Logistics', 'Marketing'],
+        meetingType: 'Executive Strategy Review',
+        calledBy: 'Ngu Divine (CEO)',
+        facilitator: 'Strategy Department',
+        minuteTaker: 'HR Secretary',
+        participants: ['CEO', 'COO', 'CFO', 'CMO', 'Logistics Head'],
+        absent: ['Compliance Officer'],
+        status: 'Completed',
+
+        purpose: 'To review Q3 performance, identify key challenges, and define strategic objectives and KPIs for Q4 2025 aligned with the company\'s annual OKRs.',
+
+        agenda: [
+            { id: '1', item: 'Review of last meeting\'s actions', presenter: 'CEO', duration: '10 min', order: 1 },
+            { id: '2', item: 'Department performance updates', presenter: 'Strategy Dept', duration: '20 min', order: 2 },
+            { id: '3', item: 'Budget & finance review', presenter: 'CFO', duration: '15 min', order: 3 },
+            { id: '4', item: 'Risk & compliance update', presenter: 'Legal', duration: '10 min', order: 4 },
+            { id: '5', item: 'New innovations', presenter: 'COO', duration: '15 min', order: 5 },
+            { id: '6', item: 'Closing remarks', presenter: 'CEO', duration: '10 min', order: 6 }
+        ],
+
+        discussion: [
+            {
+                id: '1',
+                agendaItem: 'Performance Updates',
+                summary: 'Sales grew by 12%, but logistics delivery time increased by 1.5 days due to warehouse delays.',
+                agreements: 'Agreed to review logistics partners\' SLAs before next cycle.'
+            },
+            {
+                id: '2',
+                agendaItem: 'Finance Review',
+                summary: '8% overspend in logistics fuel; marketing stayed within budget.',
+                agreements: 'CFO to submit revised Q4 forecast by next Friday.'
+            },
+            {
+                id: '3',
+                agendaItem: 'Risk Review',
+                summary: 'China supplier shipments delayed; 2 contracts under review.',
+                agreements: 'Legal to draft new supplier clause to ensure compensation for delays.'
+            },
+            {
+                id: '4',
+                agendaItem: 'Innovation',
+                summary: 'Proposal to launch AI-driven buyer verification in November.',
+                agreements: 'Approved - to be led by the Tech & Engineering Dept.'
+            }
+        ],
+
+        decisions: [
+            {
+                id: '1',
+                description: 'Approve rollout of AI verification',
+                responsible: 'CTO',
+                approvedBy: 'CEO',
+                deadline: '2025-11-01'
+            },
+            {
+                id: '2',
+                description: 'Cut logistics SLA to 72 hours',
+                responsible: 'COO',
+                approvedBy: 'CEO',
+                deadline: '2025-11-15'
+            },
+            {
+                id: '3',
+                description: 'Initiate cost-tracking dashboard',
+                responsible: 'CFO',
+                approvedBy: 'Strategy Dept',
+                deadline: '2025-12-05'
+            }
+        ],
+
+        actionItems: [
+            {
+                id: '1',
+                description: 'Prepare supplier penalty clause draft',
+                assignedTo: 'Legal Officer',
+                department: 'Legal',
+                dueDate: '2025-10-15',
+                status: 'In Progress'
+            },
+            {
+                id: '2',
+                description: 'Set up AI verification prototype',
+                assignedTo: 'Tech Lead',
+                department: 'Engineering',
+                dueDate: '2025-10-25',
+                status: 'Planned'
+            },
+            {
+                id: '3',
+                description: 'Draft revised Q4 forecast',
+                assignedTo: 'CFO',
+                department: 'Finance',
+                dueDate: '2025-10-13',
+                status: 'Pending'
+            },
+            {
+                id: '4',
+                description: 'Update delivery contracts',
+                assignedTo: 'COO',
+                department: 'Logistics',
+                dueDate: '2025-10-20',
+                status: 'Pending'
+            }
+        ],
+
+        risks: [
+            {
+                id: '1',
+                risk: 'Supplier delays',
+                impact: 'High',
+                mitigation: 'Renegotiate contract clauses',
+                owner: 'Legal'
+            },
+            {
+                id: '2',
+                risk: 'Fuel overspend',
+                impact: 'Medium',
+                mitigation: 'Budget adjustment & fleet optimization',
+                owner: 'Finance'
+            },
+            {
+                id: '3',
+                risk: 'Extended delivery SLA',
+                impact: 'High',
+                mitigation: 'Integrate tracking dashboard',
+                owner: 'Logistics'
+            }
+        ],
+
+        attachments: [
+            'Q3 KPI Report (PDF)',
+            'Departmental Budget Summary (Excel)',
+            'Logistics Cost Breakdown (PPT)',
+            'AI Verification Proposal (PDF)'
+        ],
+
+        createdBy: 'CEO',
+        createdAt: '2025-10-08T09:00:00Z',
+        updatedAt: '2025-10-08T13:00:00Z'
+    },
+    {
+        id: '2',
+        title: 'Marketing Campaign Planning - Q1 2026',
+        date: '2025-11-15',
+        startTime: '14:00',
+        endTime: '15:30',
+        platform: 'Zoom',
+        location: 'Virtual Meeting',
+        department: ['Marketing', 'Sales'],
+        meetingType: 'Department Planning',
+        calledBy: 'CMO',
+        facilitator: 'Marketing Lead',
+        minuteTaker: 'Marketing Assistant',
+        participants: ['CMO', 'Marketing Team', 'Sales Head'],
+        absent: ['Design Lead'],
+        status: 'Scheduled',
+
+        purpose: 'Plan Q1 2026 marketing campaigns and align with sales targets.',
+
+        agenda: [
+            { id: '1', item: 'Q4 2025 campaign review', presenter: 'CMO', duration: '15 min', order: 1 },
+            { id: '2', item: 'Q1 2026 budget allocation', presenter: 'Finance Rep', duration: '20 min', order: 2 },
+            { id: '3', item: 'New campaign proposals', presenter: 'Marketing Team', duration: '30 min', order: 3 },
+            { id: '4', item: 'Sales alignment', presenter: 'Sales Head', duration: '15 min', order: 4 }
+        ],
+
+        discussion: [],
+        decisions: [],
+        actionItems: [],
+        risks: [],
+        attachments: [],
+
+        createdBy: 'CMO',
+        createdAt: '2025-11-10T10:00:00Z',
+        updatedAt: '2025-11-10T10:00:00Z'
+    }
+];
+
+// Mock data matching the Markpedia OS Problem Management System
+const mockProblems: Problem[] = [
+    {
+        id: 'PRB-2025-014',
+        title: 'Delay in seller KYC approval',
+        department: 'Trust & Safety',
+        reportedBy: 'Automated Monitoring',
+        dateDetected: '2025-01-15',
+        category: 'Operational',
+        severity: 'High',
+        impactDescription: 'Seller onboarding delayed by 48+ hours, affecting 15% of new registrations and potential revenue loss',
+        rootCause: {
+            problemStatement: 'Seller KYC approval process taking 48+ hours vs target of 4 hours',
+            whys: [
+                'Why are KYC approvals delayed? - Manual verification required for 30% of applications',
+                'Why is manual verification needed? - Automated system flags false positives',
+                'Why false positives? - Data validation rules too strict',
+                'Why strict rules? - Compliance requirements from legal team',
+                'Why no optimization? - No regular review process for validation rules'
+            ],
+            rootCause: 'Lack of regular review process for KYC validation rules and compliance requirements'
+        },
+        correctiveActions: [
+            {
+                id: 'ca-001',
+                description: 'Deploy server-side validation patch to reduce false positives',
+                assignedTo: 'Engineering Team',
+                dueDate: '2025-01-20',
+                status: 'Done',
+                proof: ['Deployment logs', 'Test results']
+            },
+            {
+                id: 'ca-002',
+                description: 'Temporarily increase manual review team capacity',
+                assignedTo: 'Operations Manager',
+                dueDate: '2025-01-18',
+                status: 'Done'
+            }
+        ],
+        preventiveActions: [
+            {
+                id: 'pa-001',
+                description: 'Implement nightly data sync monitoring job',
+                assignedTo: 'DevOps Team',
+                dueDate: '2025-02-01',
+                status: 'In Progress'
+            },
+            {
+                id: 'pa-002',
+                description: 'Establish quarterly KYC process review cycle',
+                assignedTo: 'Process Excellence Team',
+                dueDate: '2025-02-15',
+                status: 'Planned'
+            }
+        ],
+        linkedProject: 'Seller Verification Upgrade',
+        owner: 'Enow Divine',
+        status: 'Closed',
+        closureDate: '2025-01-25',
+        verifiedBy: 'QA Team',
+        lessonLearned: 'Automated data validation reduces manual workload by 40% and improves approval time by 85%',
+        createdAt: '2025-01-15T08:00:00Z',
+        updatedAt: '2025-01-25T14:30:00Z'
+    },
+    {
+        id: 'PRB-2025-015',
+        title: 'Payment gateway timeout errors',
+        department: 'Finance',
+        reportedBy: 'Customer Support',
+        dateDetected: '2025-01-20',
+        category: 'Technical',
+        severity: 'Critical',
+        impactDescription: '15% payment failure rate during peak hours, affecting customer experience and revenue',
+        rootCause: {
+            problemStatement: 'Payment gateway API calls timing out during high traffic periods',
+            whys: [
+                'Why are API calls timing out? - Payment gateway response time exceeds 10 seconds',
+                'Why slow response? - Using deprecated API version with rate limits',
+                'Why deprecated API? - Migration to new API delayed',
+                'Why migration delayed? - Lack of dedicated resources',
+                'Why no dedicated resources? - Not prioritized in current sprint'
+            ],
+            rootCause: 'Payment gateway API migration not prioritized in development roadmap'
+        },
+        correctiveActions: [
+            {
+                id: 'ca-003',
+                description: 'Implement request retry mechanism with exponential backoff',
+                assignedTo: 'Backend Team',
+                dueDate: '2025-01-22',
+                status: 'Done'
+            }
+        ],
+        preventiveActions: [
+            {
+                id: 'pa-003',
+                description: 'Complete migration to latest payment gateway API',
+                assignedTo: 'Integration Team',
+                dueDate: '2025-02-10',
+                status: 'In Progress'
+            }
+        ],
+        owner: 'Tech Lead',
+        status: 'In Progress',
+        createdAt: '2025-01-20T09:15:00Z',
+        updatedAt: '2025-01-28T11:20:00Z'
+    },
+    {
+        id: 'PRB-2025-016',
+        title: 'Employee onboarding process inefficiency',
+        department: 'HR',
+        reportedBy: 'HR Manager',
+        dateDetected: '2025-01-10',
+        category: 'HR',
+        severity: 'Medium',
+        impactDescription: 'New employee setup takes 5 days vs industry standard of 2 days',
+        rootCause: {
+            problemStatement: 'Employee onboarding process involves 8 manual handoffs between departments',
+            whys: [
+                'Why manual handoffs? - No integrated onboarding system',
+                'Why no integrated system? - Legacy processes from different departments',
+                'Why legacy processes? - No cross-department process optimization initiative',
+                'Why no optimization? - Not identified as priority',
+                'Why not prioritized? - Lack of data on onboarding time impact'
+            ],
+            rootCause: 'Fragmented onboarding process without centralized ownership or digital workflow'
+        },
+        correctiveActions: [
+            {
+                id: 'ca-004',
+                description: 'Create cross-department onboarding task force',
+                assignedTo: 'HR Director',
+                dueDate: '2025-01-25',
+                status: 'In Progress'
+            }
+        ],
+        preventiveActions: [
+            {
+                id: 'pa-004',
+                description: 'Implement digital onboarding workflow system',
+                assignedTo: 'HR Tech Team',
+                dueDate: '2025-03-01',
+                status: 'Planned'
+            }
+        ],
+        owner: 'HR Director',
+        status: 'Under Analysis',
+        createdAt: '2025-01-10T14:30:00Z',
+        updatedAt: '2025-01-24T16:45:00Z'
+    }
+];
+
+const mockKPIs: ProblemKPI = {
+    activeProblems: 8,
+    closedProblems: 24,
+    recurringProblems: 3,
+    avgResolutionTime: 5.2,
+    effectivenessRate: 87,
+    lessonsPublished: 18
+};
+
+const mockAnalytics: ProblemAnalytics = {
+    frequencyByCategory: [
+        { category: 'Technical', count: 12 },
+        { category: 'Operational', count: 8 },
+        { category: 'HR', count: 5 },
+        { category: 'Financial', count: 3 },
+        { category: 'Compliance', count: 4 }
+    ],
+    resolutionTimeByDepartment: [
+        { department: 'Engineering', days: 3.2 },
+        { department: 'Operations', days: 6.8 },
+        { department: 'HR', days: 7.5 },
+        { department: 'Finance', days: 4.1 }
+    ],
+    severityVsFrequency: [
+        { severity: 'Critical', frequency: 2 },
+        { severity: 'High', frequency: 6 },
+        { severity: 'Medium', frequency: 15 },
+        { severity: 'Low', frequency: 9 }
+    ],
+    recurrenceRate: 12,
+    departmentPerformance: [
+        { department: 'Engineering', closureRate: 92 },
+        { department: 'Operations', closureRate: 78 },
+        { department: 'HR', closureRate: 65 },
+        { department: 'Finance', closureRate: 88 }
+    ],
+    knowledgeConversion: 75
+};
+
+
 export const frameworkService = {
     getFrameworks: async (): Promise<Framework[]> => {
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -809,74 +1483,130 @@ export const projectService = {
 };
 
 export const taskService = {
-  getTasks: async (): Promise<Task[]> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return mockTasks;
-  },
+    getTasks: async (): Promise<Task[]> => {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return mockTasks;
+    },
 
-  getTask: async (id: string): Promise<Task> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const task = mockTasks.find(t => t.id === id);
-    if (!task) throw new Error('Task not found');
-    return task;
-  },
+    getTask: async (id: string): Promise<Task> => {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const task = mockTasks.find(t => t.id === id);
+        if (!task) throw new Error('Task not found');
+        return task;
+    },
 
-  createTask: async (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): Promise<Task> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const newTask: Task = {
-      id: Math.random().toString(36).substr(2, 9),
-      ...taskData,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    mockTasks.push(newTask);
-    return newTask;
-  },
+    createTask: async (taskData: Omit<Task, 'id' | 'created_at' | 'updated_at'>): Promise<Task> => {
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-  updateTask: async (id: string, taskData: Partial<Task>): Promise<Task> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const index = mockTasks.findIndex(t => t.id === id);
-    if (index === -1) throw new Error('Task not found');
-    mockTasks[index] = { 
-      ...mockTasks[index], 
-      ...taskData, 
-      updatedAt: new Date().toISOString() 
-    };
-    return mockTasks[index];
-  },
+        // Check task limit (max 5 active tasks per user)
+        const userActiveTasks = mockTasks.filter(t =>
+            t.owner_id === taskData.owner_id &&
+            ['Draft', 'Approved', 'In Progress'].includes(t.status)
+        );
 
-  deleteTask: async (id: string): Promise<void> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const index = mockTasks.findIndex(t => t.id === id);
-    if (index === -1) throw new Error('Task not found');
-    mockTasks.splice(index, 1);
-  },
+        if (userActiveTasks.length >= 5) {
+            throw new Error('Task limit reached: Maximum 5 active tasks per user');
+        }
 
-    validateTask: async (id: string): Promise<Task> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const index = mockTasks.findIndex(t => t.id === id);
-    if (index === -1) throw new Error('Task not found');
-    mockTasks[index] = {
-      ...mockTasks[index],
-      status: 'In Progress',
-      updatedAt: new Date().toISOString()
-    };
-    return mockTasks[index];
+        const newTask: Task = {
+            id: Math.random().toString(36).substr(2, 9),
+            ...taskData,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+        };
+        mockTasks.push(newTask);
+        return newTask;
+    },
+
+    updateTask: async (id: string, taskData: Partial<Task>): Promise<Task> => {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const index = mockTasks.findIndex(t => t.id === id);
+        if (index === -1) throw new Error('Task not found');
+        mockTasks[index] = {
+            ...mockTasks[index],
+            ...taskData,
+            updated_at: new Date().toISOString()
+        };
+        return mockTasks[index];
+    },
+
+    deleteTask: async (id: string): Promise<void> => {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const index = mockTasks.findIndex(t => t.id === id);
+        if (index === -1) throw new Error('Task not found');
+        mockTasks.splice(index, 1);
+    },
+
+    validateTask: async (id: string, managerId: string): Promise<Task> => {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const index = mockTasks.findIndex(t => t.id === id);
+        if (index === -1) throw new Error('Task not found');
+
+        mockTasks[index] = {
+            ...mockTasks[index],
+            status: 'Approved',
+            validated_by: managerId,
+            validated_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+        return mockTasks[index];
+    },
+
+    submitTaskReport: async (taskId: string, reportData: {
+        content: string;
+        attachments?: File[];
+        proof_of_completion?: any;
+    }): Promise<Task> => {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const index = mockTasks.findIndex(t => t.id === taskId);
+        if (index === -1) throw new Error('Task not found');
+
+        mockTasks[index] = {
+            ...mockTasks[index],
+            status: 'Done',
+            report_submitted: true,
+            completed_date: new Date().toISOString(),
+            proof_of_completion: reportData.proof_of_completion,
+            updated_at: new Date().toISOString()
+        };
+        return mockTasks[index];
+    },
+
+    getWeeklyReport: async (employeeId: string, weekStart: string): Promise<TaskReport> => {
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        const weekTasks = mockTasks.filter(task =>
+            task.owner_id === employeeId &&
+            new Date(task.created_at) >= new Date(weekStart) &&
+            new Date(task.created_at) < new Date(new Date(weekStart).getTime() + 7 * 24 * 60 * 60 * 1000)
+        );
+
+        const completedTasks = weekTasks.filter(task => task.status === 'Done');
+        const overdueTasks = weekTasks.filter(task => task.status === 'Overdue');
+        const averageProgress = weekTasks.length > 0
+            ? weekTasks.reduce((sum, task) => sum + task.progress, 0) / weekTasks.length
+            : 0;
+
+        return {
+            id: Math.random().toString(36).substr(2, 9),
+            employee_id: employeeId,
+            week_start: weekStart,
+            week_end: new Date(new Date(weekStart).getTime() + 6 * 24 * 60 * 60 * 1000).toISOString(),
+            total_tasks: weekTasks.length,
+            completed_tasks: completedTasks.length,
+            overdue_tasks: overdueTasks.length,
+            average_progress: averageProgress,
+            manager_rating: 4.5, // Mock rating
+            final_score: 85, // Mock score
+            generated_at: new Date().toISOString()
+        };
     }
 };
 
 export const meetingService = {
     async getConfig(): Promise<MeetingConfig> {
-        // Placeholder: return a sensible default until Python API is wired
         return {
             id: 'default',
-            otterAI: {
-                enabled: false,
-                apiKey: '',
-                webhookUrl: '',
-                autoSync: false,
-                syncInterval: 30,
-            },
             notifications: {
                 beforeMeeting: true,
                 beforeMeetingTime: 15,
@@ -897,107 +1627,167 @@ export const meetingService = {
         };
     },
 
-    // Persist configuration
     async saveConfig(config: MeetingConfig): Promise<void> {
-        // Placeholder: no-op until Python API is wired
         await Promise.resolve();
     },
 
-    // Test Otter integration (e.g., ping Python backend)
-    async testOtterIntegration(apiKey: string): Promise<{ ok: boolean; message?: string }> {
-        // Placeholder: simulate success
-        return { ok: true };
-    },
-
     getMeetings: async (): Promise<Meeting[]> => {
-        const response = await fetch('/api/meetings');
-        if (!response.ok) throw new Error('Failed to fetch meetings');
-        return response.json();
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return mockMeetings;
     },
 
-    syncWithOtterAI: async (meetingId: string): Promise<Meeting> => {
-        const response = await fetch(`/api/meetings/${meetingId}/sync-otter`, {
-            method: 'POST',
-        });
-        if (!response.ok) throw new Error('Failed to sync with Otter AI');
-        return response.json();
-    },
-
-    createTasksFromActionItems: async (meetingId: string): Promise<void> => {
-        const response = await fetch(`/api/meetings/${meetingId}/create-tasks`, {
-            method: 'POST',
-        });
-        if (!response.ok) throw new Error('Failed to create tasks from action items');
-    },
-
-    // Webhook endpoint for Otter AI
-    handleOtterWebhook: async (payload: OtterAIWebhookPayload): Promise<void> => {
-        const response = await fetch('/api/webhooks/otter-ai', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
-        if (!response.ok) throw new Error('Failed to process Otter AI webhook');
-    },
     getMeeting: async (id: string): Promise<Meeting> => {
-        const response = await api.get(`/meetings/${id}`);
-        return response.data;
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const meeting = mockMeetings.find(m => m.id === id);
+        if (!meeting) throw new Error('Meeting not found');
+        return meeting;
     },
 
     updateMeeting: async (id: string, data: Partial<Meeting>): Promise<Meeting> => {
-        const response = await api.put(`/meetings/${id}`, data);
-        return response.data;
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const index = mockMeetings.findIndex(m => m.id === id);
+        if (index === -1) throw new Error('Meeting not found');
+
+        const updatedMeeting = { ...mockMeetings[index], ...data, updatedAt: new Date().toISOString() };
+        mockMeetings[index] = updatedMeeting;
+        return updatedMeeting;
     },
 
     addDecision: async (meetingId: string, decision: Decision): Promise<Meeting> => {
-        const response = await api.post(`/meetings/${meetingId}/decisions`, decision);
-        return response.data;
+        const meeting = await meetingService.getMeeting(meetingId);
+        const newDecision = { ...decision, id: `decision-${Date.now()}` };
+        const updatedDecisions = [...meeting.decisions, newDecision];
+
+        return meetingService.updateMeeting(meetingId, { decisions: updatedDecisions });
     },
 
     addActionItem: async (meetingId: string, actionItem: ActionItem): Promise<Meeting> => {
-        const response = await api.post(`/meetings/${meetingId}/action-items`, actionItem);
-        return response.data;
+        const meeting = await meetingService.getMeeting(meetingId);
+        const newActionItem = { ...actionItem, id: `action-${Date.now()}` };
+        const updatedActionItems = [...meeting.actionItems, newActionItem];
+
+        return meetingService.updateMeeting(meetingId, { actionItems: updatedActionItems });
     },
 
     updateActionItemStatus: async (meetingId: string, itemId: string, status: string): Promise<Meeting> => {
-        const response = await api.patch(`/meetings/${meetingId}/action-items/${itemId}`, { status });
-        return response.data;
+        const meeting = await meetingService.getMeeting(meetingId);
+        const updatedActionItems = meeting.actionItems.map(item =>
+            item.id === itemId ? { ...item, status } : item
+        );
+
+        return meetingService.updateMeeting(meetingId, { actionItems: updatedActionItems });
     },
+
+    // Remove OtterAI related methods:
+    // - syncWithOtterAI
+    // - createTasksFromActionItems
+    // - handleOtterWebhook
+    // - testOtterIntegration
 };
 
 export const problemService = {
+    // Get all problems with optional filtering
+    getProblems: async (filters?: { status?: string; department?: string; severity?: string }): Promise<Problem[]> => {
+        await new Promise(resolve => setTimeout(resolve, 500));
 
+        let filteredProblems = mockProblems;
+        if (filters?.status && filters.status !== 'all') {
+            filteredProblems = filteredProblems.filter(p => p.status === filters.status);
+        }
+        if (filters?.department && filters.department !== 'all') {
+            filteredProblems = filteredProblems.filter(p => p.department === filters.department);
+        }
+        if (filters?.severity && filters.severity !== 'all') {
+            filteredProblems = filteredProblems.filter(p => p.severity === filters.severity);
+        }
+
+        return filteredProblems;
+    },
+
+    // Get single problem by ID
     getProblem: async (id: string): Promise<Problem> => {
-        const response = await api.get(`/problems/${id}`);
-        return response.data;
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const problem = mockProblems.find(p => p.id === id);
+        if (!problem) throw new Error('Problem not found');
+        return problem;
     },
 
-    createProblem: async (data: Partial<Problem>): Promise<Problem> => {
-        const response = await api.post('/problems', data);
-        return response.data;
+    // Create new problem
+    createProblem: async (problemData: Omit<Problem, 'id' | 'createdAt' | 'updatedAt'>): Promise<Problem> => {
+        await new Promise(resolve => setTimeout(resolve, 400));
+        const newProblem: Problem = {
+            ...problemData,
+            id: `PRB-2025-${String(mockProblems.length + 1).padStart(3, '0')}`,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        mockProblems.unshift(newProblem);
+        return newProblem;
     },
 
-    updateProblem: async (id: string, data: Partial<Problem>): Promise<Problem> => {
-        const response = await api.put(`/problems/${id}`, data);
-        return response.data;
+    // Update problem
+    updateProblem: async (id: string, updates: Partial<Problem>): Promise<Problem> => {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const index = mockProblems.findIndex(p => p.id === id);
+        if (index === -1) throw new Error('Problem not found');
+
+        const updatedProblem = {
+            ...mockProblems[index],
+            ...updates,
+            updatedAt: new Date().toISOString()
+        };
+        mockProblems[index] = updatedProblem;
+        return updatedProblem;
     },
 
-    updateActionStatus: async (
-        problemId: string,
-        actionId: string,
-        type: 'corrective' | 'preventive',
-        status: string
-    ): Promise<Problem> => {
-        const response = await api.patch(
-            `/problems/${problemId}/actions/${actionId}`,
-            { type, status }
-        );
-        return response.data;
+    // Update action status
+    updateActionStatus: async (problemId: string, actionId: string, type: 'corrective' | 'preventive', status: string): Promise<Problem> => {
+        const problem = await problemService.getProblem(problemId);
+
+        if (type === 'corrective') {
+            const updatedActions = problem.correctiveActions.map(action =>
+                action.id === actionId ? { ...action, status } : action
+            );
+            return problemService.updateProblem(problemId, { correctiveActions: updatedActions });
+        } else {
+            const updatedActions = problem.preventiveActions.map(action =>
+                action.id === actionId ? { ...action, status } : action
+            );
+            return problemService.updateProblem(problemId, { preventiveActions: updatedActions });
+        }
     },
 
-    deleteProblem: async (id: string): Promise<void> => {
-        await api.delete(`/problems/${id}`);
+    // Close problem
+    closeProblem: async (id: string, verifiedBy: string, lessonLearned: string): Promise<Problem> => {
+        return problemService.updateProblem(id, {
+            status: 'Closed',
+            closureDate: new Date().toISOString().split('T')[0],
+            verifiedBy,
+            lessonLearned
+        });
     },
+
+    // Reopen problem
+    reopenProblem: async (id: string): Promise<Problem> => {
+        return problemService.updateProblem(id, {
+            status: 'Under Analysis',
+            closureDate: undefined,
+            verifiedBy: undefined
+        });
+    },
+
+    // Get KPIs
+    getKPIs: async (): Promise<ProblemKPI> => {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        return mockKPIs;
+    },
+
+    // Get analytics
+    getAnalytics: async (): Promise<ProblemAnalytics> => {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        return mockAnalytics;
+    }
 };
 
 export const jobDescriptionService = {

@@ -174,20 +174,52 @@ export interface AuthState {
 
 export interface Project {
     id: string;
-    name: string;
-    description: string;
-    status: 'Planning' | 'In Progress' | 'On Hold' | 'Completed' | 'At Risk';
-    priority: 'Low' | 'Medium' | 'High' | 'Critical';
-    riskLevel?: 'Low' | 'Medium' | 'High';
+    title: string;
     department: string;
-    budget: number;
-    spent: number;
+    owner: string;
+    purpose: string;
     startDate: string;
     endDate: string;
-    assignedTo: string[];
-    createdBy: string;
+    status: 'Planned' | 'Active' | 'On Hold' | 'Completed' | 'Archived';
+    priority: 'Low' | 'Medium' | 'High' | 'Critical';
+    budget: number;
+    spent?: number;
+    strategicObjective: string;
+    linkedOKR: string;
+    kpis: {
+        objective: string;
+        deliverable: string;
+        kpi: string;
+    }[];
+    milestones: {
+        milestone: string;
+        date: string;
+        status: '✅' | '⏳' | '❌';
+    }[];
+    team: {
+        role: string;
+        name: string;
+        responsibility: string;
+    }[];
+    tasks: {
+        task: string;
+        owner: string;
+        dueDate: string;
+        status: 'Not Started' | 'In Progress' | 'Done' | 'Delayed';
+    }[];
+    budgetBreakdown: {
+        category: string;
+        description: string;
+        amount: number;
+        status: 'Approved' | 'Pending' | 'In Progress' | 'Reserved';
+    }[];
+    risks: {
+        risk: string;
+        impact: 'Low' | 'Medium' | 'High';
+        likelihood: 'Low' | 'Medium' | 'High';
+        mitigation: string;
+    }[];
     progress: number;
-    stakeholders?: string[];
     createdAt: string;
     updatedAt: string;
 }
@@ -196,13 +228,52 @@ export interface Task {
     id: string;
     title: string;
     description: string;
-    status: 'To Do' | 'In Progress' | 'Review' | 'Done';
+    status: 'Draft' | 'Approved' | 'In Progress' | 'Done' | 'Overdue';
     priority: 'Low' | 'Medium' | 'High' | 'Critical';
-    assignedTo: string;
-    projectId?: string;
-    dueDate: string;
-    createdAt: string;
-    updatedAt: string;
+    owner_id: string;
+    manager_id: string;
+    department_id: string;
+    project_id?: string;
+    expected_output: string;
+    proof_of_completion?: {
+        attachments: string[];
+        links: string[];
+        notes: string;
+    };
+    progress: number;
+    start_date: string;
+    due_date: string;
+    completed_date?: string;
+    linked_okr?: {
+        objective: string;
+        key_result: string;
+        weight: number;
+    };
+    performance_score?: number;
+    manager_comments?: string;
+    created_at: string;
+    updated_at: string;
+
+    // Weekly rhythm tracking
+    weekly_rhythm_status: 'creation' | 'validation' | 'implementation' | 'reporting';
+    validated_by?: string;
+    validated_at?: string;
+    report_submitted?: boolean;
+    report_due?: string;
+}
+
+export interface TaskReport {
+    id: string;
+    employee_id: string;
+    week_start: string;
+    week_end: string;
+    total_tasks: number;
+    completed_tasks: number;
+    overdue_tasks: number;
+    average_progress: number;
+    manager_rating: number;
+    final_score: number;
+    generated_at: string;
 }
 
 export interface AttendanceRecord {
@@ -254,45 +325,98 @@ export interface CashbookEntry {
     proofUrl?: string;
 }
 
+
 export interface Meeting {
     id: string;
     title: string;
-    description: string;
     date: string;
     startTime: string;
     endTime: string;
-    attendees: string[];
+    platform: string;
     location: string;
-    agenda: string[];
-    minutes: string;
+    department: string[];
+    meetingType: string;
+    calledBy: string;
+    facilitator: string;
+    minuteTaker: string;
+    participants: string[];
+    absent: string[];
+    status: 'Scheduled' | 'In Progress' | 'Completed' | 'Cancelled';
+
+    // Structured sections matching the Markpedia template
+    purpose: string;
+    agenda: AgendaItem[];
+    discussion: DiscussionItem[];
     decisions: Decision[];
     actionItems: ActionItem[];
+    risks: RiskItem[];
+    attachments: string[];
+
     createdBy: string;
-    status: 'Scheduled' | 'In Progress' | 'Completed' | 'Cancelled';
-    otterAIId?: string;
-    transcript?: string;
-    summary?: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface AgendaItem {
+    id: string;
+    item: string;
+    presenter: string;
+    duration: string;
+    order: number;
+}
+
+export interface DiscussionItem {
+    id: string;
+    agendaItem: string;
+    summary: string;
+    agreements: string;
 }
 
 export interface Decision {
     id: string;
     description: string;
-    madeBy: string;
-    timestamp: string;
-    relatedAgendaItem: string;
+    responsible: string;
+    approvedBy: string;
+    deadline: string;
 }
 
 export interface ActionItem {
     id: string;
     description: string;
     assignedTo: string;
+    department: string;
     dueDate: string;
     status: 'Pending' | 'In Progress' | 'Completed' | 'Cancelled';
-    priority: 'Low' | 'Medium' | 'High' | 'Critical';
-    relatedDecision?: string;
-    createdFromMeeting: boolean;
 }
 
+export interface RiskItem {
+    id: string;
+    risk: string;
+    impact: 'Low' | 'Medium' | 'High';
+    mitigation: string;
+    owner: string;
+}
+
+export interface MeetingConfig {
+    id: string;
+    notifications: {
+        beforeMeeting: boolean;
+        beforeMeetingTime: number;
+        afterMeeting: boolean;
+        actionItemsDue: boolean;
+        decisionFollowUp: boolean;
+    };
+    automation: {
+        autoCreateTasks: boolean;
+        taskPriority: 'low' | 'medium' | 'high';
+        defaultAssignee: string;
+        syncWithCalendar: boolean;
+    };
+    templates: {
+        defaultTemplate: string;
+        customTemplates: string[];
+    };
+}
 export interface OtterAIWebhookPayload {
     meetingId: string;
     transcript: string;
@@ -310,18 +434,55 @@ export interface OtterAIWebhookPayload {
     attendees: string[];
 }
 
+export interface Problem {
+    id: string;
+    title: string;
+    department: string;
+    reportedBy: string;
+    dateDetected: string;
+    category: 'Technical' | 'Operational' | 'HR' | 'Financial' | 'Compliance';
+    severity: 'Low' | 'Medium' | 'High' | 'Critical';
+    impactDescription: string;
+    rootCause: FiveWhysAnalysis;
+    correctiveActions: CorrectiveAction[];
+    preventiveActions: PreventiveAction[];
+    linkedProject?: string;
+    linkedTask?: string;
+    owner: string;
+    status: 'New' | 'Under Analysis' | 'In Progress' | 'Closed';
+    closureDate?: string;
+    verifiedBy?: string;
+    lessonLearned?: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
 export interface FiveWhysAnalysis {
     problemStatement: string;
     whys: string[];
     rootCause: string;
 }
 
+export interface ProblemAction {
+    id: string;
+    problemId: string;
+    actionType: 'Corrective' | 'Preventive';
+    description: string;
+    owner: string;
+    dueDate: string;
+    status: 'Planned' | 'In Progress' | 'Done';
+    proof?: string[];
+    createdAt: string;
+}
+
+// Update existing interfaces to match new structure
 export interface CorrectiveAction {
     id: string;
     description: string;
     assignedTo: string;
     dueDate: string;
-    status: 'Not Started' | 'In Progress' | 'Completed';
+    status: 'Planned' | 'In Progress' | 'Done';
+    proof?: string[];
 }
 
 export interface PreventiveAction {
@@ -329,24 +490,28 @@ export interface PreventiveAction {
     description: string;
     assignedTo: string;
     dueDate: string;
-    status: 'Not Started' | 'In Progress' | 'Completed';
+    status: 'Planned' | 'In Progress' | 'Done';
+    proof?: string[];
 }
 
-export interface Problem {
-    id: string;
-    title: string;
-    description: string;
-    category: string;
-    severity: 'Low' | 'Medium' | 'High' | 'Critical';
-    status: 'Open' | 'Investigating' | 'Resolved' | 'Closed';
-    reportedBy: string;
-    assignedTo?: string;
-    reportedDate: string;
-    resolvedDate?: string;
-    updatedDate?: string;
-    fiveWhysAnalysis?: FiveWhysAnalysis;
-    correctiveActions?: CorrectiveAction[];
-    preventiveActions?: PreventiveAction[];
+// Problem KPI Interface
+export interface ProblemKPI {
+    activeProblems: number;
+    closedProblems: number;
+    recurringProblems: number;
+    avgResolutionTime: number;
+    effectivenessRate: number;
+    lessonsPublished: number;
+}
+
+// Problem Analytics
+export interface ProblemAnalytics {
+    frequencyByCategory: { category: string; count: number }[];
+    resolutionTimeByDepartment: { department: string; days: number }[];
+    severityVsFrequency: { severity: string; frequency: number }[];
+    recurrenceRate: number;
+    departmentPerformance: { department: string; closureRate: number }[];
+    knowledgeConversion: number;
 }
 
 export interface JobDescription {

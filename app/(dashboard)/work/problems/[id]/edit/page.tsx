@@ -9,13 +9,10 @@ interface PageProps {
 // Generate static params for build time
 export async function generateStaticParams() {
     try {
-        // In a real app, you might fetch all problem IDs
-        // For now, return an empty array or sample IDs
-        return [
-            { id: '1' },
-            { id: '2' },
-            { id: '3' }
-        ];
+        const problems = await problemService.getProblems();
+        return problems.map((problem) => ({
+            id: problem.id,
+        }));
     } catch (error) {
         console.error('Error generating static params:', error);
         return [];
