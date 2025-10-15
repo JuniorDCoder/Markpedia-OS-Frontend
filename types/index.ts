@@ -514,23 +514,6 @@ export interface ProblemAnalytics {
     knowledgeConversion: number;
 }
 
-export interface JobDescription {
-    id: string;
-    title: string;
-    department: string;
-    level: string;
-    summary: string;
-    responsibilities: string[];
-    requirements: string[];
-    qualifications: string[];
-    benefits: string[];
-    version: number;
-    status: 'Draft' | 'Active' | 'Archived';
-    createdBy: string;
-    createdAt: string;
-    updatedAt: string;
-}
-
 export interface Department {
     id: string;
     name: string;

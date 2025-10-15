@@ -20,7 +20,14 @@ import {
     User,
     Building,
     Clock,
-    CheckCircle
+    CheckCircle,
+    TrendingUp,
+    Shield,
+    Award,
+    MapPin,
+    Briefcase,
+    Star,
+    Eye
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -94,15 +101,15 @@ export default function JobDescriptionViewClient({
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'Approved':
-                return 'bg-green-100 text-green-800';
+                return 'bg-green-100 text-green-800 border-green-200';
             case 'Draft':
-                return 'bg-blue-100 text-blue-800';
+                return 'bg-blue-100 text-blue-800 border-blue-200';
             case 'Under Review':
-                return 'bg-yellow-100 text-yellow-800';
+                return 'bg-yellow-100 text-yellow-800 border-yellow-200';
             case 'Archived':
-                return 'bg-gray-100 text-gray-800';
+                return 'bg-gray-100 text-gray-800 border-gray-200';
             default:
-                return 'bg-gray-100 text-gray-800';
+                return 'bg-gray-100 text-gray-800 border-gray-200';
         }
     };
 
@@ -118,272 +125,346 @@ export default function JobDescriptionViewClient({
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading job description...</p>
+                </div>
             </div>
         );
     }
 
     if (!jobDescription) {
         return (
-            <div className="p-6 text-center">
-                <h1 className="text-2xl font-bold mb-4">Job Description Not Found</h1>
-                <p className="text-muted-foreground mb-6">
-                    The job description you're looking for doesn't exist.
-                </p>
-                <Button onClick={() => router.push('/work/job-descriptions')}>
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Job Descriptions
-                </Button>
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-6">
+                <Card className="max-w-md w-full text-center border-blue-200 shadow-lg">
+                    <CardContent className="pt-6">
+                        <FileText className="h-16 w-16 text-blue-600 mx-auto mb-4" />
+                        <h1 className="text-2xl font-bold mb-2 text-blue-900">Job Description Not Found</h1>
+                        <p className="text-muted-foreground mb-6">
+                            The job description you're looking for doesn't exist or has been archived.
+                        </p>
+                        <Button
+                            onClick={() => router.push('/work/job-descriptions')}
+                            className="bg-blue-600 hover:bg-blue-700"
+                        >
+                            <ArrowLeft className="h-4 w-4 mr-2" />
+                            Back to Job Descriptions
+                        </Button>
+                    </CardContent>
+                </Card>
             </div>
         );
     }
 
     return (
-        <div className="space-y-6 p-4 sm:p-6">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex items-start sm:items-center">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => router.push('/work/job-descriptions')}
-                        className="mr-2"
-                    >
-                        <ArrowLeft className="h-5 w-5" />
-                    </Button>
-                    <div>
-                        <h1 className="text-2xl sm:text-3xl font-bold">{jobDescription.title}</h1>
-                        <p className="text-muted-foreground text-sm sm:text-base mt-1">
-                            {jobDescription.summary}
-                        </p>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+            <div className="space-y-6 p-4 sm:p-6 max-w-7xl mx-auto">
+                {/* Header Section */}
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+                    <div className="flex-1">
+                        <div className="flex items-start gap-3 mb-4">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => router.push('/work/job-descriptions')}
+                                className="h-10 w-10 border border-blue-200 bg-white hover:bg-blue-50 mt-1"
+                            >
+                                <ArrowLeft className="h-5 w-5 text-blue-600" />
+                            </Button>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex flex-wrap items-center gap-2 mb-2">
+                                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent break-words">
+                                        {jobDescription.title}
+                                    </h1>
+                                    <Badge className={getStatusColor(jobDescription.status)}>
+                                        {jobDescription.status}
+                                    </Badge>
+                                </div>
+                                <p className="text-lg text-muted-foreground mb-3 leading-relaxed">
+                                    {jobDescription.summary}
+                                </p>
+                                <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                                    <div className="flex items-center gap-1">
+                                        <Building className="h-4 w-4" />
+                                        <span>{getDepartmentName(jobDescription.department)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <FileText className="h-4 w-4" />
+                                        <span>Version {jobDescription.version}</span>
+                                    </div>
+                                    {jobDescription.reportsTo && (
+                                        <div className="flex items-center gap-1">
+                                            <Users className="h-4 w-4" />
+                                            <span>Reports to {jobDescription.reportsTo}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex flex-col sm:flex-row lg:flex-col gap-3 lg:items-end lg:w-80">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 gap-2">
+                            <Button
+                                onClick={() => router.push(`/work/job-descriptions/${jobDescriptionId}/edit`)}
+                                className="bg-blue-600 hover:bg-blue-700 w-full"
+                            >
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit JD
+                            </Button>
+                            <Button
+                                variant="outline"
+                                onClick={handleExportPDF}
+                                disabled={exporting}
+                                className="w-full border-blue-300 text-blue-700 hover:bg-blue-50"
+                            >
+                                {exporting ? (
+                                    <div className="animate-spin rounded-full h-4 w-4 mr-2 border-b-2 border-blue-600"></div>
+                                ) : (
+                                    <Download className="h-4 w-4 mr-2" />
+                                )}
+                                Export PDF
+                            </Button>
+                            {jobDescription.status === 'Approved' && (
+                                <Button
+                                    variant="outline"
+                                    onClick={createNewVersion}
+                                    className="w-full border-green-300 text-green-700 hover:bg-green-50"
+                                >
+                                    <FileText className="h-4 w-4 mr-2" />
+                                    New Version
+                                </Button>
+                            )}
+                        </div>
                     </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
-                    <Button
-                        variant="outline"
-                        onClick={handleExportPDF}
-                        disabled={exporting}
-                        className="w-full sm:w-auto"
-                    >
-                        {exporting ? (
-                            <div className="animate-spin rounded-full h-4 w-4 mr-2 border-b-2 border-blue-600"></div>
-                        ) : (
-                            <Download className="h-4 w-4 mr-2" />
+                {/* Quick Stats */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <StatCard
+                        icon={<Clock className="h-5 w-5 text-blue-600" />}
+                        label="Probation"
+                        value={`${jobDescription.probationPeriod} months`}
+                        color="border-blue-200 bg-blue-50"
+                    />
+                    <StatCard
+                        icon={<Calendar className="h-5 w-5 text-purple-600" />}
+                        label="Review Cadence"
+                        value={jobDescription.reviewCadence}
+                        color="border-purple-200 bg-purple-50"
+                    />
+                    <StatCard
+                        icon={<Target className="h-5 w-5 text-green-600" />}
+                        label="KPIs"
+                        value={jobDescription.kpis?.length || 0}
+                        color="border-green-200 bg-green-50"
+                    />
+                    <StatCard
+                        icon={<TrendingUp className="h-5 w-5 text-orange-600" />}
+                        label="OKRs"
+                        value={jobDescription.okrs?.length || 0}
+                        color="border-orange-200 bg-orange-50"
+                    />
+                </div>
+
+                {/* Main Content Grid */}
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    {/* Left Column - Core Information */}
+                    <div className="xl:col-span-2 space-y-6">
+                        {/* Purpose & Mission Alignment */}
+                        {(jobDescription.purpose || jobDescription.mission || jobDescription.vision) && (
+                            <Card className="border-blue-200 shadow-sm">
+                                <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200">
+                                    <CardTitle className="flex items-center text-blue-900">
+                                        <Target className="h-5 w-5 mr-2" />
+                                        Purpose & Mission Alignment
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="pt-6 space-y-4">
+                                    {jobDescription.purpose && (
+                                        <div>
+                                            <h4 className="font-semibold text-blue-800 mb-2 flex items-center">
+                                                <Shield className="h-4 w-4 mr-2" />
+                                                Purpose
+                                            </h4>
+                                            <p className="text-muted-foreground leading-relaxed">{jobDescription.purpose}</p>
+                                        </div>
+                                    )}
+                                    {jobDescription.mission && (
+                                        <div>
+                                            <h4 className="font-semibold text-purple-800 mb-2 flex items-center">
+                                                <Award className="h-4 w-4 mr-2" />
+                                                Mission
+                                            </h4>
+                                            <p className="text-muted-foreground leading-relaxed">{jobDescription.mission}</p>
+                                        </div>
+                                    )}
+                                    {jobDescription.vision && (
+                                        <div>
+                                            <h4 className="font-semibold text-green-800 mb-2 flex items-center">
+                                                <Eye className="h-4 w-4 mr-2" />
+                                                Vision
+                                            </h4>
+                                            <p className="text-muted-foreground leading-relaxed">{jobDescription.vision}</p>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
                         )}
-                        Export PDF
-                    </Button>
-                    <Button className="w-full sm:w-auto">
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
-                    </Button>
-                    {jobDescription.status === 'Approved' && (
-                        <Button variant="outline" className="w-full sm:w-auto" onClick={createNewVersion}>
-                            <FileText className="h-4 w-4 mr-2" />
-                            New Version
-                        </Button>
-                    )}
+
+                        {/* Responsibilities */}
+                        <Card className="border-green-200 shadow-sm">
+                            <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200">
+                                <CardTitle className="flex items-center text-green-900">
+                                    <CheckCircle className="h-5 w-5 mr-2" />
+                                    Key Responsibilities
+                                </CardTitle>
+                                <CardDescription>
+                                    Primary duties and responsibilities for this role
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="pt-6">
+                                <ul className="space-y-3">
+                                    {jobDescription.responsibilities.map((r, i) => (
+                                        <li key={i} className="flex items-start p-3 rounded-lg bg-green-50 border border-green-100 hover:border-green-300 transition-colors">
+                                            <span className="text-green-600 mr-3 mt-1 flex-shrink-0">•</span>
+                                            <span className="text-muted-foreground leading-relaxed">{r}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </CardContent>
+                        </Card>
+
+                        {/* Performance Metrics */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {jobDescription.kpis?.length > 0 && (
+                                <InfoListCard
+                                    title="Key Performance Indicators"
+                                    icon={<BarChart3 className="h-5 w-5 text-blue-600" />}
+                                    items={jobDescription.kpis}
+                                    color="border-blue-200"
+                                    bgColor="bg-blue-50"
+                                />
+                            )}
+                            {jobDescription.okrs?.length > 0 && (
+                                <InfoListCard
+                                    title="Objectives & Key Results"
+                                    icon={<Target className="h-5 w-5 text-orange-600" />}
+                                    items={jobDescription.okrs}
+                                    color="border-orange-200"
+                                    bgColor="bg-orange-50"
+                                />
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Right Column - Additional Information */}
+                    <div className="space-y-6">
+                        {/* Skills & Tools */}
+                        <div className="space-y-6">
+                            {jobDescription.skills?.length > 0 && (
+                                <BadgeListCard
+                                    title="Required Skills"
+                                    icon={<User className="h-5 w-5 text-purple-600" />}
+                                    items={jobDescription.skills}
+                                    color="border-purple-200"
+                                    bgColor="bg-purple-50"
+                                />
+                            )}
+                            {jobDescription.tools?.length > 0 && (
+                                <BadgeListCard
+                                    title="Required Tools"
+                                    icon={<Settings className="h-5 w-5 text-gray-600" />}
+                                    items={jobDescription.tools}
+                                    color="border-gray-200"
+                                    bgColor="bg-gray-50"
+                                />
+                            )}
+                        </div>
+
+                        {/* Career Path */}
+                        {jobDescription.careerPath && (
+                            <Card className="border-indigo-200 shadow-sm">
+                                <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-200">
+                                    <CardTitle className="flex items-center text-indigo-900">
+                                        <TrendingUp className="h-5 w-5 mr-2" />
+                                        Career Path
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="pt-6">
+                                    <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+                                        <p className="text-muted-foreground leading-relaxed">{jobDescription.careerPath}</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {/* Document Information */}
+                        <Card className="border-gray-200 shadow-sm">
+                            <CardHeader className="bg-gradient-to-r from-gray-50 to-slate-50 border-b border-gray-200">
+                                <CardTitle className="flex items-center text-gray-900">
+                                    <FileText className="h-5 w-5 mr-2" />
+                                    Document Information
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-6 space-y-3">
+                                <MetaLine label="Created By" value={jobDescription.createdBy} />
+                                <MetaLine label="Created On" value={new Date(jobDescription.createdAt).toLocaleDateString()} />
+                                {jobDescription.lastReviewed && (
+                                    <MetaLine label="Last Reviewed" value={new Date(jobDescription.lastReviewed).toLocaleDateString()} />
+                                )}
+                                {jobDescription.nextReview && (
+                                    <MetaLine
+                                        label="Next Review"
+                                        value={new Date(jobDescription.nextReview).toLocaleDateString()}
+                                        highlight={new Date(jobDescription.nextReview) <= new Date()}
+                                    />
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
                 </div>
             </div>
-
-            {/* Metadata */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                <Card>
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium">Status</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <Badge className={getStatusColor(jobDescription.status)}>{jobDescription.status}</Badge>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium">Department</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <Badge className={getDepartmentColor(jobDescription.department)}>
-                            {getDepartmentName(jobDescription.department)}
-                        </Badge>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium">Version</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <Badge variant="outline" className="bg-gray-100 text-gray-800">
-                            v{jobDescription.version}
-                        </Badge>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Additional Metadata */}
-            <Card>
-                <CardContent className="pt-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <MetaItem icon={<User />} label="Reports To" value={jobDescription.reportsTo || 'Not specified'} />
-                        <MetaItem icon={<Clock />} label="Probation Period" value={`${jobDescription.probationPeriod} months`} />
-                        <MetaItem icon={<Calendar />} label="Review Cadence" value={jobDescription.reviewCadence} />
-                        {jobDescription.lastReviewed && (
-                            <MetaItem
-                                icon={<Calendar />}
-                                label="Last Reviewed"
-                                value={new Date(jobDescription.lastReviewed).toLocaleDateString()}
-                            />
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Purpose / Vision / Mission */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {jobDescription.purpose && <InfoCard title="Purpose" icon={<Target />} color="text-blue-600" text={jobDescription.purpose} />}
-                {jobDescription.vision && <InfoCard title="Vision" icon={<BarChart3 />} color="text-green-600" text={jobDescription.vision} />}
-                {jobDescription.mission && <InfoCard title="Mission" icon={<Settings />} color="text-purple-600" text={jobDescription.mission} />}
-            </div>
-
-            {/* Responsibilities */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center">
-                        <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
-                        Key Responsibilities
-                    </CardTitle>
-                    <CardDescription>Primary duties and responsibilities for this role</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <ul className="space-y-2">
-                        {jobDescription.responsibilities.map((r, i) => (
-                            <li key={i} className="flex items-start text-sm">
-                                <span className="mr-2 text-green-600">•</span>
-                                <span className="text-muted-foreground">{r}</span>
-                            </li>
-                        ))}
-                    </ul>
-                </CardContent>
-            </Card>
-
-            {/* KPIs & OKRs */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {jobDescription.kpis?.length > 0 && (
-                    <InfoListCard title="Key Performance Indicators (KPIs)" icon={<Target />} color="text-blue-600" items={jobDescription.kpis} />
-                )}
-                {jobDescription.okrs?.length > 0 && (
-                    <InfoListCard title="Objectives & Key Results (OKRs)" icon={<BarChart3 />} color="text-orange-600" items={jobDescription.okrs} />
-                )}
-            </div>
-
-            {/* Skills & Tools */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {jobDescription.skills?.length > 0 && (
-                    <BadgeListCard title="Required Skills" icon={<User />} color="text-purple-600" items={jobDescription.skills} />
-                )}
-                {jobDescription.tools?.length > 0 && (
-                    <BadgeListCard title="Required Tools" icon={<Settings />} color="text-gray-600" items={jobDescription.tools} />
-                )}
-            </div>
-
-            {/* Career Path */}
-            {jobDescription.careerPath && (
-                <InfoCard
-                    title="Career Path"
-                    icon={<Building />}
-                    color="text-indigo-600"
-                    text={jobDescription.careerPath}
-                />
-            )}
-
-            {/* Additional Info */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Additional Information</CardTitle>
-                    <CardDescription>Created and review information</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                        <MetaLine label="Created By" value="System Administrator" />
-                        <MetaLine label="Created On" value={new Date(jobDescription.createdAt).toLocaleDateString()} />
-                        {jobDescription.lastReviewed && (
-                            <MetaLine label="Last Reviewed" value={new Date(jobDescription.lastReviewed).toLocaleDateString()} />
-                        )}
-                        {jobDescription.nextReview && (
-                            <MetaLine label="Next Review" value={new Date(jobDescription.nextReview).toLocaleDateString()} />
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
         </div>
     );
 }
 
-/* === Helper Components === */
-function MetaItem({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+/* === Enhanced Helper Components === */
+function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string | number; color: string }) {
     return (
-        <div className="flex items-start sm:items-center">
-            <div className="text-muted-foreground mr-3 mt-1 sm:mt-0">{icon}</div>
-            <div>
-                <p className="text-sm font-medium">{label}</p>
-                <p className="text-sm text-muted-foreground">{value}</p>
-            </div>
-        </div>
-    );
-}
-
-function InfoCard({
-                      title,
-                      icon,
-                      color,
-                      text
-                  }: {
-    title: string;
-    icon: React.ReactNode;
-    color: string;
-    text: string;
-}) {
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle className={`flex items-center text-sm ${color}`}>
-                    {icon}
-                    <span className="ml-2 text-foreground">{title}</span>
-                </CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p className="text-sm text-muted-foreground">{text}</p>
+        <Card className={`border ${color} shadow-sm hover:shadow-md transition-shadow`}>
+            <CardContent className="pt-6 text-center">
+                <div className="flex justify-center mb-2">{icon}</div>
+                <div className="text-2xl font-bold text-gray-900 mb-1">{value}</div>
+                <p className="text-sm text-muted-foreground">{label}</p>
             </CardContent>
         </Card>
     );
 }
 
-function InfoListCard({
-                          title,
-                          icon,
-                          color,
-                          items
-                      }: {
+function InfoListCard({ title, icon, items, color, bgColor }: {
     title: string;
     icon: React.ReactNode;
-    color: string;
     items: string[];
+    color: string;
+    bgColor: string;
 }) {
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle className={`flex items-center ${color}`}>
+        <Card className={`border ${color} shadow-sm`}>
+            <CardHeader className={`${bgColor} border-b ${color}`}>
+                <CardTitle className="flex items-center text-sm font-semibold">
                     {icon}
-                    <span className="ml-2 text-foreground text-sm">{title}</span>
+                    <span className="ml-2">{title}</span>
                 </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
                 <ul className="space-y-2">
                     {items.map((item, i) => (
-                        <li key={i} className="flex items-start text-sm">
-                            <span className={`${color} mr-2`}>•</span>
-                            <span className="text-muted-foreground">{item}</span>
+                        <li key={i} className="flex items-start text-sm p-2 rounded hover:bg-gray-50 transition-colors">
+                            <span className="text-blue-600 mr-2 mt-1 flex-shrink-0">•</span>
+                            <span className="text-muted-foreground leading-relaxed">{item}</span>
                         </li>
                     ))}
                 </ul>
@@ -392,32 +473,28 @@ function InfoListCard({
     );
 }
 
-function BadgeListCard({
-                           title,
-                           icon,
-                           color,
-                           items
-                       }: {
+function BadgeListCard({ title, icon, items, color, bgColor }: {
     title: string;
     icon: React.ReactNode;
-    color: string;
     items: string[];
+    color: string;
+    bgColor: string;
 }) {
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle className={`flex items-center ${color}`}>
+        <Card className={`border ${color} shadow-sm`}>
+            <CardHeader className={`${bgColor} border-b ${color}`}>
+                <CardTitle className="flex items-center text-sm font-semibold">
                     {icon}
-                    <span className="ml-2 text-foreground text-sm">{title}</span>
+                    <span className="ml-2">{title}</span>
                 </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
                 <div className="flex flex-wrap gap-2">
                     {items.map((item, i) => (
                         <Badge
                             key={i}
                             variant="outline"
-                            className="bg-gray-50 text-gray-700 border-gray-200 text-xs sm:text-sm"
+                            className="bg-white text-gray-700 border-gray-300 hover:border-gray-400 transition-colors text-xs px-3 py-1"
                         >
                             {item}
                         </Badge>
@@ -428,11 +505,13 @@ function BadgeListCard({
     );
 }
 
-function MetaLine({ label, value }: { label: string; value: string }) {
+function MetaLine({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
     return (
-        <div>
-            <p className="font-medium">{label}</p>
-            <p className="text-muted-foreground">{value}</p>
+        <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
+            <span className="text-sm font-medium text-gray-700">{label}</span>
+            <span className={`text-sm ${highlight ? 'text-orange-600 font-semibold' : 'text-muted-foreground'}`}>
+                {value}
+            </span>
         </div>
     );
 }

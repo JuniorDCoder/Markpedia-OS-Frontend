@@ -20,7 +20,10 @@ import {
     Edit,
     Users,
     Building,
-    Calendar
+    Calendar,
+    Target,
+    BarChart3,
+    Clock
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -67,10 +70,21 @@ export default function JobDescriptionsPage() {
         }
     };
 
+    const createNewVersion = async (id: string) => {
+        try {
+            await jobDescriptionService.createNewVersion(id);
+            toast.success('New version created successfully');
+            loadJobDescriptions(); // Reload to show new version
+        } catch (error) {
+            toast.error('Failed to create new version');
+        }
+    };
+
     const filteredJobDescriptions = jobDescriptions.filter(jd => {
         const matchesSearch =
             jd.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            jd.summary.toLowerCase().includes(searchTerm.toLowerCase());
+            jd.summary.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            jd.department.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = statusFilter === 'all' || jd.status === statusFilter;
         const matchesDepartment = departmentFilter === 'all' || jd.department === departmentFilter;
         return matchesSearch && matchesStatus && matchesDepartment;
@@ -79,15 +93,15 @@ export default function JobDescriptionsPage() {
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'Approved':
-                return 'bg-green-100 text-green-800';
+                return 'bg-green-100 text-green-800 border-green-200';
             case 'Draft':
-                return 'bg-blue-100 text-blue-800';
+                return 'bg-blue-100 text-blue-800 border-blue-200';
             case 'Under Review':
-                return 'bg-yellow-100 text-yellow-800';
+                return 'bg-yellow-100 text-yellow-800 border-yellow-200';
             case 'Archived':
-                return 'bg-gray-100 text-gray-800';
+                return 'bg-gray-100 text-gray-800 border-gray-200';
             default:
-                return 'bg-gray-100 text-gray-800';
+                return 'bg-gray-100 text-gray-800 border-gray-200';
         }
     };
 
@@ -95,6 +109,15 @@ export default function JobDescriptionsPage() {
         const departmentObj = departments.find(d => d.id === department);
         return departmentObj?.color || 'bg-gray-100 text-gray-800';
     };
+
+    // Calculate metrics for KPI tiles as per client specification
+    const totalJDs = jobDescriptions.length;
+    const activeJDs = jobDescriptions.filter(jd => jd.status === 'Approved').length;
+    const pendingReviewJDs = jobDescriptions.filter(jd => jd.status === 'Under Review').length;
+    const okrLinkedJDs = jobDescriptions.filter(jd => jd.okrs && jd.okrs.length > 0).length;
+    const reviewDueJDs = jobDescriptions.filter(jd =>
+        jd.nextReview && new Date(jd.nextReview) <= new Date()
+    ).length;
 
     if (loading) return <TableSkeleton />;
 
@@ -108,7 +131,7 @@ export default function JobDescriptionsPage() {
                         Job Descriptions
                     </h1>
                     <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-                        Manage job descriptions, roles, and responsibilities across departments
+                        Structured and version-controlled job description system
                     </p>
                 </div>
                 <Button asChild className="w-full sm:w-auto">
@@ -119,14 +142,48 @@ export default function JobDescriptionsPage() {
                 </Button>
             </div>
 
-            {/* Filters */}
+            {/* KPI Tiles - As per client specification */}
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                <Card className="text-center">
+                    <CardContent className="pt-6">
+                        <div className="text-2xl font-bold text-blue-600">{totalJDs}</div>
+                        <p className="text-sm text-muted-foreground">Total JDs</p>
+                    </CardContent>
+                </Card>
+                <Card className="text-center">
+                    <CardContent className="pt-6">
+                        <div className="text-2xl font-bold text-green-600">{activeJDs}</div>
+                        <p className="text-sm text-muted-foreground">Active</p>
+                    </CardContent>
+                </Card>
+                <Card className="text-center">
+                    <CardContent className="pt-6">
+                        <div className="text-2xl font-bold text-yellow-600">{pendingReviewJDs}</div>
+                        <p className="text-sm text-muted-foreground">Pending Review</p>
+                    </CardContent>
+                </Card>
+                <Card className="text-center">
+                    <CardContent className="pt-6">
+                        <div className="text-2xl font-bold text-purple-600">{okrLinkedJDs}</div>
+                        <p className="text-sm text-muted-foreground">OKR Linked</p>
+                    </CardContent>
+                </Card>
+                <Card className="text-center">
+                    <CardContent className="pt-6">
+                        <div className="text-2xl font-bold text-orange-600">{reviewDueJDs}</div>
+                        <p className="text-sm text-muted-foreground">Review Due</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Filters and Search Bar */}
             <Card>
                 <CardContent className="pt-6">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                         <div className="flex-1 relative w-full">
                             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                             <Input
-                                placeholder="Search job descriptions..."
+                                placeholder="Search job titles, departments, or summaries..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="pl-10 w-full"
@@ -195,13 +252,16 @@ export default function JobDescriptionsPage() {
                     {filteredJobDescriptions.map(jd => (
                         <Card
                             key={jd.id}
-                            className="hover:shadow-md transition-shadow h-full flex flex-col rounded-2xl"
+                            className="hover:shadow-md transition-shadow h-full flex flex-col rounded-2xl border"
                         >
                             <CardHeader className="pb-3">
                                 <div className="flex items-start justify-between">
                                     <div className="space-y-2 flex-1">
                                         <CardTitle className="text-base sm:text-lg font-semibold">
-                                            <Link href={`/work/job-descriptions/${jd.id}`} className="hover:underline">
+                                            <Link
+                                                href={`/work/job-descriptions/${jd.id}`}
+                                                className="hover:underline hover:text-blue-600"
+                                            >
                                                 {jd.title}
                                             </Link>
                                         </CardTitle>
@@ -215,33 +275,59 @@ export default function JobDescriptionsPage() {
                                             <Badge variant="outline" className={getDepartmentColor(jd.department)}>
                                                 {departments.find(d => d.id === jd.department)?.name || jd.department}
                                             </Badge>
+                                            <Badge variant="outline" className="text-xs">
+                                                v{jd.version}
+                                            </Badge>
                                         </div>
                                     </div>
                                 </div>
                             </CardHeader>
 
                             <CardContent className="flex-1 space-y-3">
+                                {/* Reports To */}
                                 <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
-                                    <Users className="h-4 w-4 mr-2" />
-                                    {jd.reportsTo ? `Reports to: ${jd.reportsTo}` : 'No direct reports'}
+                                    <Users className="h-4 w-4 mr-2 flex-shrink-0" />
+                                    <span className="truncate">
+                                        Reports to: {jd.reportsTo || 'Not specified'}
+                                    </span>
                                 </div>
 
-                                {jd.version && (
+                                {/* OKR Alignment */}
+                                {jd.okrs && jd.okrs.length > 0 && (
                                     <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
-                                        <FileText className="h-4 w-4 mr-2" />
-                                        Version: {jd.version}
+                                        <Target className="h-4 w-4 mr-2 flex-shrink-0" />
+                                        <span className="truncate">
+                                            {jd.okrs.length} OKR{jd.okrs.length !== 1 ? 's' : ''} linked
+                                        </span>
                                     </div>
                                 )}
 
-                                {jd.lastReviewed && (
+                                {/* KPIs */}
+                                {jd.kpis && jd.kpis.length > 0 && (
                                     <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
-                                        <Calendar className="h-4 w-4 mr-2" />
-                                        Last reviewed: {new Date(jd.lastReviewed).toLocaleDateString()}
+                                        <BarChart3 className="h-4 w-4 mr-2 flex-shrink-0" />
+                                        <span className="truncate">
+                                            {jd.kpis.length} KPI{jd.kpis.length !== 1 ? 's' : ''}
+                                        </span>
                                     </div>
                                 )}
 
+                                {/* Review Information */}
+                                {jd.nextReview && (
+                                    <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
+                                        <Clock className="h-4 w-4 mr-2 flex-shrink-0" />
+                                        <span className="truncate">
+                                            Review: {new Date(jd.nextReview).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                )}
+
+                                {/* Key Responsibilities */}
                                 <div className="pt-4 border-t">
-                                    <h4 className="font-medium text-xs sm:text-sm mb-2">Key Responsibilities</h4>
+                                    <h4 className="font-medium text-xs sm:text-sm mb-2 flex items-center">
+                                        <FileText className="h-4 w-4 mr-2" />
+                                        Key Responsibilities
+                                    </h4>
                                     <ul className="text-xs sm:text-sm text-muted-foreground space-y-1">
                                         {jd.responsibilities.slice(0, 3).map((resp, index) => (
                                             <li key={index} className="flex items-start">
@@ -256,6 +342,25 @@ export default function JobDescriptionsPage() {
                                         )}
                                     </ul>
                                 </div>
+
+                                {/* Skills Preview */}
+                                {jd.skills && jd.skills.length > 0 && (
+                                    <div className="pt-3 border-t">
+                                        <h4 className="font-medium text-xs sm:text-sm mb-2">Key Skills</h4>
+                                        <div className="flex flex-wrap gap-1">
+                                            {jd.skills.slice(0, 3).map((skill, index) => (
+                                                <Badge key={index} variant="secondary" className="text-xs">
+                                                    {skill}
+                                                </Badge>
+                                            ))}
+                                            {jd.skills.length > 3 && (
+                                                <Badge variant="outline" className="text-xs">
+                                                    +{jd.skills.length - 3}
+                                                </Badge>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </CardContent>
 
                             <div className="p-4 border-t mt-auto">
@@ -274,14 +379,27 @@ export default function JobDescriptionsPage() {
                                             </Link>
                                         </Button>
                                     </div>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-xs sm:text-sm"
-                                        onClick={() => exportToPDF(jd.id)}
-                                    >
-                                        <Download className="h-4 w-4" />
-                                    </Button>
+                                    <div className="flex items-center space-x-1">
+                                        {jd.status === 'Approved' && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="text-xs sm:text-sm"
+                                                onClick={() => createNewVersion(jd.id)}
+                                            >
+                                                <FileText className="h-4 w-4 mr-1" />
+                                                New Version
+                                            </Button>
+                                        )}
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-xs sm:text-sm"
+                                            onClick={() => exportToPDF(jd.id)}
+                                        >
+                                            <Download className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         </Card>
