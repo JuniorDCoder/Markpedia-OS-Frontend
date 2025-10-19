@@ -16,44 +16,6 @@ const api = axios.create({
   timeout: 10000,
 });
 
-const mockAttendanceRecords: AttendanceRecord[] = [
-    {
-        id: '1759186800000-1',
-        userId: '1',
-        userName: 'John Doe',
-        date: '2024-01-15',
-        checkIn: '09:00',
-        checkOut: '17:30',
-        status: 'Present',
-        notes: 'Regular working day',
-        createdAt: '2024-01-15',
-        updatedAt: '2024-01-15'
-    },
-    {
-        id: '1758322800000-1',
-        userId: '1',
-        userName: 'John Doe',
-        date: '2024-01-16',
-        checkIn: '09:15',
-        checkOut: '17:45',
-        status: 'Late',
-        notes: 'Traffic delay',
-        createdAt: '2024-01-16',
-        updatedAt: '2024-01-16'
-    },
-    {
-        id: '1758409200000-2',
-        userId: '2',
-        userName: 'Sarah Johnson',
-        date: '2024-01-15',
-        checkIn: '08:45',
-        checkOut: '17:15',
-        status: 'Present',
-        notes: 'Early start',
-        createdAt: '2024-01-15',
-        updatedAt: '2024-01-15'
-    }
-];
 
 // Mock data for development
 const mockUsers: User[] = [
@@ -1922,65 +1884,249 @@ export const jobDescriptionService = {
 };
 
 export const attendanceService = {
-    getAttendanceRecords: async (): Promise<AttendanceRecord[]> => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        return mockAttendanceRecords;
+    // Get attendance records aligned with framework structure
+    async getAttendanceRecords(params?: {
+        employeeId?: string;
+        date?: string;
+        startDate?: string;
+        endDate?: string;
+        status?: string;
+    }): Promise<AttendanceRecord[]> {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                // Mock data aligned with framework policies
+                const mockData: AttendanceRecord[] = [
+                    {
+                        id: '1',
+                        userId: '1',
+                        userName: 'John Doe',
+                        date: '2025-10-19',
+                        checkIn: '08:00',
+                        checkOut: '17:00',
+                        status: 'Present',
+                        notes: 'On time',
+                        createdAt: '2025-10-19T08:00:00Z',
+                        updatedAt: '2025-10-19T17:00:00Z'
+                    },
+                    {
+                        id: '2',
+                        userId: '1',
+                        userName: 'John Doe',
+                        date: '2025-10-18',
+                        checkIn: '09:15',
+                        checkOut: '17:30',
+                        status: 'Late',
+                        notes: 'Traffic delay - 15 mins late',
+                        createdAt: '2025-10-18T09:15:00Z',
+                        updatedAt: '2025-10-19T17:30:00Z'
+                    },
+                    {
+                        id: '3',
+                        userId: '2',
+                        userName: 'Jane Smith',
+                        date: '2025-10-19',
+                        checkIn: '08:45',
+                        checkOut: '17:00',
+                        status: 'Present',
+                        notes: 'Early arrival',
+                        createdAt: '2025-10-19T08:45:00Z',
+                        updatedAt: '2025-10-19T17:00:00Z'
+                    },
+                    {
+                        id: '4',
+                        userId: '3',
+                        userName: 'Mike Johnson',
+                        date: '2025-10-19',
+                        checkIn: undefined,
+                        checkOut: undefined,
+                        status: 'Absent',
+                        notes: 'Unauthorized absence',
+                        createdAt: '2025-10-19T09:00:00Z',
+                        updatedAt: '2025-10-19T09:00:00Z'
+                    },
+                    {
+                        id: '5',
+                        userId: '4',
+                        userName: 'Sarah Wilson',
+                        date: '2025-10-19',
+                        checkIn: '09:00',
+                        checkOut: '13:00',
+                        status: 'Leave',
+                        notes: 'Medical appointment - Half day',
+                        createdAt: '2025-10-19T09:00:00Z',
+                        updatedAt: '2025-10-19T13:00:00Z'
+                    }
+                ];
+
+                let filteredData = mockData;
+                if (params?.employeeId && params.employeeId !== 'all') {
+                    filteredData = filteredData.filter(record => record.userId === params.employeeId);
+                }
+                if (params?.startDate && params?.endDate) {
+                    filteredData = filteredData.filter(record =>
+                        record.date >= params.startDate! && record.date <= params.endDate!
+                    );
+                }
+                if (params?.status) {
+                    filteredData = filteredData.filter(record => record.status === params.status);
+                }
+
+                resolve(filteredData);
+            }, 500);
+        });
     },
 
-    getAttendanceRecord: async (id: string): Promise<AttendanceRecord> => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        const record = mockAttendanceRecords.find(r => r.id === id);
-        if (!record) throw new Error('Attendance record not found');
-        return record;
+    // Get single attendance record by ID
+    async getAttendanceRecord(id: string): Promise<AttendanceRecord> {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const mockRecord: AttendanceRecord = {
+                    id,
+                    userId: '1',
+                    userName: 'John Doe',
+                    date: '2024-01-15',
+                    checkIn: '09:00',
+                    checkOut: '17:00',
+                    status: 'Present',
+                    notes: 'Regular working day',
+                    createdAt: '2024-01-15T09:00:00Z',
+                    updatedAt: '2024-01-15T17:00:00Z'
+                };
+                resolve(mockRecord);
+            }, 500);
+        });
     },
 
-    createAttendanceRecord: async (data: Partial<AttendanceRecord>): Promise<AttendanceRecord> => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        const newRecord: AttendanceRecord = {
-            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            userId: data.userId || '',
-            userName: data.userName || '',
-            date: data.date || new Date().toISOString().split('T')[0],
-            checkIn: data.checkIn || '',
-            checkOut: data.checkOut || '',
-            status: data.status || 'Present',
-            notes: data.notes || '',
-            createdAt: new Date().toISOString().split('T')[0],
-            updatedAt: new Date().toISOString().split('T')[0],
-            ...data
+    // Create new attendance record
+    async createAttendanceRecord(data: {
+        userId: string;
+        date: string;
+        checkIn?: string;
+        checkOut?: string;
+        status: 'Present' | 'Late' | 'Absent' | 'Leave' | 'Holiday';
+        notes?: string;
+    }): Promise<AttendanceRecord> {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const newRecord: AttendanceRecord = {
+                    ...data,
+                    id: Math.random().toString(36).substr(2, 9),
+                    userName: 'New Employee', // In real app, this would come from user service
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+                resolve(newRecord);
+            }, 500);
+        });
+    },
+
+    // Update attendance record
+    async updateAttendanceRecord(id: string, data: {
+        checkIn?: string;
+        checkOut?: string;
+        status?: 'Present' | 'Late' | 'Absent' | 'Leave' | 'Holiday';
+        notes?: string;
+    }): Promise<AttendanceRecord> {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const updatedRecord: AttendanceRecord = {
+                    id,
+                    userId: '1',
+                    userName: 'John Doe',
+                    date: '2024-01-15',
+                    checkIn: '09:00',
+                    checkOut: '17:00',
+                    status: 'Present',
+                    notes: 'Updated record',
+                    createdAt: '2024-01-15T09:00:00Z',
+                    updatedAt: new Date().toISOString(),
+                    ...data
+                };
+                resolve(updatedRecord);
+            }, 500);
+        });
+    },
+
+    // Delete attendance record
+    async deleteAttendanceRecord(id: string): Promise<void> {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                console.log(`Deleted attendance record: ${id}`);
+                resolve();
+            }, 500);
+        });
+    },
+
+
+    // Clock in/out function
+    async clockInOut(employeeId: string, type: 'in' | 'out', timestamp?: string): Promise<AttendanceRecord> {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const now = new Date();
+                const record: AttendanceRecord = {
+                    id: Math.random().toString(36).substr(2, 9),
+                    userId: employeeId,
+                    userName: 'Current User',
+                    date: now.toISOString().split('T')[0],
+                    [type === 'in' ? 'checkIn' : 'checkOut']: timestamp || now.toTimeString().split(' ')[0].substring(0, 5),
+                    status: 'Present',
+                    createdAt: now.toISOString(),
+                    updatedAt: now.toISOString()
+                };
+                resolve(record);
+            }, 500);
+        });
+    },
+
+    // Get attendance statistics aligned with framework
+    async getAttendanceStats(employeeId?: string): Promise<{
+        totalWorkingDays: number;
+        presentDays: number;
+        lateDays: number;
+        absentDays: number;
+        excusedDays: number;
+        overtimeHours: number;
+        attendanceRate: number;
+        punctualityScore: number;
+    }> {
+        const records = await this.getAttendanceRecords(employeeId ? { employeeId } : undefined);
+
+        const totalWorkingDays = records.length;
+        const presentDays = records.filter(r => r.status === 'Present').length;
+        const lateDays = records.filter(r => r.status === 'Late').length;
+        const absentDays = records.filter(r => r.status === 'Absent').length;
+        const excusedDays = records.filter(r => r.status === 'Leave').length;
+
+        return {
+            totalWorkingDays,
+            presentDays,
+            lateDays,
+            absentDays,
+            excusedDays,
+            overtimeHours: 12.5, // Mock overtime data
+            attendanceRate: totalWorkingDays > 0 ? (presentDays / totalWorkingDays) * 100 : 0,
+            punctualityScore: totalWorkingDays > 0 ? ((presentDays - lateDays) / totalWorkingDays) * 100 : 0
         };
-        mockAttendanceRecords.push(newRecord);
-        return newRecord;
     },
 
-    updateAttendanceRecord: async (id: string, data: Partial<AttendanceRecord>): Promise<AttendanceRecord> => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        const index = mockAttendanceRecords.findIndex(r => r.id === id);
-        if (index === -1) throw new Error('Attendance record not found');
-        mockAttendanceRecords[index] = {
-            ...mockAttendanceRecords[index],
-            ...data,
-            updatedAt: new Date().toISOString().split('T')[0]
-        };
-        return mockAttendanceRecords[index];
-    },
-
-    deleteAttendanceRecord: async (id: string): Promise<void> => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        const index = mockAttendanceRecords.findIndex(r => r.id === id);
-        if (index === -1) throw new Error('Attendance record not found');
-        mockAttendanceRecords.splice(index, 1);
-    },
-
-    getUserAttendance: async (userId: string, startDate?: string, endDate?: string): Promise<AttendanceRecord[]> => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        let records = mockAttendanceRecords.filter(r => r.userId === userId);
-
-        if (startDate && endDate) {
-            records = records.filter(r => r.date >= startDate && r.date <= endDate);
-        }
-
-        return records.sort((a, b) => b.date.localeCompare(a.date));
+    // Generate reports as per framework
+    async generateReport(type: 'daily' | 'weekly' | 'monthly', date: Date): Promise<any> {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve({
+                    type,
+                    period: date.toISOString().split('T')[0],
+                    generatedAt: new Date().toISOString(),
+                    summary: {
+                        totalEmployees: 45,
+                        presentCount: 42,
+                        lateCount: 2,
+                        absentCount: 1,
+                        excusedCount: 2
+                    }
+                });
+            }, 500);
+        });
     }
 };
 

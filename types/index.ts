@@ -291,18 +291,44 @@ export interface AttendanceRecord {
 
 export interface LeaveRequest {
     id: string;
-    userId: string;
+    employee_id: string;
+    department_id: string;
     userName?: string;
-    type: 'Annual' | 'Sick' | 'Personal' | 'Maternity' | 'Emergency';
-    startDate: string;
-    endDate: string;
-    days: number;
+    departmentName?: string;
+    leave_type: 'Annual' | 'Sick' | 'Maternity' | 'Paternity' | 'Compassionate' | 'Unpaid' | 'Official' | 'Study';
+    start_date: string;
+    end_date: string;
+    total_days: number;
     reason: string;
-    status: 'Pending' | 'Approved' | 'Rejected';
-    approvedBy?: string;
-    approvedByName?: string;
-    createdAt: string;
-    updatedAt: string;
+    status: 'Pending' | 'Manager Approved' | 'HR Approved' | 'Rejected' | 'Cancelled' | 'Completed' | 'CEO Approved';
+    proof?: any; // JSON field for documents
+    applied_on: string;
+    approved_by_manager?: string;
+    approved_by_hr?: string;
+    approved_by_ceo?: string;
+    balance_before?: number;
+    balance_after?: number;
+    remarks?: string;
+    created_at: string;
+    updated_at: string;
+    backup_person?: string;
+    contact_during_leave?: string;
+}
+
+export interface LeaveBalance {
+    annual: number;
+    sick: number;
+    compassionate: number;
+    paternity?: number;
+    maternity?: number;
+}
+
+export interface LeaveStats {
+    employeesOnLeave: number;
+    upcomingLeaves: number;
+    pendingRequests: number;
+    leaveCostImpact: number;
+    utilizationRate: number;
 }
 
 export interface CreateLeaveRequest {

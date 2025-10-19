@@ -5,7 +5,11 @@ import { Toaster } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import ProgressBarWrapper from '@/components/ui/progress-bar-wrapper';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({
+    subsets: ['latin'],
+    display: 'swap',
+    fallback: ['system-ui', 'sans-serif'],
+});
 
 export const metadata: Metadata = {
     title: 'Markpedia OS - Business Operating System',

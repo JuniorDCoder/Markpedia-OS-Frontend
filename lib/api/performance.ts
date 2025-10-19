@@ -1,257 +1,248 @@
-// lib/api/performance.ts
-import { PerformanceReview, PerformanceSummary, CreatePerformanceReviewData, UpdatePerformanceReviewData, PerformanceGoal, CompetencyRating } from '@/types/performance';
+import { PerformanceRecord, PerformanceSummary, PerformanceStats, WarningRecord, TaskCompletionData, AttendanceData } from '@/types/performance';
 
-// Mock data
-const mockPerformanceReviews: PerformanceReview[] = [
+// Mock data based on the new performance management system
+const mockPerformanceRecords: PerformanceRecord[] = [
     {
         id: '1',
-        employeeId: '101',
-        employeeName: 'John Smith',
-        reviewerId: '201',
-        reviewerName: 'Sarah Johnson',
-        period: 'Quarterly',
-        reviewType: 'Standard',
-        status: 'Completed',
-        startDate: '2024-07-01',
-        endDate: '2024-09-30',
-        dueDate: '2024-10-15',
-        completedDate: '2024-10-12',
-        overallRating: 4.2,
-        overallComments: 'John has shown excellent growth in leadership skills and consistently delivers high-quality work.',
-        goals: [
-            {
-                id: 'g1',
-                title: 'Complete React Advanced Certification',
-                description: 'Enhance frontend development skills by completing advanced React certification',
-                category: 'Technical Skills',
-                targetDate: '2024-09-30',
-                priority: 'High',
-                status: 'Completed',
-                progress: 100,
-                rating: 5,
-                employeeComments: 'Completed certification with distinction',
-                reviewerComments: 'Excellent achievement, immediately applied learning to current projects'
-            },
-            {
-                id: 'g2',
-                title: 'Lead Team Project Migration',
-                description: 'Successfully migrate legacy system to new architecture',
-                category: 'Leadership',
-                targetDate: '2024-12-31',
-                priority: 'Critical',
-                status: 'In Progress',
-                progress: 75,
-                rating: 4,
-                employeeComments: 'Project is on track, team collaboration has been excellent',
-                reviewerComments: 'Great leadership skills demonstrated throughout the project'
-            }
-        ],
-        competencies: [
-            {
-                id: 'c1',
-                competency: 'Technical Expertise',
-                category: 'Technical',
-                currentLevel: 4,
-                targetLevel: 5,
-                selfRating: 4,
-                managerRating: 4,
-                comments: 'Strong technical foundation with room to grow in system architecture',
-                developmentNotes: 'Focus on distributed systems and scalability patterns'
-            },
-            {
-                id: 'c2',
-                competency: 'Team Leadership',
-                category: 'Leadership',
-                currentLevel: 4,
-                targetLevel: 4,
-                selfRating: 3,
-                managerRating: 4,
-                comments: 'Natural leader with excellent mentoring abilities',
-                developmentNotes: 'Continue developing strategic thinking skills'
-            }
-        ],
-        createdAt: '2024-10-01T10:00:00Z',
-        updatedAt: '2024-10-12T15:30:00Z',
-        createdBy: '201',
-        lastModifiedBy: '201'
+        employee_id: '101',
+        employeeName: 'Enow Divine Eyong',
+        department: 'Engineering',
+        position: 'Senior Developer',
+        month: '2025-09-01',
+        tasks_completed: 28,
+        tasks_assigned: 30,
+        lateness_minutes: 27,
+        lateness_count: 3,
+        warning_level: 'None',
+        warning_points: 0,
+        task_score: 93.33,
+        attendance_score: 92,
+        warning_score: 100,
+        okr_score: 85,
+        behavior_score: 80,
+        innovation_score: 70,
+        weighted_total: 87.5,
+        rating: 'Good',
+        manager_comment: 'Reliable and improving consistency.',
+        hr_comment: 'Eligible for Q4 recognition.',
+        validated_by_manager: true,
+        validated_by_hr: true,
+        created_at: '2025-10-01T10:00:00Z',
+        updated_at: '2025-10-05T15:30:00Z'
     },
     {
         id: '2',
-        employeeId: '102',
-        employeeName: 'Emily Davis',
-        reviewerId: '201',
-        reviewerName: 'Sarah Johnson',
-        period: 'Monthly',
-        reviewType: '360-Feedback',
-        status: 'In Progress',
-        startDate: '2024-09-01',
-        endDate: '2024-09-30',
-        dueDate: '2024-10-05',
-        overallRating: 3.8,
-        goals: [
-            {
-                id: 'g3',
-                title: 'Improve Client Communication',
-                description: 'Enhance client-facing communication skills and presentation abilities',
-                category: 'Communication',
-                targetDate: '2024-11-30',
-                priority: 'Medium',
-                status: 'In Progress',
-                progress: 60,
-                rating: 3,
-                employeeComments: 'Attending communication workshops and practicing presentation skills',
-                reviewerComments: 'Showing good progress, more confidence in client meetings'
-            }
-        ],
-        competencies: [
-            {
-                id: 'c3',
-                competency: 'Client Relations',
-                category: 'Communication',
-                currentLevel: 3,
-                targetLevel: 4,
-                selfRating: 3,
-                managerRating: 3,
-                averageRating: 3.2,
-                comments: 'Building stronger relationships with clients',
-                developmentNotes: 'Focus on active listening and solution-oriented discussions'
-            }
-        ],
-        feedback360: [
-            {
-                id: 'f1',
-                feedbackProvider: 'Anonymous Peer',
-                relationship: 'Peer',
-                isAnonymous: true,
-                overallRating: 4,
-                strengths: ['Technical expertise', 'Reliability', 'Problem-solving'],
-                areasForImprovement: ['Communication in meetings', 'Proactive updates'],
-                specificFeedback: 'Emily is technically very strong but could be more vocal in team discussions',
-                submittedAt: '2024-10-08T14:20:00Z'
-            }
-        ],
-        createdAt: '2024-09-25T09:00:00Z',
-        updatedAt: '2024-10-08T16:45:00Z',
-        createdBy: '201',
-        lastModifiedBy: '102'
+        employee_id: '102',
+        employeeName: 'Sarah Johnson',
+        department: 'Marketing',
+        position: 'Marketing Manager',
+        month: '2025-09-01',
+        tasks_completed: 25,
+        tasks_assigned: 25,
+        lateness_minutes: 0,
+        lateness_count: 0,
+        warning_level: 'None',
+        warning_points: 0,
+        task_score: 100,
+        attendance_score: 100,
+        warning_score: 100,
+        okr_score: 95,
+        behavior_score: 90,
+        innovation_score: 85,
+        weighted_total: 96.5,
+        rating: 'Outstanding',
+        manager_comment: 'Exceptional performance and leadership.',
+        hr_comment: 'Top performer candidate.',
+        validated_by_manager: true,
+        validated_by_hr: true,
+        created_at: '2025-10-01T10:00:00Z',
+        updated_at: '2025-10-05T15:30:00Z'
     },
     {
         id: '3',
-        employeeId: '103',
+        employee_id: '103',
         employeeName: 'Michael Chen',
-        reviewerId: '202',
-        reviewerName: 'David Wilson',
-        period: 'Annual',
-        reviewType: 'Standard',
-        status: 'Draft',
-        startDate: '2024-01-01',
-        endDate: '2024-12-31',
-        dueDate: '2024-12-15',
-        overallRating: 0,
-        goals: [
-            {
-                id: 'g4',
-                title: 'Develop Mobile App Expertise',
-                description: 'Learn React Native and deliver first mobile application',
-                category: 'Professional Development',
-                targetDate: '2024-12-31',
-                priority: 'High',
-                status: 'In Progress',
-                progress: 45,
-                rating: 0,
-                employeeComments: 'Making steady progress on React Native course',
-                reviewerComments: 'Good initiative in expanding skill set'
-            }
-        ],
-        competencies: [
-            {
-                id: 'c4',
-                competency: 'Innovation',
-                category: 'Technical',
-                currentLevel: 3,
-                targetLevel: 4,
-                selfRating: 3,
-                managerRating: 3,
-                comments: 'Shows creativity in problem-solving approaches',
-                developmentNotes: 'Encourage more experimentation with new technologies'
-            }
-        ],
-        createdAt: '2024-11-01T08:00:00Z',
-        updatedAt: '2024-11-01T08:00:00Z',
-        createdBy: '202',
-        lastModifiedBy: '202'
+        department: 'Sales',
+        position: 'Sales Executive',
+        month: '2025-09-01',
+        tasks_completed: 18,
+        tasks_assigned: 25,
+        lateness_minutes: 90,
+        lateness_count: 5,
+        warning_level: 'Verbal',
+        warning_points: 5,
+        task_score: 72,
+        attendance_score: 82,
+        warning_score: 95,
+        okr_score: 65,
+        behavior_score: 75,
+        innovation_score: 60,
+        weighted_total: 72.1,
+        rating: 'Fair',
+        manager_comment: 'Needs improvement in task completion and punctuality.',
+        hr_comment: 'Monitor for next month performance.',
+        validated_by_manager: true,
+        validated_by_hr: true,
+        created_at: '2025-10-01T10:00:00Z',
+        updated_at: '2025-10-05T15:30:00Z'
+    },
+    {
+        id: '4',
+        employee_id: '104',
+        employeeName: 'Emily Davis',
+        department: 'HR',
+        position: 'HR Specialist',
+        month: '2025-09-01',
+        tasks_completed: 15,
+        tasks_assigned: 20,
+        lateness_minutes: 120,
+        lateness_count: 8,
+        warning_level: 'Written',
+        warning_points: 10,
+        task_score: 75,
+        attendance_score: 76,
+        warning_score: 90,
+        okr_score: 70,
+        behavior_score: 65,
+        innovation_score: 55,
+        weighted_total: 71.8,
+        rating: 'Fair',
+        manager_comment: 'Performance below expectations.',
+        hr_comment: 'Consider PIP if no improvement.',
+        validated_by_manager: true,
+        validated_by_hr: true,
+        created_at: '2025-10-01T10:00:00Z',
+        updated_at: '2025-10-05T15:30:00Z'
     }
 ];
 
 const mockPerformanceSummaries: PerformanceSummary[] = [
     {
         employeeId: '101',
-        employeeName: 'John Smith',
+        employeeName: 'Enow Divine Eyong',
         department: 'Engineering',
         position: 'Senior Developer',
-        currentRating: 4.2,
-        previousRating: 3.8,
+        currentRating: 87.5,
+        previousRating: 82.3,
         trend: 'Improving',
-        lastReviewDate: '2024-10-12',
-        nextReviewDate: '2024-12-15',
+        lastReviewDate: '2025-09-30',
+        nextReviewDate: '2025-10-31',
         completedReviews: 3,
-        pendingReviews: 0
+        pendingReviews: 0,
+        overallScore: 87.5,
+        performanceRating: 'Good',
+        taskCompletionRate: 93.33,
+        attendanceRate: 92,
+        warningStatus: 'None'
     },
     {
         employeeId: '102',
-        employeeName: 'Emily Davis',
-        department: 'Engineering',
-        position: 'Frontend Developer',
-        currentRating: 3.8,
-        previousRating: 3.6,
+        employeeName: 'Sarah Johnson',
+        department: 'Marketing',
+        position: 'Marketing Manager',
+        currentRating: 96.5,
+        previousRating: 94.2,
         trend: 'Improving',
-        lastReviewDate: '2024-09-30',
-        nextReviewDate: '2024-10-31',
-        completedReviews: 2,
-        pendingReviews: 1
+        lastReviewDate: '2025-09-30',
+        nextReviewDate: '2025-10-31',
+        completedReviews: 3,
+        pendingReviews: 0,
+        overallScore: 96.5,
+        performanceRating: 'Outstanding',
+        taskCompletionRate: 100,
+        attendanceRate: 100,
+        warningStatus: 'None'
     },
     {
         employeeId: '103',
         employeeName: 'Michael Chen',
-        department: 'Engineering',
-        position: 'Full Stack Developer',
-        currentRating: 3.5,
-        previousRating: 3.5,
-        trend: 'Stable',
-        lastReviewDate: '2023-12-15',
-        nextReviewDate: '2024-12-15',
-        completedReviews: 1,
-        pendingReviews: 1
+        department: 'Sales',
+        position: 'Sales Executive',
+        currentRating: 72.1,
+        previousRating: 75.6,
+        trend: 'Declining',
+        lastReviewDate: '2025-09-30',
+        nextReviewDate: '2025-10-31',
+        completedReviews: 3,
+        pendingReviews: 0,
+        overallScore: 72.1,
+        performanceRating: 'Fair',
+        taskCompletionRate: 72,
+        attendanceRate: 82,
+        warningStatus: 'Verbal Warning'
+    },
+    {
+        employeeId: '104',
+        employeeName: 'Emily Davis',
+        department: 'HR',
+        position: 'HR Specialist',
+        currentRating: 71.8,
+        previousRating: 78.9,
+        trend: 'Declining',
+        lastReviewDate: '2025-09-30',
+        nextReviewDate: '2025-10-31',
+        completedReviews: 3,
+        pendingReviews: 0,
+        overallScore: 71.8,
+        performanceRating: 'Fair',
+        taskCompletionRate: 75,
+        attendanceRate: 76,
+        warningStatus: 'Written Warning'
     }
 ];
 
-class PerformanceService {
-    private reviews: PerformanceReview[] = mockPerformanceReviews;
-    private summaries: PerformanceSummary[] = mockPerformanceSummaries;
+const mockPerformanceStats: PerformanceStats = {
+    employeesOnPIP: 2,
+    outstandingPerformers: 8,
+    averageScore: 82.0,
+    completionRate: 85,
+    departmentBreakdown: [
+        { department: 'Engineering', averageScore: 87.5, employeeCount: 12 },
+        { department: 'Marketing', averageScore: 89.2, employeeCount: 8 },
+        { department: 'Sales', averageScore: 78.6, employeeCount: 15 },
+        { department: 'HR', averageScore: 82.1, employeeCount: 6 },
+        { department: 'Operations', averageScore: 84.3, employeeCount: 10 }
+    ]
+};
 
-    // Get all performance reviews
-    async getAllPerformanceReviews(): Promise<PerformanceReview[]> {
+class PerformanceService {
+    private records: PerformanceRecord[] = mockPerformanceRecords;
+    private summaries: PerformanceSummary[] = mockPerformanceSummaries;
+    private stats: PerformanceStats = mockPerformanceStats;
+
+    // Get all performance records
+    async getAllPerformanceRecords(): Promise<PerformanceRecord[]> {
         return new Promise((resolve) => {
-            setTimeout(() => resolve([...this.reviews]), 500);
+            setTimeout(() => resolve([...this.records]), 500);
         });
     }
 
-    // Get performance review by ID
-    async getPerformanceReview(id: string): Promise<PerformanceReview | null> {
+    // Get performance record by ID
+    async getPerformanceRecord(id: string): Promise<PerformanceRecord | null> {
         return new Promise((resolve) => {
             setTimeout(() => {
-                const review = this.reviews.find(r => r.id === id);
-                resolve(review || null);
+                const record = this.records.find(r => r.id === id);
+                resolve(record || null);
             }, 300);
         });
     }
 
-    // Get performance reviews by employee
-    async getPerformanceReviewsByEmployee(employeeId: string): Promise<PerformanceReview[]> {
+    // Get performance records by employee
+    async getPerformanceRecordsByEmployee(employeeId: string): Promise<PerformanceRecord[]> {
         return new Promise((resolve) => {
             setTimeout(() => {
-                const employeeReviews = this.reviews.filter(r => r.employeeId === employeeId);
-                resolve(employeeReviews);
+                const employeeRecords = this.records.filter(r => r.employee_id === employeeId);
+                resolve(employeeRecords);
+            }, 400);
+        });
+    }
+
+    // Get performance records by month
+    async getPerformanceRecordsByMonth(month: string): Promise<PerformanceRecord[]> {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const monthRecords = this.records.filter(r => r.month === month);
+                resolve(monthRecords);
             }, 400);
         });
     }
@@ -263,100 +254,146 @@ class PerformanceService {
         });
     }
 
-    // Create new performance review
-    async createPerformanceReview(data: CreatePerformanceReviewData): Promise<PerformanceReview> {
+    // Get performance statistics
+    async getPerformanceStats(): Promise<PerformanceStats> {
+        return new Promise((resolve) => {
+            setTimeout(() => resolve({...this.stats}), 400);
+        });
+    }
+
+    // Calculate performance score based on the new formula
+    calculatePerformanceScore(data: {
+        tasks_completed: number;
+        tasks_assigned: number;
+        lateness_minutes: number;
+        lateness_count: number;
+        warning_level: string;
+        okr_score: number;
+        behavior_score: number;
+        innovation_score: number;
+    }) {
+        // Task Completion Score (30%)
+        const task_score = (data.tasks_completed / data.tasks_assigned) * 100;
+
+        // Attendance Score (20%)
+        const lateness_penalty = Math.floor(data.lateness_minutes / 15);
+        const attendance_score = Math.max(0, 100 - lateness_penalty);
+
+        // Warning Score (10%)
+        const warning_points = this.getWarningPoints(data.warning_level);
+        const warning_score = Math.max(0, 100 - warning_points);
+
+        // Weighted Total
+        const weighted_total =
+            (task_score * 0.30) +
+            (attendance_score * 0.20) +
+            (warning_score * 0.10) +
+            (data.okr_score * 0.20) +
+            (data.behavior_score * 0.10) +
+            (data.innovation_score * 0.10);
+
+        // Determine rating
+        let rating: 'Outstanding' | 'Good' | 'Fair' | 'Poor';
+        if (weighted_total >= 90) rating = 'Outstanding';
+        else if (weighted_total >= 75) rating = 'Good';
+        else if (weighted_total >= 60) rating = 'Fair';
+        else rating = 'Poor';
+
+        return {
+            task_score: Number(task_score.toFixed(2)),
+            attendance_score: Number(attendance_score.toFixed(2)),
+            warning_score: Number(warning_score.toFixed(2)),
+            weighted_total: Number(weighted_total.toFixed(2)),
+            rating
+        };
+    }
+
+    // Get warning points based on warning level
+    private getWarningPoints(warning_level: string): number {
+        switch (warning_level) {
+            case 'Verbal': return 5;
+            case 'Written': return 10;
+            case 'Final': return 15;
+            case 'PIP Active': return 20;
+            default: return 0;
+        }
+    }
+
+    // Create new performance record
+    async createPerformanceRecord(data: Omit<PerformanceRecord, 'id' | 'created_at' | 'updated_at'>): Promise<PerformanceRecord> {
         return new Promise((resolve) => {
             setTimeout(() => {
-                const newReview: PerformanceReview = {
-                    id: (this.reviews.length + 1).toString(),
+                const newRecord: PerformanceRecord = {
+                    id: (this.records.length + 1).toString(),
                     ...data,
-                    employeeName: `Employee ${data.employeeId}`, // In real app, fetch from employee service
-                    reviewerName: `Reviewer ${data.reviewerId}`, // In real app, fetch from employee service
-                    status: 'Draft',
-                    overallRating: 0,
-                    goals: data.goals?.map((goal, index) => ({
-                        ...goal,
-                        id: `g${Date.now()}_${index}`,
-                        rating: 0,
-                        progress: 0,
-                        status: 'Not Started' as const
-                    })) || [],
-                    competencies: data.competencies?.map((comp, index) => ({
-                        ...comp,
-                        id: `c${Date.now()}_${index}`
-                    })) || [],
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                    createdBy: data.reviewerId,
-                    lastModifiedBy: data.reviewerId
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
                 };
 
-                this.reviews.push(newReview);
-                resolve(newReview);
+                this.records.push(newRecord);
+                resolve(newRecord);
             }, 600);
         });
     }
 
-    // Update performance review
-    async updatePerformanceReview(id: string, data: UpdatePerformanceReviewData): Promise<PerformanceReview> {
+    // Update performance record
+    async updatePerformanceRecord(id: string, data: Partial<PerformanceRecord>): Promise<PerformanceRecord> {
         return new Promise((resolve, reject) => {
             setTimeout(() => {
-                const index = this.reviews.findIndex(r => r.id === id);
+                const index = this.records.findIndex(r => r.id === id);
                 if (index === -1) {
-                    reject(new Error('Performance review not found'));
+                    reject(new Error('Performance record not found'));
                     return;
                 }
 
-                const updatedReview = {
-                    ...this.reviews[index],
+                const updatedRecord = {
+                    ...this.records[index],
                     ...data,
-                    updatedAt: new Date().toISOString(),
-                    lastModifiedBy: data.reviewerId || this.reviews[index].lastModifiedBy
+                    updated_at: new Date().toISOString()
                 };
 
-                this.reviews[index] = updatedReview;
-                resolve(updatedReview);
+                this.records[index] = updatedRecord;
+                resolve(updatedRecord);
             }, 600);
         });
     }
 
-    // Delete performance review
-    async deletePerformanceReview(id: string): Promise<boolean> {
+    // Validate performance record by manager
+    async validateByManager(id: string): Promise<PerformanceRecord> {
+        return this.updatePerformanceRecord(id, {
+            validated_by_manager: true,
+            updated_at: new Date().toISOString()
+        });
+    }
+
+    // Validate performance record by HR
+    async validateByHR(id: string): Promise<PerformanceRecord> {
+        return this.updatePerformanceRecord(id, {
+            validated_by_hr: true,
+            updated_at: new Date().toISOString()
+        });
+    }
+
+    // Get department performance
+    async getDepartmentPerformance(department: string): Promise<PerformanceRecord[]> {
         return new Promise((resolve) => {
             setTimeout(() => {
-                const index = this.reviews.findIndex(r => r.id === id);
-                if (index !== -1) {
-                    this.reviews.splice(index, 1);
-                    resolve(true);
-                } else {
-                    resolve(false);
-                }
+                const deptRecords = this.records.filter(r => r.department === department);
+                resolve(deptRecords);
             }, 400);
         });
     }
 
-    // Submit review for approval
-    async submitReview(id: string): Promise<PerformanceReview> {
-        return this.updatePerformanceReview(id, {
-            status: 'In Progress',
-            updatedAt: new Date().toISOString()
-        });
-    }
-
-    // Approve review
-    async approveReview(id: string, approverId: string): Promise<PerformanceReview> {
-        return this.updatePerformanceReview(id, {
-            status: 'Approved',
-            completedDate: new Date().toISOString(),
-            lastModifiedBy: approverId
-        });
-    }
-
-    // Publish review
-    async publishReview(id: string): Promise<PerformanceReview> {
-        return this.updatePerformanceReview(id, {
-            status: 'Published',
-            updatedAt: new Date().toISOString()
+    // Get performance trends for an employee
+    async getEmployeeTrends(employeeId: string, months: number = 6): Promise<PerformanceRecord[]> {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const employeeRecords = this.records
+                    .filter(r => r.employee_id === employeeId)
+                    .sort((a, b) => new Date(b.month).getTime() - new Date(a.month).getTime())
+                    .slice(0, months);
+                resolve(employeeRecords);
+            }, 400);
         });
     }
 }

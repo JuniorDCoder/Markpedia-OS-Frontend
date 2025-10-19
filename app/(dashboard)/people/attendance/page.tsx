@@ -1,6 +1,8 @@
+// Updated AttendancePage with fixed stats variable
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,9 +11,28 @@ import { TableSkeleton } from '@/components/ui/loading';
 import { useAppStore } from '@/store/app';
 import { useAuthStore } from '@/store/auth';
 import { AttendanceRecord, User } from '@/types';
-import { Calendar, Clock, Download, ChevronLeft, ChevronRight, Filter, Plus } from 'lucide-react';
+import {
+    Calendar,
+    Clock,
+    Download,
+    ChevronLeft,
+    ChevronRight,
+    Filter,
+    Plus,
+    Users,
+    AlertTriangle,
+    CheckCircle2,
+    XCircle,
+    Clock4,
+    Eye,
+    Edit
+} from 'lucide-react';
 import toast from 'react-hot-toast';
-import Link from 'next/link';
+import { attendanceService } from '@/services/api';
+import { AttendanceForm } from '@/components/sections/AttendanceForm';
+import { AttendanceDetails } from '@/components/sections/AttendanceDetails';
+
+type ViewMode = 'list' | 'create' | 'edit' | 'detail';
 
 export default function AttendancePage() {
     const { setCurrentModule } = useAppStore();
@@ -21,22 +42,62 @@ export default function AttendancePage() {
     const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
     const [loading, setLoading] = useState(true);
     const [currentDate, setCurrentDate] = useState(new Date());
-    const isPrivilegedUser = true;
+    const [attendanceStats, setAttendanceStats] = useState<any>(null); // Renamed to avoid conflict
+    const [viewMode, setViewMode] = useState<ViewMode>('list');
+    const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
+
+    const userRole = user?.role || 'Employee';
+    const isPrivilegedUser = ['HR Officer', 'Department Head', 'CEO', 'Manager'].includes(userRole);
+    const canEditAttendance = ['HR Officer', 'Department Head', 'CEO'].includes(userRole);
+    const canRecordAttendance = ['Employee', 'Manager', "CEO"].includes(userRole);
 
     useEffect(() => {
         setCurrentModule('people');
         loadEmployees();
-        loadAttendance();
-    }, [setCurrentModule, currentDate, selectedEmployee]);
+    }, [setCurrentModule]);
+
+    useEffect(() => {
+        if (viewMode === 'list') {
+            loadAttendance();
+            loadStats();
+        }
+    }, [currentDate, selectedEmployee, viewMode]);
 
     const loadEmployees = async () => {
         try {
-            setEmployees([
-                { id: '1', name: 'John Doe', email: 'john@company.com', role: 'Employee' },
-                { id: '2', name: 'Jane Smith', email: 'jane@company.com', role: 'Manager' },
-                { id: '3', name: 'Mike Johnson', email: 'mike@company.com', role: 'Employee' },
-            ]);
-        } catch {
+            const mockEmployees: User[] = [
+                {
+                    id: '1',
+                    name: 'John Doe',
+                    email: 'john@markpedia.com',
+                    role: 'Employee',
+                    department: 'Engineering'
+                },
+                {
+                    id: '2',
+                    name: 'Jane Smith',
+                    email: 'jane@markpedia.com',
+                    role: 'Manager',
+                    department: 'Marketing'
+                },
+                {
+                    id: '3',
+                    name: 'Mike Johnson',
+                    email: 'mike@markpedia.com',
+                    role: 'Employee',
+                    department: 'Sales'
+                },
+                {
+                    id: '4',
+                    name: 'Sarah Wilson',
+                    email: 'sarah@markpedia.com',
+                    role: 'HR Officer',
+                    department: 'HR'
+                },
+            ];
+            setEmployees(mockEmployees);
+        } catch (error) {
+            console.error('Failed to load employees:', error);
             toast.error('Failed to load employees');
         }
     };
@@ -44,46 +105,121 @@ export default function AttendancePage() {
     const loadAttendance = async () => {
         try {
             setLoading(true);
-            const userId = isPrivilegedUser && selectedEmployee !== 'all' ? selectedEmployee : user?.id || '1';
-            const mockAttendance: AttendanceRecord[] = [];
+
             const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
             const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
 
-            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-                const dayOfWeek = d.getDay();
-                if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-                    const isLate = Math.random() < 0.1;
-                    const isAbsent = Math.random() < 0.05;
-                    mockAttendance.push({
-                        id: `${d.getTime()}-${userId}`,
-                        userId,
-                        userName: employees.find(e => e.id === userId)?.name || 'Employee',
-                        date: d.toISOString().split('T')[0],
-                        checkIn: isAbsent ? undefined : isLate ? '09:15' : '09:00',
-                        checkOut: isAbsent ? undefined : '17:30',
-                        status: isAbsent ? 'Absent' : isLate ? 'Late' : 'Present',
-                        notes: isLate ? 'Traffic delay' : undefined,
-                    });
-                }
+            const startDateStr = startDate.toISOString().split('T')[0];
+            const endDateStr = endDate.toISOString().split('T')[0];
+
+            const params: any = {
+                startDate: startDateStr,
+                endDate: endDateStr
+            };
+
+            if (isPrivilegedUser && selectedEmployee !== 'all') {
+                params.employeeId = selectedEmployee;
+            } else if (!isPrivilegedUser) {
+                params.employeeId = user?.id;
             }
-            setAttendance(mockAttendance);
-        } catch {
+
+            const attendanceData = await attendanceService.getAttendanceRecords(params);
+            setAttendance(attendanceData);
+
+        } catch (error) {
+            console.error('Failed to load attendance data:', error);
             toast.error('Failed to load attendance data');
         } finally {
             setLoading(false);
         }
     };
 
+    const loadStats = async () => {
+        try {
+            const employeeId = isPrivilegedUser && selectedEmployee !== 'all' ? selectedEmployee : user?.id;
+            const statsData = await attendanceService.getAttendanceStats(employeeId);
+            setAttendanceStats(statsData);
+        } catch (error) {
+            console.error('Failed to load stats:', error);
+        }
+    };
+
+    const handleCreateRecord = async (data: any) => {
+        try {
+            await attendanceService.createAttendanceRecord(data);
+            setViewMode('list');
+            loadAttendance(); // Refresh the list
+        } catch (error) {
+            throw error; // Let the form handle the error
+        }
+    };
+
+    const handleUpdateRecord = async (data: any) => {
+        if (!selectedRecord) return;
+
+        try {
+            await attendanceService.updateAttendanceRecord(selectedRecord.id, data);
+            setViewMode('list');
+            loadAttendance(); // Refresh the list
+        } catch (error) {
+            throw error; // Let the form handle the error
+        }
+    };
+
+    const handleDeleteRecord = async (recordId: string) => {
+        setViewMode('list');
+        loadAttendance(); // Refresh the list
+    };
+
+    const handleViewRecord = (record: AttendanceRecord) => {
+        setSelectedRecord(record);
+        setViewMode('detail');
+    };
+
+    const handleEditRecord = (record: AttendanceRecord) => {
+        setSelectedRecord(record);
+        setViewMode('edit');
+    };
+
+    const handleCreateNew = () => {
+        setSelectedRecord(null);
+        setViewMode('create');
+    };
+
+    const handleBackToList = () => {
+        setViewMode('list');
+        setSelectedRecord(null);
+    };
+
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'Present':
-                return 'bg-green-100 text-green-800';
+                return 'bg-green-100 text-green-800 border-green-200';
             case 'Late':
-                return 'bg-yellow-100 text-yellow-800';
+                return 'bg-yellow-100 text-yellow-800 border-yellow-200';
             case 'Absent':
-                return 'bg-red-100 text-red-800';
+                return 'bg-red-100 text-red-800 border-red-200';
+            case 'Leave':
+                return 'bg-blue-100 text-blue-800 border-blue-200';
+            case 'Holiday':
+                return 'bg-purple-100 text-purple-800 border-purple-200';
             default:
-                return 'bg-gray-100 text-gray-800';
+                return 'bg-gray-100 text-gray-800 border-gray-200';
+        }
+    };
+
+    const getStatusIcon = (status: string) => {
+        switch (status) {
+            case 'Present':
+                return <CheckCircle2 className="h-4 w-4" />;
+            case 'Late':
+                return <Clock4 className="h-4 w-4" />;
+            case 'Absent':
+                return <XCircle className="h-4 w-4" />;
+            case 'Leave':
+                return <AlertTriangle className="h-4 w-4" />;
+            default:
+                return <Clock className="h-4 w-4" />;
         }
     };
 
@@ -96,12 +232,21 @@ export default function AttendancePage() {
         const startingDayOfWeek = firstDay.getDay();
         const days = [];
 
-        for (let i = 0; i < startingDayOfWeek; i++) days.push(null);
+        for (let i = 0; i < startingDayOfWeek; i++) {
+            days.push(null);
+        }
+
         for (let day = 1; day <= daysInMonth; day++) {
             const date = new Date(year, month, day);
             const dateString = date.toISOString().split('T')[0];
             const attendanceRecord = attendance.find(a => a.date === dateString);
-            days.push({ day, date: dateString, attendance: attendanceRecord });
+            days.push({
+                day,
+                date: dateString,
+                attendance: attendanceRecord,
+                isWeekend: date.getDay() === 0 || date.getDay() === 6,
+                isToday: date.toDateString() === new Date().toDateString()
+            });
         }
 
         return days;
@@ -115,18 +260,50 @@ export default function AttendancePage() {
         });
     };
 
-    const getAttendanceStats = () => {
+    const getLocalAttendanceStats = () => {
         const totalDays = attendance.length;
         const presentDays = attendance.filter(a => a.status === 'Present').length;
         const lateDays = attendance.filter(a => a.status === 'Late').length;
         const absentDays = attendance.filter(a => a.status === 'Absent').length;
-        return { totalDays, presentDays, lateDays, absentDays };
+        const leaveDays = attendance.filter(a => a.status === 'Leave').length;
+        const holidayDays = attendance.filter(a => a.status === 'Holiday').length;
+
+        return { totalDays, presentDays, lateDays, absentDays, leaveDays, holidayDays };
     };
 
-    const stats = getAttendanceStats();
+    const localStats = getLocalAttendanceStats(); // Use local variable for display
+
+    // Render different views based on viewMode
+    if (viewMode === 'create' || viewMode === 'edit') {
+        return (
+            <div className="space-y-6 pb-10">
+                <AttendanceForm
+                    record={viewMode === 'edit' ? selectedRecord : undefined}
+                    employees={employees}
+                    onSave={viewMode === 'edit' ? handleUpdateRecord : handleCreateRecord}
+                    onCancel={handleBackToList}
+                    isEditing={viewMode === 'edit'}
+                />
+            </div>
+        );
+    }
+
+    if (viewMode === 'detail' && selectedRecord) {
+        return (
+            <div className="space-y-6 pb-10">
+                <AttendanceDetails
+                    attendance={selectedRecord}
+                    onEdit={handleEditRecord}
+                    onDelete={handleDeleteRecord}
+                    onBack={handleBackToList}
+                />
+            </div>
+        );
+    }
 
     if (loading) return <TableSkeleton />;
 
+    // Main list view
     return (
         <div className="space-y-6 pb-10">
             {/* Header */}
@@ -134,19 +311,27 @@ export default function AttendancePage() {
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center">
                         <Clock className="h-6 w-6 sm:h-8 sm:w-8 mr-2 sm:mr-3" />
-                        Attendance
+                        Time & Attendance
                     </h1>
                     <p className="text-sm sm:text-base text-muted-foreground mt-1 sm:mt-2">
-                        {isPrivilegedUser ? 'Track employee attendance and working hours' : 'View your attendance'}
+                        {isPrivilegedUser
+                            ? 'Monitor employee attendance and working hours'
+                            : 'Track your attendance and working hours'
+                        }
                     </p>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                    <Button asChild className="w-full sm:w-auto">
-                        <Link href="/people/attendance/new">
-                            <Plus className="h-4 w-4 mr-2" /> Log Attendance
-                        </Link>
-                    </Button>
+                    {/* Create New Record Button */}
+                    {canRecordAttendance && (
+                        <Button asChild className="w-full sm:w-auto">
+                            <Link href="/people/attendance/new">
+                                <Plus className="h-4 w-4 mr-2" /> New Attendance
+                            </Link>
+                        </Button>
+                    )}
+
+                    {/* Export Button */}
                     <Button variant="outline" size="sm" className="w-full sm:w-auto">
                         <Download className="h-4 w-4 mr-2" /> Export
                     </Button>
@@ -156,10 +341,13 @@ export default function AttendancePage() {
             {/* Employee Filter */}
             {isPrivilegedUser && (
                 <Card>
-                    <CardHeader>
+                    <CardHeader className="pb-3">
                         <CardTitle className="flex items-center text-base sm:text-lg">
-                            <Filter className="h-5 w-5 mr-2" /> Employee Filter
+                            <Users className="h-5 w-5 mr-2" /> Employee Selection
                         </CardTitle>
+                        <CardDescription className="text-sm">
+                            Select employee to view attendance records
+                        </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
@@ -170,7 +358,7 @@ export default function AttendancePage() {
                                 <SelectItem value="all">All Employees</SelectItem>
                                 {employees.map(employee => (
                                     <SelectItem key={employee.id} value={employee.id}>
-                                        {employee.name} ({employee.role})
+                                        {employee.name} ({employee.department})
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -180,12 +368,12 @@ export default function AttendancePage() {
             )}
 
             {/* Stats */}
-            <div className="grid gap-4 grid-cols-2 sm:grid-cols-4">
+            <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
                 {[
-                    { label: 'Total Days', value: stats.totalDays, color: 'text-muted-foreground', icon: <Calendar className="h-4 w-4" /> },
-                    { label: 'Present', value: stats.presentDays, color: 'bg-green-500' },
-                    { label: 'Late', value: stats.lateDays, color: 'bg-yellow-500' },
-                    { label: 'Absent', value: stats.absentDays, color: 'bg-red-500' },
+                    { label: 'Total Days', value: localStats.totalDays, color: 'text-muted-foreground', icon: <Calendar className="h-4 w-4" /> },
+                    { label: 'Present', value: localStats.presentDays, color: 'bg-green-500' },
+                    { label: 'Late', value: localStats.lateDays, color: 'bg-yellow-500' },
+                    { label: 'Absent', value: localStats.absentDays, color: 'bg-red-500' },
                 ].map((stat, i) => (
                     <Card key={i}>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -239,8 +427,21 @@ export default function AttendancePage() {
                             {getDaysInMonth().map((dayData, index) => (
                                 <div key={index} className="aspect-square">
                                     {dayData ? (
-                                        <div className="h-full p-2 border rounded-lg hover:bg-muted/50 cursor-pointer">
-                                            <div className="text-xs sm:text-sm font-medium">{dayData.day}</div>
+                                        <div
+                                            className={`h-full p-2 border rounded-lg hover:bg-muted/50 cursor-pointer ${
+                                                dayData.isToday ? 'ring-2 ring-blue-500' : ''
+                                            }`}
+                                            onClick={() => {
+                                                if (dayData.attendance) {
+                                                    handleViewRecord(dayData.attendance);
+                                                }
+                                            }}
+                                        >
+                                            <div className={`text-xs sm:text-sm font-medium ${
+                                                dayData.isToday ? 'text-blue-600' : ''
+                                            }`}>
+                                                {dayData.day}
+                                            </div>
                                             {dayData.attendance && (
                                                 <div className="mt-1">
                                                     <Badge
@@ -267,45 +468,72 @@ export default function AttendancePage() {
                 </CardContent>
             </Card>
 
-            {/* Recent Attendance */}
+            {/* Recent Records with View/Edit Actions */}
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-base sm:text-lg">Recent Attendance</CardTitle>
-                    <CardDescription className="text-sm">Latest records</CardDescription>
+                    <CardTitle className="text-base sm:text-lg">Recent Attendance Records</CardTitle>
+                    <CardDescription className="text-sm">
+                        Latest attendance entries - {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-3 sm:space-y-4">
+                    <div className="space-y-3">
                         {attendance.slice(-10).reverse().map(record => (
                             <div
                                 key={record.id}
-                                className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border rounded-lg"
+                                className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg hover:bg-muted/20 transition-colors"
                             >
-                                <div className="space-y-1 text-sm">
-                                    <div className="font-medium">
-                                        {new Date(record.date).toLocaleDateString('en-US', {
-                                            weekday: 'short',
-                                            month: 'short',
-                                            day: 'numeric',
-                                            year: 'numeric',
-                                        })}
+                                <div className="flex items-center gap-4 flex-1 mb-3 sm:mb-0">
+                                    <div className={`p-2 rounded-full ${getStatusColor(record.status)}`}>
+                                        {getStatusIcon(record.status)}
                                     </div>
-                                    <div className="text-muted-foreground">
-                                        {record.userName && <span className="font-medium">{record.userName} • </span>}
-                                        {record.checkIn && record.checkOut
-                                            ? `${record.checkIn} - ${record.checkOut}`
-                                            : record.checkIn
-                                                ? `Check-in: ${record.checkIn}`
-                                                : 'No check-in recorded'}
+                                    <div className="space-y-1">
+                                        <div className="font-medium flex items-center gap-2 flex-wrap">
+                                            {new Date(record.date).toLocaleDateString('en-US', {
+                                                weekday: 'long',
+                                                year: 'numeric',
+                                                month: 'long',
+                                                day: 'numeric',
+                                            })}
+                                            {isPrivilegedUser && selectedEmployee === 'all' && (
+                                                <span className="text-muted-foreground font-normal">
+                                                    • {record.userName}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="text-sm text-muted-foreground">
+                                            {record.checkIn && record.checkOut ? (
+                                                `Work hours: ${record.checkIn} - ${record.checkOut}`
+                                            ) : record.checkIn ? (
+                                                `Checked in: ${record.checkIn}`
+                                            ) : (
+                                                'No time recorded'
+                                            )}
+                                            {record.notes && ` • ${record.notes}`}
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-2 mt-2 sm:mt-0">
-                                    <Badge variant="secondary" className={getStatusColor(record.status)}>
+                                <div className="flex items-center gap-2 self-end sm:self-auto">
+                                    <Badge className={getStatusColor(record.status)}>
                                         {record.status}
                                     </Badge>
-                                    <Button asChild variant="ghost" size="sm">
-                                        <Link href={`/people/attendance/${record.id}`}>View</Link>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleViewRecord(record)}
+                                    >
+                                        <Eye className="h-4 w-4" />
                                     </Button>
+                                    {canEditAttendance && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleEditRecord(record)}
+                                        >
+                                            <Edit className="h-4 w-4" />
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
                         ))}

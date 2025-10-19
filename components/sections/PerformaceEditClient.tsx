@@ -3,104 +3,108 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { performanceService } from '@/lib/api/performance';
-import { PerformanceReview } from '@/types/performance';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { TrendingUp, Calendar, User, ArrowLeft, Save, Loader2, Star, Target } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { TrendingUp, Calendar, User, ArrowLeft, Save, Loader2, Star, Target, AlertTriangle, Clock } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import {TableSkeleton} from "@/components/ui/loading";
 
 interface PerformanceEditClientProps {
     id: string;
-    initialData?: PerformanceReview;
+    initialData: any;
 }
 
-interface PageProps {
-    params: {
-        id: string;
-    };
-}
-
-interface FormData {
-    employeeName: string;
-    employeeId: string;
-    reviewerName: string;
-    reviewerId: string;
-    period: string;
-    reviewType: string;
-    dueDate: string;
-    status: string;
-    overallRating: number;
-    goals: Array<{ id: string; description: string; achieved: boolean; weight: number }>;
-    competencies: Array<{ id: string; name: string; rating: number; comments: string }>;
-    feedback: string;
-    developmentPlan: string;
-    recommendations: string;
-    isPublished: boolean;
-}
-
-export default function PerformaceEditClient({ id, initialData }: PerformanceEditClientProps) {
+export default function PerformanceEditClient({ id, initialData }: PerformanceEditClientProps) {
     const router = useRouter();
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!initialData);
     const [saving, setSaving] = useState(false);
-    const [review, setReview] = useState<PerformanceReview | null>(null);
-    const [formData, setFormData] = useState<PerformanceReview>({
-        employeeName: '',
-        employeeId: '',
-        reviewerName: '',
-        reviewerId: '',
-        period: 'Quarterly',
-        reviewType: 'Standard',
-        dueDate: '',
-        status: 'Draft',
-        overallRating: 0,
-        goals: [],
-        competencies: [],
-        feedback: '',
-        developmentPlan: '',
-        recommendations: '',
-        isPublished: false,
+    const [formData, setFormData] = useState<any>(initialData);
+    const [calculatedScores, setCalculatedScores] = useState({
+        task_score: 0,
+        attendance_score: 100,
+        warning_score: 100,
+        weighted_total: 0,
+        rating: 'Fair' as 'Outstanding' | 'Good' | 'Fair' | 'Poor'
     });
 
     useEffect(() => {
-        loadPerformanceReview();
-    }, [id]);
+        if (!initialData) {
+            loadPerformanceRecord();
+        } else {
+            calculateScores();
+        }
+    }, [id, initialData]);
 
-    const loadPerformanceReview = async () => {
+    const loadPerformanceRecord = async () => {
         try {
             setLoading(true);
-            const reviewData = await performanceService.getPerformanceReview(id);
-            if (reviewData) {
-                setReview(reviewData);
-                setFormData({
-                    employeeName: reviewData.employeeName,
-                    employeeId: reviewData.employeeId,
-                    reviewerName: reviewData.reviewerName,
-                    reviewerId: reviewData.reviewerId,
-                    period: reviewData.period,
-                    reviewType: reviewData.reviewType,
-                    dueDate: reviewData.dueDate,
-                    status: reviewData.status,
-                    overallRating: reviewData.overallRating,
-                    goals: reviewData.goals || [],
-                    competencies: reviewData.competencies || [],
-                    feedback: reviewData.feedback || '',
-                    developmentPlan: reviewData.developmentPlan || '',
-                    recommendations: reviewData.recommendations || '',
-                    isPublished: reviewData.isPublished || false,
+            const record = await performanceService.getPerformanceRecord(id);
+            if (record) {
+                setFormData(record);
+                setCalculatedScores({
+                    task_score: record.task_score,
+                    attendance_score: record.attendance_score,
+                    warning_score: record.warning_score,
+                    weighted_total: record.weighted_total,
+                    rating: record.rating
                 });
             }
         } catch (error) {
-            toast.error('Failed to load performance review');
+            toast.error('Failed to load performance record');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const calculateScores = () => {
+        if (!formData) return;
+
+        const task_score = formData.tasks_assigned > 0
+            ? (formData.tasks_completed / formData.tasks_assigned) * 100
+            : 0;
+
+        const lateness_penalty = Math.floor(formData.lateness_minutes / 15);
+        const attendance_score = Math.max(0, 100 - lateness_penalty);
+
+        const warning_points = getWarningPoints(formData.warning_level);
+        const warning_score = Math.max(0, 100 - warning_points);
+
+        const weighted_total =
+            (task_score * 0.30) +
+            (attendance_score * 0.20) +
+            (warning_score * 0.10) +
+            (formData.okr_score * 0.20) +
+            (formData.behavior_score * 0.10) +
+            (formData.innovation_score * 0.10);
+
+        let rating: 'Outstanding' | 'Good' | 'Fair' | 'Poor';
+        if (weighted_total >= 90) rating = 'Outstanding';
+        else if (weighted_total >= 75) rating = 'Good';
+        else if (weighted_total >= 60) rating = 'Fair';
+        else rating = 'Poor';
+
+        setCalculatedScores({
+            task_score: Number(task_score.toFixed(2)),
+            attendance_score: Number(attendance_score.toFixed(2)),
+            warning_score: Number(warning_score.toFixed(2)),
+            weighted_total: Number(weighted_total.toFixed(2)),
+            rating
+        });
+    };
+
+    const getWarningPoints = (warning_level: string): number => {
+        switch (warning_level) {
+            case 'Verbal': return 5;
+            case 'Written': return 10;
+            case 'Final': return 15;
+            case 'PIP Active': return 20;
+            default: return 0;
         }
     };
 
@@ -109,103 +113,65 @@ export default function PerformaceEditClient({ id, initialData }: PerformanceEdi
         try {
             setSaving(true);
 
-            const updatedReview = {
-                ...review,
+            const updatedRecord = {
                 ...formData,
-                updatedAt: new Date().toISOString(),
+                ...calculatedScores,
+                warning_points: getWarningPoints(formData.warning_level),
+                updated_at: new Date().toISOString()
             };
 
-            await performanceService.updatePerformanceReview(id, updatedReview);
-            toast.success('Performance review updated successfully');
+            await performanceService.updatePerformanceRecord(id, updatedRecord);
+            toast.success('Performance record updated successfully');
             router.push('/people/performance');
         } catch (error) {
-            toast.error('Failed to update performance review');
+            toast.error('Failed to update performance record');
         } finally {
             setSaving(false);
         }
     };
 
-    const handleGoalChange = (index: number, field: string, value: any) => {
-        setFormData(prev => ({
-            ...prev,
-            goals: prev.goals.map((goal, i) =>
-                i === index ? { ...goal, [field]: value } : goal
-            )
-        }));
+    const handleInputChange = (field: string, value: any) => {
+        setFormData((prev: any) => ({ ...prev, [field]: value }));
+        setTimeout(calculateScores, 100);
     };
 
-    const handleCompetencyChange = (index: number, field: string, value: any) => {
-        setFormData(prev => ({
-            ...prev,
-            competencies: prev.competencies.map((comp, i) =>
-                i === index ? { ...comp, [field]: value } : comp
-            )
-        }));
+    const getRatingColor = (rating: string) => {
+        switch (rating) {
+            case 'Outstanding': return 'bg-green-100 text-green-800 border-green-200';
+            case 'Good': return 'bg-blue-100 text-blue-800 border-blue-200';
+            case 'Fair': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            case 'Poor': return 'bg-red-100 text-red-800 border-red-200';
+            default: return 'bg-gray-100 text-gray-800 border-gray-200';
+        }
     };
 
-    const addGoal = () => {
-        setFormData(prev => ({
-            ...prev,
-            goals: [...prev.goals, {
-                id: Date.now().toString(),
-                description: '',
-                achieved: false,
-                weight: 0
-            }]
-        }));
+    const getWarningColor = (level: string) => {
+        switch (level) {
+            case 'None': return 'bg-green-100 text-green-800';
+            case 'Verbal': return 'bg-yellow-100 text-yellow-800';
+            case 'Written': return 'bg-orange-100 text-orange-800';
+            case 'Final': return 'bg-red-100 text-red-800';
+            case 'PIP Active': return 'bg-red-100 text-red-800';
+            default: return 'bg-gray-100 text-gray-800';
+        }
     };
-
-    const removeGoal = (index: number) => {
-        setFormData(prev => ({
-            ...prev,
-            goals: prev.goals.filter((_, i) => i !== index)
-        }));
-    };
-
-    const addCompetency = () => {
-        setFormData(prev => ({
-            ...prev,
-            competencies: [...prev.competencies, {
-                id: Date.now().toString(),
-                name: '',
-                rating: 0,
-                comments: ''
-            }]
-        }));
-    };
-
-    const removeCompetency = (index: number) => {
-        setFormData(prev => ({
-            ...prev,
-            competencies: prev.competencies.filter((_, i) => i !== index)
-        }));
-    };
-
-    const calculateOverallRating = () => {
-        if (formData.competencies.length === 0) return 0;
-        const total = formData.competencies.reduce((sum, comp) => sum + comp.rating, 0);
-        return parseFloat((total / formData.competencies.length).toFixed(1));
-    };
-
-    useEffect(() => {
-        const newRating = calculateOverallRating();
-        setFormData(prev => ({ ...prev, overallRating: newRating }));
-    }, [formData.competencies]);
 
     if (loading) {
         return (
-            <TableSkeleton />
+            <div className="flex items-center justify-center min-h-screen">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
         );
     }
 
-    if (!review) {
+    if (!formData) {
         return (
-            <div className="text-center py-12 px-4">
+            <div className="text-center py-12">
                 <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">Performance review not found</h3>
+                <h3 className="text-lg font-medium mb-2">Performance record not found</h3>
                 <Button asChild>
                     <Link href="/people/performance">
-                        Back to Performance Reviews
+                        Back to Performance
                     </Link>
                 </Button>
             </div>
@@ -213,368 +179,328 @@ export default function PerformaceEditClient({ id, initialData }: PerformanceEdi
     }
 
     return (
-        <div className="space-y-6 px-4 sm:px-6 lg:px-8 py-4">
-            {/* Header Section - Responsive */}
-            <div className="space-y-4">
-                <Button variant="ghost" asChild className="mb-2">
-                    <Link href={`/people/performance/${id}`}>
-                        <ArrowLeft className="h-4 w-4 mr-2" />
-                        Back to Review
-                    </Link>
-                </Button>
-
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2 sm:gap-3">
-                            <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 flex-shrink-0" />
-                            <span className="truncate">Edit Performance Review</span>
-                        </h1>
-                        <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-                            Update performance review details and ratings
-                        </p>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                        <Badge variant="outline" className="text-sm w-fit">
-                            {formData.status}
-                        </Badge>
-                        <div className="flex items-center gap-2">
-                            <Label htmlFor="published" className="text-sm">Publish</Label>
-                            <Switch
-                                id="published"
-                                checked={formData.isPublished}
-                                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPublished: checked }))}
-                            />
-                        </div>
-                    </div>
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <div>
+                    <Button variant="ghost" asChild className="mb-4">
+                        <Link href={`/people/performance/${id}`}>
+                            <ArrowLeft className="h-4 w-4 mr-2" />
+                            Back to Record
+                        </Link>
+                    </Button>
+                    <h1 className="text-3xl font-bold tracking-tight flex items-center">
+                        <TrendingUp className="h-8 w-8 mr-3" />
+                        Edit Performance Record
+                    </h1>
+                    <p className="text-muted-foreground mt-2">
+                        Update performance evaluation for {formData.employeeName}
+                    </p>
                 </div>
+                <Badge className={getRatingColor(calculatedScores.rating)}>
+                    {calculatedScores.rating}
+                </Badge>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Basic Information */}
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-lg sm:text-xl">Basic Information</CardTitle>
-                        <CardDescription className="text-sm">
-                            Employee and review details
+                        <CardTitle>Employee Information</CardTitle>
+                        <CardDescription>
+                            Employee details and evaluation period
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <div>
+                                <Label className="text-sm">Employee</Label>
+                                <p className="font-medium">{formData.employeeName}</p>
+                            </div>
+                            <div>
+                                <Label className="text-sm">Department</Label>
+                                <p>{formData.department}</p>
+                            </div>
+                            <div>
+                                <Label className="text-sm">Position</Label>
+                                <p>{formData.position}</p>
+                            </div>
                             <div className="space-y-2">
-                                <Label htmlFor="employeeName" className="text-sm">Employee Name</Label>
+                                <Label htmlFor="month" className="text-sm">Evaluation Month</Label>
                                 <Input
-                                    id="employeeName"
-                                    value={formData.employeeName}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, employeeName: e.target.value }))}
+                                    id="month"
+                                    type="month"
+                                    value={formData.month.substring(0, 7)}
+                                    onChange={(e) => handleInputChange('month', e.target.value + '-01')}
                                     required
-                                    className="text-sm"
                                 />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="reviewerName" className="text-sm">Reviewer Name</Label>
-                                <Input
-                                    id="reviewerName"
-                                    value={formData.reviewerName}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, reviewerName: e.target.value }))}
-                                    required
-                                    className="text-sm"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="period" className="text-sm">Review Period</Label>
-                                <Select value={formData.period} onValueChange={(value) => setFormData(prev => ({ ...prev, period: value }))}>
-                                    <SelectTrigger className="text-sm">
-                                        <SelectValue placeholder="Select period" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Monthly">Monthly</SelectItem>
-                                        <SelectItem value="Quarterly">Quarterly</SelectItem>
-                                        <SelectItem value="Annual">Annual</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="reviewType" className="text-sm">Review Type</Label>
-                                <Select value={formData.reviewType} onValueChange={(value) => setFormData(prev => ({ ...prev, reviewType: value }))}>
-                                    <SelectTrigger className="text-sm">
-                                        <SelectValue placeholder="Select type" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Standard">Standard</SelectItem>
-                                        <SelectItem value="360-Feedback">360-Feedback</SelectItem>
-                                        <SelectItem value="Self-Assessment">Self-Assessment</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="dueDate" className="text-sm">Due Date</Label>
-                                <Input
-                                    id="dueDate"
-                                    type="date"
-                                    value={formData.dueDate}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, dueDate: e.target.value }))}
-                                    required
-                                    className="text-sm"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="status" className="text-sm">Status</Label>
-                                <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}>
-                                    <SelectTrigger className="text-sm">
-                                        <SelectValue placeholder="Select status" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Draft">Draft</SelectItem>
-                                        <SelectItem value="In Progress">In Progress</SelectItem>
-                                        <SelectItem value="Completed">Completed</SelectItem>
-                                        <SelectItem value="Approved">Approved</SelectItem>
-                                    </SelectContent>
-                                </Select>
                             </div>
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* Overall Rating */}
+                {/* Task Completion */}
                 <Card>
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                            <Star className="h-4 w-4 sm:h-5 sm:w-5" />
-                            Overall Rating
+                        <CardTitle className="flex items-center gap-2">
+                            <Target className="h-5 w-5" />
+                            Task Completion (30%)
                         </CardTitle>
-                        <CardDescription className="text-sm">
-                            Calculated average from competency ratings
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="tasks_assigned">Tasks Assigned</Label>
+                                <Input
+                                    id="tasks_assigned"
+                                    type="number"
+                                    min="0"
+                                    value={formData.tasks_assigned}
+                                    onChange={(e) => handleInputChange('tasks_assigned', parseInt(e.target.value) || 0)}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="tasks_completed">Tasks Completed</Label>
+                                <Input
+                                    id="tasks_completed"
+                                    type="number"
+                                    min="0"
+                                    max={formData.tasks_assigned}
+                                    value={formData.tasks_completed}
+                                    onChange={(e) => handleInputChange('tasks_completed', parseInt(e.target.value) || 0)}
+                                    required
+                                />
+                            </div>
+                        </div>
+                        {formData.tasks_assigned > 0 && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <div className="flex justify-between items-center">
+                                    <span className="font-medium">Task Completion Rate</span>
+                                    <Badge variant="outline" className="bg-white">
+                                        {calculatedScores.task_score}%
+                                    </Badge>
+                                </div>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Attendance & Punctuality */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Clock className="h-5 w-5" />
+                            Attendance & Punctuality (20%)
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="lateness_minutes">Total Lateness (minutes)</Label>
+                                <Input
+                                    id="lateness_minutes"
+                                    type="number"
+                                    min="0"
+                                    value={formData.lateness_minutes}
+                                    onChange={(e) => handleInputChange('lateness_minutes', parseInt(e.target.value) || 0)}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="lateness_count">Lateness Occurrences</Label>
+                                <Input
+                                    id="lateness_count"
+                                    type="number"
+                                    min="0"
+                                    value={formData.lateness_count}
+                                    onChange={(e) => handleInputChange('lateness_count', parseInt(e.target.value) || 0)}
+                                    required
+                                />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Warnings & Discipline */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5" />
+                            Warnings & Discipline (10%)
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="warning_level">Warning Level</Label>
+                            <Select
+                                value={formData.warning_level}
+                                onValueChange={(value: any) => handleInputChange('warning_level', value)}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="None">None (0 points)</SelectItem>
+                                    <SelectItem value="Verbal">Verbal Warning (-5 points)</SelectItem>
+                                    <SelectItem value="Written">Written Warning (-10 points)</SelectItem>
+                                    <SelectItem value="Final">Final Warning (-15 points)</SelectItem>
+                                    <SelectItem value="PIP Active">PIP Active (-20 points)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Additional Metrics */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Star className="h-5 w-5" />
+                            Additional Performance Metrics
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid gap-4 md:grid-cols-3">
+                            <div className="space-y-2">
+                                <Label htmlFor="okr_score">Goal Alignment (OKRs)</Label>
+                                <Input
+                                    id="okr_score"
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    value={formData.okr_score}
+                                    onChange={(e) => handleInputChange('okr_score', parseInt(e.target.value) || 0)}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="behavior_score">Collaboration & Behavior</Label>
+                                <Input
+                                    id="behavior_score"
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    value={formData.behavior_score}
+                                    onChange={(e) => handleInputChange('behavior_score', parseInt(e.target.value) || 0)}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="innovation_score">Innovation & Initiative</Label>
+                                <Input
+                                    id="innovation_score"
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    value={formData.innovation_score}
+                                    onChange={(e) => handleInputChange('innovation_score', parseInt(e.target.value) || 0)}
+                                    required
+                                />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Performance Summary */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Performance Summary</CardTitle>
+                        <CardDescription>
+                            Calculated scores and final rating
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                            <div className="text-3xl sm:text-4xl font-bold text-blue-600">
-                                {formData.overallRating.toFixed(1)}
-                                <span className="text-lg sm:text-xl text-muted-foreground">/5.0</span>
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            <div className="text-center p-4 border rounded-lg">
+                                <div className="text-2xl font-bold text-blue-600">{calculatedScores.task_score}%</div>
+                                <div className="text-sm text-muted-foreground">Task Completion</div>
                             </div>
-                            <div className="flex-1 w-full">
-                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                    <div
-                                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                                        style={{ width: `${(formData.overallRating / 5) * 100}%` }}
-                                    />
+                            <div className="text-center p-4 border rounded-lg">
+                                <div className="text-2xl font-bold text-orange-600">{calculatedScores.attendance_score}%</div>
+                                <div className="text-sm text-muted-foreground">Attendance</div>
+                            </div>
+                            <div className="text-center p-4 border rounded-lg">
+                                <div className="text-2xl font-bold text-red-600">{calculatedScores.warning_score}%</div>
+                                <div className="text-sm text-muted-foreground">Discipline</div>
+                            </div>
+                        </div>
+
+                        <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-green-50 border rounded-lg">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <div className="text-sm text-muted-foreground">Overall Performance Score</div>
+                                    <div className="text-3xl font-bold text-primary">{calculatedScores.weighted_total}</div>
                                 </div>
+                                <Badge className={`text-lg ${getRatingColor(calculatedScores.rating)}`}>
+                                    {calculatedScores.rating}
+                                </Badge>
                             </div>
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* Goals */}
+                {/* Comments & Validation */}
                 <Card>
                     <CardHeader>
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                                <Target className="h-4 w-4 sm:h-5 sm:w-5" />
-                                Goals & Objectives
-                            </CardTitle>
-                            <Button type="button" variant="outline" size="sm" onClick={addGoal} className="w-full sm:w-auto">
-                                Add Goal
-                            </Button>
-                        </div>
-                        <CardDescription className="text-sm">
-                            Review and update performance goals
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {formData.goals.map((goal, index) => (
-                            <div key={goal.id} className="flex flex-col gap-3 p-3 sm:p-4 border rounded-lg">
-                                <div className="flex-1 space-y-3">
-                                    <div className="space-y-2">
-                                        <Label htmlFor={`goal-${index}`} className="text-sm">Goal Description</Label>
-                                        <Input
-                                            id={`goal-${index}`}
-                                            value={goal.description}
-                                            onChange={(e) => handleGoalChange(index, 'description', e.target.value)}
-                                            placeholder="Describe the goal or objective"
-                                            className="text-sm"
-                                        />
-                                    </div>
-                                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                                        <div className="flex items-center gap-2">
-                                            <Label htmlFor={`goal-weight-${index}`} className="text-sm whitespace-nowrap">Weight</Label>
-                                            <Input
-                                                id={`goal-weight-${index}`}
-                                                type="number"
-                                                min="0"
-                                                max="100"
-                                                value={goal.weight}
-                                                onChange={(e) => handleGoalChange(index, 'weight', parseInt(e.target.value) || 0)}
-                                                className="w-16 sm:w-20 text-sm"
-                                            />
-                                            <span className="text-sm text-muted-foreground">%</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Switch
-                                                checked={goal.achieved}
-                                                onCheckedChange={(checked) => handleGoalChange(index, 'achieved', checked)}
-                                            />
-                                            <Label htmlFor={`goal-achieved-${index}`} className="text-sm">
-                                                Achieved
-                                            </Label>
-                                        </div>
-                                    </div>
-                                </div>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => removeGoal(index)}
-                                    className="text-red-600 hover:text-red-700 w-full sm:w-auto"
-                                >
-                                    Remove
-                                </Button>
-                            </div>
-                        ))}
-                        {formData.goals.length === 0 && (
-                            <div className="text-center py-6 sm:py-8 text-muted-foreground text-sm">
-                                No goals added yet. Click "Add Goal" to get started.
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-
-                {/* Competencies */}
-                <Card>
-                    <CardHeader>
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                                <Star className="h-4 w-4 sm:h-5 sm:w-5" />
-                                Competencies & Skills
-                            </CardTitle>
-                            <Button type="button" variant="outline" size="sm" onClick={addCompetency} className="w-full sm:w-auto">
-                                Add Competency
-                            </Button>
-                        </div>
-                        <CardDescription className="text-sm">
-                            Rate employee competencies (1-5 scale)
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {formData.competencies.map((competency, index) => (
-                            <div key={competency.id} className="p-3 sm:p-4 border rounded-lg space-y-3">
-                                <div className="space-y-3">
-                                    <div className="space-y-2">
-                                        <Label htmlFor={`competency-${index}`} className="text-sm">Competency Name</Label>
-                                        <Input
-                                            id={`competency-${index}`}
-                                            value={competency.name}
-                                            onChange={(e) => handleCompetencyChange(index, 'name', e.target.value)}
-                                            placeholder="e.g., Communication, Leadership"
-                                            className="text-sm"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor={`competency-rating-${index}`} className="text-sm">
-                                            Rating: {competency.rating}/5
-                                        </Label>
-                                        <div className="flex items-center gap-1 sm:gap-2">
-                                            {[1, 2, 3, 4, 5].map((star) => (
-                                                <Button
-                                                    key={star}
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className={`h-8 w-8 sm:h-10 sm:w-10 p-0 ${competency.rating >= star ? 'text-yellow-500' : 'text-gray-300'}`}
-                                                    onClick={() => handleCompetencyChange(index, 'rating', star)}
-                                                >
-                                                    <Star className="h-4 w-4 sm:h-5 sm:w-5 fill-current" />
-                                                </Button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor={`competency-comments-${index}`} className="text-sm">Comments</Label>
-                                        <Textarea
-                                            id={`competency-comments-${index}`}
-                                            value={competency.comments}
-                                            onChange={(e) => handleCompetencyChange(index, 'comments', e.target.value)}
-                                            placeholder="Add specific feedback and examples"
-                                            rows={2}
-                                            className="text-sm"
-                                        />
-                                    </div>
-                                </div>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => removeCompetency(index)}
-                                    className="text-red-600 hover:text-red-700 w-full sm:w-auto"
-                                >
-                                    Remove
-                                </Button>
-                            </div>
-                        ))}
-                        {formData.competencies.length === 0 && (
-                            <div className="text-center py-6 sm:py-8 text-muted-foreground text-sm">
-                                No competencies added yet. Click "Add Competency" to get started.
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-
-                {/* Feedback & Development */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg sm:text-xl">Feedback & Development</CardTitle>
-                        <CardDescription className="text-sm">
-                            Overall feedback and development recommendations
-                        </CardDescription>
+                        <CardTitle>Comments & Validation</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="feedback" className="text-sm">Overall Feedback</Label>
+                            <Label htmlFor="manager_comment">Manager Comments</Label>
                             <Textarea
-                                id="feedback"
-                                value={formData.feedback}
-                                onChange={(e) => setFormData(prev => ({ ...prev, feedback: e.target.value }))}
-                                placeholder="Provide overall performance feedback..."
-                                rows={4}
-                                className="text-sm"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="developmentPlan" className="text-sm">Development Plan</Label>
-                            <Textarea
-                                id="developmentPlan"
-                                value={formData.developmentPlan}
-                                onChange={(e) => setFormData(prev => ({ ...prev, developmentPlan: e.target.value }))}
-                                placeholder="Outline development opportunities and plan..."
+                                id="manager_comment"
+                                value={formData.manager_comment}
+                                onChange={(e) => handleInputChange('manager_comment', e.target.value)}
                                 rows={3}
-                                className="text-sm"
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="recommendations" className="text-sm">Recommendations</Label>
+                            <Label htmlFor="hr_comment">HR Comments</Label>
                             <Textarea
-                                id="recommendations"
-                                value={formData.recommendations}
-                                onChange={(e) => setFormData(prev => ({ ...prev, recommendations: e.target.value }))}
-                                placeholder="Provide recommendations for future growth..."
-                                rows={3}
-                                className="text-sm"
+                                id="hr_comment"
+                                value={formData.hr_comment}
+                                onChange={(e) => handleInputChange('hr_comment', e.target.value)}
+                                rows={2}
                             />
+                        </div>
+                        <div className="flex gap-4">
+                            <div className="flex items-center gap-2">
+                                <Switch
+                                    checked={formData.validated_by_manager}
+                                    onCheckedChange={(checked) => handleInputChange('validated_by_manager', checked)}
+                                />
+                                <Label>Manager Validated</Label>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Switch
+                                    checked={formData.validated_by_hr}
+                                    onCheckedChange={(checked) => handleInputChange('validated_by_hr', checked)}
+                                />
+                                <Label>HR Validated</Label>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
 
                 {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-end pt-6 border-t">
-                    <Button type="button" variant="outline" asChild className="w-full sm:w-auto order-2 sm:order-1">
+                <div className="flex gap-4 justify-end pt-6 border-t">
+                    <Button type="button" variant="outline" asChild>
                         <Link href={`/people/performance/${id}`}>
                             Cancel
                         </Link>
                     </Button>
-                    <Button type="submit" disabled={saving} className="w-full sm:w-auto order-1 sm:order-2">
-                        {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                        <span className="hidden sm:inline">Update Performance Review</span>
-                        <span className="sm:hidden">Update Review</span>
+                    <Button type="submit" disabled={saving}>
+                        {saving ? (
+                            <>
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                Updating...
+                            </>
+                        ) : (
+                            <>
+                                <Save className="h-4 w-4 mr-2" />
+                                Update Performance Record
+                            </>
+                        )}
                     </Button>
                 </div>
             </form>

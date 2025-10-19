@@ -6,16 +6,20 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TrendingUp, Calendar, User, Plus, Search, Filter, Eye, Edit, Trash2 } from 'lucide-react';
+import { TrendingUp, Calendar, User, Plus, Search, Filter, Eye, Edit, Star, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { TableSkeleton } from "@/components/ui/loading";
 import { useEffect, useState } from "react";
 import { useAppStore } from "@/store/app";
 
 export default function PerformanceListPage() {
-    const [performanceReviews, setPerformanceReviews] = useState<any[]>([]);
+    const [performanceRecords, setPerformanceRecords] = useState<any[]>([]);
     const [performanceSummaries, setPerformanceSummaries] = useState<any[]>([]);
+    const [performanceStats, setPerformanceStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [departmentFilter, setDepartmentFilter] = useState('all');
+    const [ratingFilter, setRatingFilter] = useState('all');
     const { setCurrentModule } = useAppStore();
 
     useEffect(() => {
@@ -26,57 +30,48 @@ export default function PerformanceListPage() {
     const loadPerformanceStats = async () => {
         setLoading(true);
         try {
-            const reviews = await performanceService.getAllPerformanceReviews();
-            const summaries = await performanceService.getPerformanceSummaries();
+            const [records, summaries, stats] = await Promise.all([
+                performanceService.getAllPerformanceRecords(),
+                performanceService.getPerformanceSummaries(),
+                performanceService.getPerformanceStats()
+            ]);
+            setPerformanceRecords(records);
             setPerformanceSummaries(summaries);
-            setPerformanceReviews(reviews);
+            setPerformanceStats(stats);
         } catch (error) {
-            console.error('Error loading performance reviews:', error);
+            console.error('Error loading performance data:', error);
         } finally {
             setLoading(false);
         }
     }
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'Completed':
-                return 'bg-green-100 text-green-800 hover:bg-green-200';
-            case 'In Progress':
-                return 'bg-blue-100 text-blue-800 hover:bg-blue-200';
-            case 'Approved':
-                return 'bg-purple-100 text-purple-800 hover:bg-purple-200';
-            case 'Published':
-                return 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200';
-            case 'Draft':
-                return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200';
+    const getRatingColor = (rating: string) => {
+        switch (rating) {
+            case 'Outstanding':
+                return 'bg-green-100 text-green-800 border-green-200';
+            case 'Good':
+                return 'bg-blue-100 text-blue-800 border-blue-200';
+            case 'Fair':
+                return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            case 'Poor':
+                return 'bg-red-100 text-red-800 border-red-200';
             default:
-                return 'bg-gray-100 text-gray-800 hover:bg-gray-200';
+                return 'bg-gray-100 text-gray-800 border-gray-200';
         }
     };
 
-    const getPeriodColor = (period: string) => {
-        switch (period) {
-            case 'Monthly':
-                return 'bg-blue-100 text-blue-800';
-            case 'Quarterly':
-                return 'bg-green-100 text-green-800';
-            case 'Annual':
-                return 'bg-purple-100 text-purple-800';
+    const getRatingIcon = (rating: string) => {
+        switch (rating) {
+            case 'Outstanding':
+                return <Star className="h-4 w-4 text-green-600" />;
+            case 'Good':
+                return <CheckCircle className="h-4 w-4 text-blue-600" />;
+            case 'Fair':
+                return <Clock className="h-4 w-4 text-yellow-600" />;
+            case 'Poor':
+                return <AlertTriangle className="h-4 w-4 text-red-600" />;
             default:
-                return 'bg-gray-100 text-gray-800';
-        }
-    };
-
-    const getTypeColor = (type: string) => {
-        switch (type) {
-            case 'Standard':
-                return 'bg-gray-100 text-gray-800';
-            case '360-Feedback':
-                return 'bg-orange-100 text-orange-800';
-            case 'Self-Assessment':
-                return 'bg-teal-100 text-teal-800';
-            default:
-                return 'bg-gray-100 text-gray-800';
+                return <TrendingUp className="h-4 w-4 text-gray-600" />;
         }
     };
 
@@ -91,63 +86,96 @@ export default function PerformanceListPage() {
         }
     };
 
-    const formatRating = (rating: number) => {
-        return rating > 0 ? rating.toFixed(1) : 'N/A';
+    const getDepartmentColor = (department: string) => {
+        const colors = {
+            'Engineering': 'bg-blue-50 text-blue-700 border-blue-200',
+            'Marketing': 'bg-purple-50 text-purple-700 border-purple-200',
+            'Sales': 'bg-green-50 text-green-700 border-green-200',
+            'HR': 'bg-pink-50 text-pink-700 border-pink-200',
+            'Operations': 'bg-orange-50 text-orange-700 border-orange-200'
+        };
+        return colors[department as keyof typeof colors] || 'bg-gray-50 text-gray-700 border-gray-200';
     };
+
+    const filteredRecords = performanceRecords.filter(record => {
+        const matchesSearch = record.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            record.department.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesDepartment = departmentFilter === 'all' || record.department === departmentFilter;
+        const matchesRating = ratingFilter === 'all' || record.rating === ratingFilter;
+        return matchesSearch && matchesDepartment && matchesRating;
+    });
+
+    const filteredSummaries = performanceSummaries.filter(summary => {
+        const matchesSearch = summary.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            summary.department.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesDepartment = departmentFilter === 'all' || summary.department === departmentFilter;
+        const matchesRating = ratingFilter === 'all' || summary.performanceRating === ratingFilter;
+        return matchesSearch && matchesDepartment && matchesRating;
+    });
 
     if (loading) {
         return <TableSkeleton />;
     }
 
-    const PerformanceReviewCard = ({ review }: { review: any }) => (
+    const PerformanceRecordCard = ({ record }: { record: any }) => (
         <div
-            key={review.id}
-            className="flex flex-col sm:flex-row sm:items-center justify-between p-3 md:p-4 border rounded-lg hover:bg-accent/50 transition-colors gap-3"
+            key={record.id}
+            className="flex flex-col lg:flex-row lg:items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors gap-4"
         >
             <div className="flex-1 min-w-0">
-                <div className="font-medium text-sm md:text-base mb-1 flex items-center gap-1 md:gap-2 flex-wrap">
-                    <span className="line-clamp-1">{review.employeeName}</span>
-                    <Badge variant="outline" className={`${getPeriodColor(review.period)} text-xs`}>
-                        {review.period}
+                <div className="flex items-center gap-2 mb-2">
+                    {getRatingIcon(record.rating)}
+                    <span className="font-medium text-sm md:text-base">{record.employeeName}</span>
+                    <Badge variant="outline" className={`${getDepartmentColor(record.department)} text-xs`}>
+                        {record.department}
                     </Badge>
-                    <Badge variant="outline" className={`${getTypeColor(review.reviewType)} text-xs`}>
-                        {review.reviewType}
+                    <Badge variant="secondary" className={`${getRatingColor(record.rating)} text-xs`}>
+                        {record.rating}
                     </Badge>
                 </div>
-                <div className="text-xs md:text-sm text-muted-foreground flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-                    <span className="flex items-center">
-                        <User className="h-3 w-3 mr-1 flex-shrink-0" />
-                        Reviewer: {review.reviewerName}
-                    </span>
-                    <span className="flex items-center">
-                        <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
-                        Due: {new Date(review.dueDate).toLocaleDateString()}
-                    </span>
-                    {review.overallRating > 0 && (
-                        <span className="flex items-center">
-                            <TrendingUp className="h-3 w-3 mr-1 flex-shrink-0" />
-                            Rating: {formatRating(review.overallRating)}/5.0
-                        </span>
-                    )}
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-muted-foreground">
+                    <div>
+                        <div className="font-medium">Overall Score</div>
+                        <div className="text-sm font-semibold">{record.weighted_total}</div>
+                    </div>
+                    <div>
+                        <div className="font-medium">Tasks</div>
+                        <div>{record.task_score}%</div>
+                    </div>
+                    <div>
+                        <div className="font-medium">Attendance</div>
+                        <div>{record.attendance_score}%</div>
+                    </div>
+                    <div>
+                        <div className="font-medium">Warnings</div>
+                        <div>{record.warning_level}</div>
+                    </div>
                 </div>
+
+                {record.manager_comment && (
+                    <div className="mt-2 text-xs text-muted-foreground">
+                        <span className="font-medium">Manager: </span>
+                        {record.manager_comment}
+                    </div>
+                )}
             </div>
-            <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
-                <Badge variant="secondary" className={`${getStatusColor(review.status)} text-xs`}>
-                    {review.status}
-                </Badge>
+
+            <div className="flex items-center gap-2 lg:flex-col lg:items-end lg:gap-1">
+                <div className="text-right">
+                    <div className="text-2xl font-bold text-primary">{record.weighted_total}</div>
+                    <div className="text-xs text-muted-foreground">Total Score</div>
+                </div>
                 <div className="flex items-center gap-1">
                     <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
-                        <Link href={`/people/performance/${review.id}`}>
-                            <Eye className="h-3 w-3 md:h-4 md:w-4" />
+                        <Link href={`/people/performance/${record.id}`}>
+                            <Eye className="h-4 w-4" />
                         </Link>
                     </Button>
                     <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
-                        <Link href={`/people/performance/${review.id}/edit`}>
-                            <Edit className="h-3 w-3 md:h-4 md:w-4" />
+                        <Link href={`/people/performance/${record.id}/edit`}>
+                            <Edit className="h-4 w-4" />
                         </Link>
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive">
-                        <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
                     </Button>
                 </div>
             </div>
@@ -157,55 +185,44 @@ export default function PerformanceListPage() {
     const PerformanceSummaryCard = ({ summary }: { summary: any }) => (
         <div
             key={summary.employeeId}
-            className="flex flex-col lg:flex-row lg:items-center justify-between p-3 md:p-4 border rounded-lg hover:bg-accent/50 transition-colors gap-3"
+            className="flex flex-col lg:flex-row lg:items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors gap-4"
         >
             <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-2">
                     {getTrendIcon(summary.trend)}
-                    <h3 className="font-medium text-sm md:text-base line-clamp-1">{summary.employeeName}</h3>
-                    <Badge variant="outline" className="text-xs">
+                    <span className="font-medium text-sm md:text-base">{summary.employeeName}</span>
+                    <Badge variant="outline" className={`${getDepartmentColor(summary.department)} text-xs`}>
                         {summary.department}
                     </Badge>
+                    <Badge variant="secondary" className={`${getRatingColor(summary.performanceRating)} text-xs`}>
+                        {summary.performanceRating}
+                    </Badge>
                 </div>
-                <div className="text-xs md:text-sm text-muted-foreground flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-                    <span>{summary.position}</span>
-                    <span className="flex items-center">
-                        <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
-                        Last: {new Date(summary.lastReviewDate).toLocaleDateString()}
-                    </span>
-                    <span className="flex items-center">
-                        <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
-                        Next: {new Date(summary.nextReviewDate).toLocaleDateString()}
-                    </span>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-muted-foreground">
+                    <div>
+                        <div className="font-medium">Current</div>
+                        <div className="text-sm font-semibold">{summary.currentRating}</div>
+                    </div>
+                    <div>
+                        <div className="font-medium">Previous</div>
+                        <div>{summary.previousRating}</div>
+                    </div>
+                    <div>
+                        <div className="font-medium">Task Rate</div>
+                        <div>{summary.taskCompletionRate}%</div>
+                    </div>
+                    <div>
+                        <div className="font-medium">Attendance</div>
+                        <div>{summary.attendanceRate}%</div>
+                    </div>
                 </div>
             </div>
-            <div className="flex items-center justify-between lg:justify-end gap-3 lg:gap-6 w-full lg:w-auto">
-                <div className="flex items-center gap-3 md:gap-6">
-                    <div className="text-right">
-                        <div className="text-xs text-muted-foreground">Current</div>
-                        <div className="font-semibold text-sm md:text-base">
-                            {formatRating(summary.currentRating)}/5.0
-                        </div>
-                    </div>
-                    {summary.previousRating && (
-                        <div className="text-right">
-                            <div className="text-xs text-muted-foreground">Previous</div>
-                            <div className="font-medium text-sm">
-                                {formatRating(summary.previousRating)}/5.0
-                            </div>
-                        </div>
-                    )}
-                    <div className="text-right">
-                        <div className="text-xs text-muted-foreground">Reviews</div>
-                        <div className="font-medium text-sm">
-                            {summary.completedReviews} done
-                        </div>
-                        {summary.pendingReviews > 0 && (
-                            <div className="text-xs text-orange-600">
-                                {summary.pendingReviews} pending
-                            </div>
-                        )}
-                    </div>
+
+            <div className="flex items-center gap-4">
+                <div className="text-right">
+                    <div className="text-2xl font-bold text-primary">{summary.overallScore}</div>
+                    <div className="text-xs text-muted-foreground">Overall</div>
                 </div>
                 <Badge
                     variant="outline"
@@ -222,92 +239,111 @@ export default function PerformanceListPage() {
     );
 
     return (
-        <div className="space-y-4 md:space-y-6">
+        <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex md:flex-row flex-col md:gap-0 gap-4 items-center justify-between">
                 <div className="min-w-0 flex-1">
-                    <h1 className="text-xl md:text-2xl lg:text-3xl font-bold tracking-tight flex items-center gap-2 md:gap-3">
-                        <TrendingUp className="h-5 w-5 md:h-6 md:w-6 lg:h-8 lg:w-8" />
+                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2 md:gap-3">
+                        <TrendingUp className="h-6 w-6 md:h-8 md:w-8" />
                         <span className="truncate">Performance Management</span>
                     </h1>
-                    <p className="text-muted-foreground text-xs md:text-sm mt-1">
-                        Monitor and manage employee performance reviews and development
+                    <p className="text-muted-foreground text-sm mt-1">
+                        Monthly performance evaluation based on task completion, attendance, and discipline
                     </p>
                 </div>
-                <Button asChild size="sm" className="hidden sm:flex flex-shrink-0">
+                <Button asChild className="flex-shrink-0">
                     <Link href="/people/performance/new">
-                        <Plus className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
-                        <span className="hidden md:inline">New Review</span>
-                        <span className="md:hidden">New</span>
-                    </Link>
-                </Button>
-                <Button asChild size="icon" className="sm:hidden flex-shrink-0">
-                    <Link href="/people/performance/new">
-                        <Plus className="h-4 w-4" />
+                        <Plus className="h-4 w-4 mr-2" />
+                        Manually Add Evaluation
                     </Link>
                 </Button>
             </div>
 
-            {/* Performance Summary Cards */}
-            <div className="grid gap-2 sm:gap-4 grid-cols-2 lg:grid-cols-4">
-                <Card className="p-3 md:p-6">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2 md:pb-4">
-                        <CardTitle className="text-xs md:text-sm font-medium">Total Reviews</CardTitle>
-                        <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        <div className="text-lg md:text-2xl font-bold">{performanceReviews.length}</div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Across all periods
-                        </p>
-                    </CardContent>
-                </Card>
+            {/* Performance Stats Cards */}
+            {performanceStats && (
+                <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Average Score</CardTitle>
+                            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{performanceStats.averageScore}</div>
+                            <p className="text-xs text-muted-foreground">
+                                Overall performance
+                            </p>
+                        </CardContent>
+                    </Card>
 
-                <Card className="p-3 md:p-6">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2 md:pb-4">
-                        <CardTitle className="text-xs md:text-sm font-medium">Completed</CardTitle>
-                        <Calendar className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        <div className="text-lg md:text-2xl font-bold text-green-600">
-                            {performanceReviews.filter(r => r.status === 'Completed').length}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Ready for approval
-                        </p>
-                    </CardContent>
-                </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Outstanding</CardTitle>
+                            <Star className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-green-600">
+                                {performanceStats.outstandingPerformers}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                Top performers
+                            </p>
+                        </CardContent>
+                    </Card>
 
-                <Card className="p-3 md:p-6">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2 md:pb-4">
-                        <CardTitle className="text-xs md:text-sm font-medium">In Progress</CardTitle>
-                        <User className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        <div className="text-lg md:text-2xl font-bold text-blue-600">
-                            {performanceReviews.filter(r => r.status === 'In Progress').length}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Active reviews
-                        </p>
-                    </CardContent>
-                </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">On PIP</CardTitle>
+                            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-red-600">
+                                {performanceStats.employeesOnPIP}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                Needs improvement
+                            </p>
+                        </CardContent>
+                    </Card>
 
-                <Card className="p-3 md:p-6">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2 md:pb-4">
-                        <CardTitle className="text-xs md:text-sm font-medium">Avg Rating</CardTitle>
-                        <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Completion</CardTitle>
+                            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{performanceStats.completionRate}%</div>
+                            <p className="text-xs text-muted-foreground">
+                                Evaluation rate
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {/* Department Breakdown */}
+            {performanceStats && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Department Performance</CardTitle>
+                        <CardDescription>
+                            Average performance scores by department
+                        </CardDescription>
                     </CardHeader>
-                    <CardContent className="p-0">
-                        <div className="text-lg md:text-2xl font-bold">
-                            {(performanceReviews.reduce((acc, r) => acc + r.overallRating, 0) / performanceReviews.filter(r => r.overallRating > 0).length || 0).toFixed(1)}
+                    <CardContent>
+                        <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+                            {performanceStats.departmentBreakdown.map((dept: any) => (
+                                <div key={dept.department} className="text-center p-3 border rounded-lg">
+                                    <div className="font-medium text-sm mb-1">{dept.department}</div>
+                                    <div className="text-2xl font-bold text-primary">{dept.averageScore}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                        {dept.employeeCount} employees
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Overall performance
-                        </p>
                     </CardContent>
                 </Card>
-            </div>
+            )}
 
             {/* Filters */}
             <Card>
@@ -315,92 +351,100 @@ export default function PerformanceListPage() {
                     <CardTitle className="text-lg">Filters</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                    <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
+                    <div className="flex flex-col sm:flex-row gap-4">
                         <div className="flex-1 relative">
-                            <Search className="absolute left-3 top-1/2 h-3 w-3 md:h-4 md:w-4 -translate-y-1/2 text-muted-foreground" />
+                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                             <Input
-                                placeholder="Search employee name..."
-                                className="pl-9 md:pl-10 text-sm md:text-base"
+                                placeholder="Search employee or department..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-10"
                             />
                         </div>
                         <div className="flex gap-2 flex-wrap">
-                            <Select>
-                                <SelectTrigger className="w-full sm:w-[140px] md:w-[180px] text-sm">
-                                    <SelectValue placeholder="Review Period" />
+                            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                                <SelectTrigger className="w-[140px]">
+                                    <SelectValue placeholder="Department" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">All Periods</SelectItem>
-                                    <SelectItem value="monthly">Monthly</SelectItem>
-                                    <SelectItem value="quarterly">Quarterly</SelectItem>
-                                    <SelectItem value="annual">Annual</SelectItem>
+                                    <SelectItem value="all">All Departments</SelectItem>
+                                    <SelectItem value="Engineering">Engineering</SelectItem>
+                                    <SelectItem value="Marketing">Marketing</SelectItem>
+                                    <SelectItem value="Sales">Sales</SelectItem>
+                                    <SelectItem value="HR">HR</SelectItem>
+                                    <SelectItem value="Operations">Operations</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <Select>
-                                <SelectTrigger className="w-full sm:w-[120px] md:w-[180px] text-sm">
-                                    <SelectValue placeholder="Status" />
+                            <Select value={ratingFilter} onValueChange={setRatingFilter}>
+                                <SelectTrigger className="w-[140px]">
+                                    <SelectValue placeholder="Rating" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">All Status</SelectItem>
-                                    <SelectItem value="draft">Draft</SelectItem>
-                                    <SelectItem value="in-progress">In Progress</SelectItem>
-                                    <SelectItem value="completed">Completed</SelectItem>
-                                    <SelectItem value="approved">Approved</SelectItem>
-                                    <SelectItem value="published">Published</SelectItem>
+                                    <SelectItem value="all">All Ratings</SelectItem>
+                                    <SelectItem value="Outstanding">Outstanding</SelectItem>
+                                    <SelectItem value="Good">Good</SelectItem>
+                                    <SelectItem value="Fair">Fair</SelectItem>
+                                    <SelectItem value="Poor">Poor</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
-                                <Filter className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
-                                <span className="hidden sm:inline">Apply</span>
+                            <Button variant="outline" onClick={loadPerformanceStats}>
+                                <Filter className="h-4 w-4 mr-2" />
+                                Refresh
                             </Button>
                         </div>
                     </div>
                 </CardContent>
             </Card>
 
-            {/* Performance Reviews */}
+            {/* Monthly Performance Records */}
             <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-lg md:text-xl">Performance Reviews</CardTitle>
-                    <CardDescription className="text-sm">
-                        Manage employee performance reviews and track progress
+                <CardHeader>
+                    <CardTitle className="text-xl">Monthly Performance Records</CardTitle>
+                    <CardDescription>
+                        Detailed performance evaluations for September 2025
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="pt-0">
-                    <div className="space-y-2 md:space-y-3">
-                        {performanceReviews.map((review) => (
-                            <PerformanceReviewCard key={review.id} review={review} />
+                <CardContent>
+                    <div className="space-y-3">
+                        {filteredRecords.map((record) => (
+                            <PerformanceRecordCard key={record.id} record={record} />
                         ))}
 
-                        {performanceReviews.length === 0 && (
+                        {filteredRecords.length === 0 && (
                             <div className="text-center py-8">
-                                <TrendingUp className="h-8 w-8 md:h-12 md:w-12 text-muted-foreground mx-auto mb-3 md:mb-4" />
-                                <h3 className="text-base md:text-lg font-medium mb-2">No performance reviews found</h3>
-                                <p className="text-xs md:text-sm text-muted-foreground mb-4 max-w-sm mx-auto">
-                                    Create your first performance review to get started.
+                                <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                                <h3 className="text-lg font-medium mb-2">No performance records found</h3>
+                                <p className="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">
+                                    {searchTerm || departmentFilter !== 'all' || ratingFilter !== 'all'
+                                        ? 'Try adjusting your search or filter criteria'
+                                        : 'No performance records available for the selected period'
+                                    }
                                 </p>
-                                <Button asChild size="sm">
-                                    <Link href="/people/performance/new">
-                                        <Plus className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
-                                        Create Performance Review
-                                    </Link>
-                                </Button>
+                                {!searchTerm && departmentFilter === 'all' && ratingFilter === 'all' && (
+                                    <Button asChild>
+                                        <Link href="/people/performance/new">
+                                            <Plus className="h-4 w-4 mr-2" />
+                                            Create Performance Evaluation
+                                        </Link>
+                                    </Button>
+                                )}
                             </div>
                         )}
                     </div>
                 </CardContent>
             </Card>
 
-            {/* Performance Summary */}
+            {/* Employee Performance Summary */}
             <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-lg md:text-xl">Employee Performance Summary</CardTitle>
-                    <CardDescription className="text-sm">
+                <CardHeader>
+                    <CardTitle className="text-xl">Employee Performance Summary</CardTitle>
+                    <CardDescription>
                         Overview of employee performance trends and ratings
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="pt-0">
-                    <div className="space-y-2 md:space-y-3">
-                        {performanceSummaries.map((summary) => (
+                <CardContent>
+                    <div className="space-y-3">
+                        {filteredSummaries.map((summary) => (
                             <PerformanceSummaryCard key={summary.employeeId} summary={summary} />
                         ))}
                     </div>

@@ -3,14 +3,14 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
-import { leaveRequestService } from '@/lib/api/leaveRequests';
+import { leaveRequestService, LEAVE_REASONS } from '@/lib/api/leaveRequests';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, ArrowLeft, Plus, Loader2 } from 'lucide-react';
+import { Calendar, ArrowLeft, Plus, Loader2, Upload, User, Phone, Mail } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 
@@ -19,12 +19,16 @@ export default function NewLeaveRequestPage() {
     const { user } = useAuthStore();
     const [saving, setSaving] = useState(false);
     const [formData, setFormData] = useState({
-        type: 'Annual' as const,
-        startDate: '',
-        endDate: '',
-        days: 0,
+        leave_type: 'Annual' as const,
+        start_date: '',
+        end_date: '',
+        total_days: 0,
         reason: '',
+        backup_person: '',
+        contact_during_leave: '',
+        proof: null as File | null
     });
+    const [selectedReason, setSelectedReason] = useState('');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -34,14 +38,44 @@ export default function NewLeaveRequestPage() {
             return;
         }
 
+        // Validate dates
+        if (new Date(formData.start_date) > new Date(formData.end_date)) {
+            toast.error('End date must be after start date');
+            return;
+        }
+
         try {
             setSaving(true);
+
+            // Prepare proof data
+            const proofData = formData.proof ? {
+                filename: formData.proof.name,
+                type: formData.proof.type,
+                size: formData.proof.size
+            } : undefined;
+
             await leaveRequestService.createLeaveRequest({
-                ...formData,
-                userId: user.id,
+                employee_id: user.id,
+                department_id: user.departmentId || '1', // Default department
                 userName: user.name,
+                departmentName: user.department || 'General',
+                leave_type: formData.leave_type,
+                start_date: formData.start_date,
+                end_date: formData.end_date,
+                total_days: formData.total_days,
+                reason: selectedReason || formData.reason,
                 status: 'Pending',
+                proof: proofData,
+                applied_on: new Date().toISOString().split('T')[0],
+                backup_person: formData.backup_person,
+                contact_during_leave: formData.contact_during_leave,
+                balance_before: undefined,
+                balance_after: undefined,
+                remarks: '',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
             });
+
             toast.success('Leave request submitted successfully');
             router.push('/people/leave');
         } catch (error) {
@@ -51,22 +85,60 @@ export default function NewLeaveRequestPage() {
         }
     };
 
-    const handleDateChange = (field: 'startDate' | 'endDate', value: string) => {
+    const handleDateChange = (field: 'start_date' | 'end_date', value: string) => {
         setFormData(prev => {
             const newData = { ...prev, [field]: value };
 
             // Calculate days if both dates are present
-            if (newData.startDate && newData.endDate) {
-                const start = new Date(newData.startDate);
-                const end = new Date(newData.endDate);
-                const diffTime = Math.abs(end.getTime() - start.getTime());
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-                newData.days = diffDays;
+            if (newData.start_date && newData.end_date) {
+                const start = new Date(newData.start_date);
+                const end = new Date(newData.end_date);
+
+                // Calculate working days (exclude weekends)
+                let workingDays = 0;
+                let currentDate = new Date(start);
+
+                while (currentDate <= end) {
+                    const dayOfWeek = currentDate.getDay();
+                    if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Not Sunday (0) or Saturday (6)
+                        workingDays++;
+                    }
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+
+                newData.total_days = workingDays;
             }
 
             return newData;
         });
     };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            // Validate file type and size
+            const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+            const maxSize = 5 * 1024 * 1024; // 5MB
+
+            if (!validTypes.includes(file.type)) {
+                toast.error('Please upload a PDF, JPG, or PNG file');
+                return;
+            }
+
+            if (file.size > maxSize) {
+                toast.error('File size must be less than 5MB');
+                return;
+            }
+
+            setFormData(prev => ({ ...prev, proof: file }));
+        }
+    };
+
+    const getReasonsForType = (type: string) => {
+        return LEAVE_REASONS[type as keyof typeof LEAVE_REASONS] || [];
+    };
+
+    const requiresProof = formData.leave_type === 'Sick' || formData.leave_type === 'Study';
 
     return (
         <div className="space-y-6">
@@ -83,7 +155,7 @@ export default function NewLeaveRequestPage() {
                         New Leave Request
                     </h1>
                     <p className="text-muted-foreground mt-2">
-                        Submit a new leave request
+                        Submit a new leave request in compliance with Cameroon Labour Code
                     </p>
                 </div>
             </div>
@@ -92,79 +164,219 @@ export default function NewLeaveRequestPage() {
                 <CardHeader>
                     <CardTitle>Leave Request Information</CardTitle>
                     <CardDescription>
-                        Fill in the details for your leave request
+                        Fill in the details for your leave request. All fields marked with * are required.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Leave Type and Duration */}
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="space-y-2">
-                                <Label htmlFor="type">Leave Type *</Label>
-                                <Select value={formData.type} onValueChange={(value: any) => setFormData(prev => ({ ...prev, type: value }))}>
+                                <Label htmlFor="leave_type">Leave Type *</Label>
+                                <Select
+                                    value={formData.leave_type}
+                                    onValueChange={(value: any) => setFormData(prev => ({ ...prev, leave_type: value, reason: '' }))}
+                                >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select leave type" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="Annual">Annual Leave</SelectItem>
                                         <SelectItem value="Sick">Sick Leave</SelectItem>
-                                        <SelectItem value="Personal">Personal Leave</SelectItem>
                                         <SelectItem value="Maternity">Maternity Leave</SelectItem>
-                                        <SelectItem value="Emergency">Emergency Leave</SelectItem>
+                                        <SelectItem value="Paternity">Paternity Leave</SelectItem>
+                                        <SelectItem value="Compassionate">Compassionate Leave</SelectItem>
+                                        <SelectItem value="Study">Study / Examination Leave</SelectItem>
+                                        <SelectItem value="Official">Official / Duty Leave</SelectItem>
+                                        <SelectItem value="Unpaid">Unpaid Leave</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="days">Duration (Days) *</Label>
+                                <Label htmlFor="total_days">Duration (Working Days) *</Label>
                                 <Input
-                                    id="days"
+                                    id="total_days"
                                     type="number"
                                     min="1"
                                     required
-                                    value={formData.days}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, days: parseInt(e.target.value) || 0 }))}
+                                    value={formData.total_days}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, total_days: parseInt(e.target.value) || 0 }))}
+                                    disabled
+                                    className="bg-muted"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Calculated automatically excluding weekends
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Dates */}
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="start_date">Start Date *</Label>
+                                <Input
+                                    id="start_date"
+                                    type="date"
+                                    required
+                                    value={formData.start_date}
+                                    onChange={(e) => handleDateChange('start_date', e.target.value)}
+                                    min={new Date().toISOString().split('T')[0]}
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="startDate">Start Date *</Label>
+                                <Label htmlFor="end_date">End Date *</Label>
                                 <Input
-                                    id="startDate"
+                                    id="end_date"
                                     type="date"
                                     required
-                                    value={formData.startDate}
-                                    onChange={(e) => handleDateChange('startDate', e.target.value)}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="endDate">End Date *</Label>
-                                <Input
-                                    id="endDate"
-                                    type="date"
-                                    required
-                                    value={formData.endDate}
-                                    onChange={(e) => handleDateChange('endDate', e.target.value)}
+                                    value={formData.end_date}
+                                    onChange={(e) => handleDateChange('end_date', e.target.value)}
+                                    min={formData.start_date || new Date().toISOString().split('T')[0]}
                                 />
                             </div>
                         </div>
 
+                        {/* Reason Selection */}
                         <div className="space-y-2">
-                            <Label htmlFor="reason">Reason for Leave *</Label>
+                            <Label htmlFor="reason-select">Select Reason *</Label>
+                            <Select value={selectedReason} onValueChange={setSelectedReason}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={`Select ${formData.leave_type.toLowerCase()} reason`} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {getReasonsForType(formData.leave_type).map((reason, index) => (
+                                        <SelectItem key={index} value={reason}>
+                                            {reason}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Custom Reason */}
+                        <div className="space-y-2">
+                            <Label htmlFor="reason">
+                                {selectedReason ? 'Additional Details' : 'Reason for Leave *'}
+                            </Label>
                             <Textarea
                                 id="reason"
-                                placeholder="Please provide a detailed reason for your leave request"
-                                required
+                                placeholder={
+                                    selectedReason
+                                        ? "Provide additional details about your leave request..."
+                                        : "Please provide a detailed reason for your leave request..."
+                                }
+                                required={!selectedReason}
                                 value={formData.reason}
                                 onChange={(e) => setFormData(prev => ({ ...prev, reason: e.target.value }))}
-                                rows={4}
+                                rows={3}
                             />
                         </div>
 
+                        {/* Supporting Document */}
+                        {requiresProof && (
+                            <div className="space-y-2">
+                                <Label htmlFor="proof">
+                                    Supporting Document *
+                                    <span className="text-muted-foreground text-sm ml-2">
+                                        (PDF, JPG, PNG - Max 5MB)
+                                    </span>
+                                </Label>
+                                <div className="flex items-center gap-4">
+                                    <Input
+                                        id="proof"
+                                        type="file"
+                                        accept=".pdf,.jpg,.jpeg,.png"
+                                        onChange={handleFileChange}
+                                        className="flex-1"
+                                    />
+                                    {formData.proof && (
+                                        <div className="flex items-center gap-2 text-sm text-green-600">
+                                            <Upload className="h-4 w-4" />
+                                            {formData.proof.name}
+                                        </div>
+                                    )}
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    {formData.leave_type === 'Sick'
+                                        ? 'Medical certificate required for sick leave exceeding 2 days'
+                                        : 'Proof of enrollment or exam schedule required for study leave'
+                                    }
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Optional Supporting Document for other types */}
+                        {!requiresProof && (
+                            <div className="space-y-2">
+                                <Label htmlFor="proof-optional">
+                                    Supporting Document
+                                    <span className="text-muted-foreground text-sm ml-2">
+                                        (Optional - PDF, JPG, PNG - Max 5MB)
+                                    </span>
+                                </Label>
+                                <Input
+                                    id="proof-optional"
+                                    type="file"
+                                    accept=".pdf,.jpg,.jpeg,.png"
+                                    onChange={handleFileChange}
+                                />
+                            </div>
+                        )}
+
+                        {/* Backup Person and Contact Info */}
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="backup_person">
+                                    <User className="h-4 w-4 inline mr-1" />
+                                    Backup Person
+                                </Label>
+                                <Input
+                                    id="backup_person"
+                                    placeholder="Who will cover your duties?"
+                                    value={formData.backup_person}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, backup_person: e.target.value }))}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="contact_during_leave">
+                                    <Phone className="h-4 w-4 inline mr-1" />
+                                    Contact During Leave
+                                </Label>
+                                <Input
+                                    id="contact_during_leave"
+                                    placeholder="Phone or email for emergencies"
+                                    value={formData.contact_during_leave}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, contact_during_leave: e.target.value }))}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Policy Reminder */}
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <h4 className="font-medium text-blue-800 text-sm flex items-center">
+                                <Calendar className="h-4 w-4 mr-2" />
+                                Leave Policy Reminder
+                            </h4>
+                            <ul className="text-xs text-blue-700 mt-2 space-y-1">
+                                <li>• Annual Leave: 1.5 working days per month of service (18 days/year)</li>
+                                <li>• Sick Leave: Medical certificate required for absences exceeding 2 days</li>
+                                <li>• Maternity Leave: 14 weeks (4 before + 10 after childbirth)</li>
+                                <li>• Paternity Leave: 3-5 days during childbirth period</li>
+                                <li>• All leave requests subject to manager and HR approval</li>
+                            </ul>
+                        </div>
+
                         <div className="flex gap-4 pt-4">
-                            <Button type="submit" disabled={saving}>
-                                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-                                Submit Request
+                            <Button type="submit" disabled={saving} className="flex-1">
+                                {saving ? (
+                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                ) : (
+                                    <Plus className="h-4 w-4 mr-2" />
+                                )}
+                                Submit Leave Request
                             </Button>
                             <Button type="button" variant="outline" asChild>
                                 <Link href="/people/leave">

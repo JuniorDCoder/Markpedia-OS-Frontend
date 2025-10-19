@@ -90,7 +90,7 @@ const navigation = {
             name: 'Attendance',
             href: '/people/attendance',
             icon: UserCheck,
-            roles: ['CEO', 'Admin', 'Manager', 'CXO'],
+            roles: ['CEO', 'Admin', 'Manager', 'CXO', 'Employee'],
         },
         {
             name: 'Leave Requests',
