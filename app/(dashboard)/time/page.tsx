@@ -6,498 +6,509 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TableSkeleton } from '@/components/ui/loading';
 import { useAppStore } from '@/store/app';
 import { useAuthStore } from '@/store/auth';
-import { CalendarEvent, AgendaItem } from '@/types';
-import { Calendar, Clock, Plus, ChevronLeft, ChevronRight, Users, MapPin, Menu } from 'lucide-react';
+import {
+    CEOAvailability,
+    TravelRequest,
+    AppointmentRequest,
+    CompanyEvent,
+    TimeDashboardMetrics
+} from '@/types/time-management';
+import { timeManagementService } from '@/lib/api/time-management';
+import {
+    Calendar, Clock, Plus, ChevronLeft, ChevronRight, Users, MapPin,
+    Plane, FileText, User, AlertTriangle, CheckCircle, XCircle,
+    Building, Trophy, Users2, Lightbulb, Heart
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function TimePage() {
     const { setCurrentModule } = useAppStore();
     const { user } = useAuthStore();
-    const [events, setEvents] = useState<CalendarEvent[]>([]);
-    const [agendaItems, setAgendaItems] = useState<AgendaItem[]>([]);
+    const [availability, setAvailability] = useState<CEOAvailability[]>([]);
+    const [travelRequests, setTravelRequests] = useState<TravelRequest[]>([]);
+    const [appointments, setAppointments] = useState<AppointmentRequest[]>([]);
+    const [events, setEvents] = useState<CompanyEvent[]>([]);
+    const [metrics, setMetrics] = useState<TimeDashboardMetrics | null>(null);
     const [loading, setLoading] = useState(true);
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');
-    const [mobileView, setMobileView] = useState<'calendar' | 'agenda' | 'events'>('calendar');
+    const [activeTab, setActiveTab] = useState('overview');
 
     useEffect(() => {
         setCurrentModule('time');
-        loadCalendarData();
+        loadTimeData();
     }, [setCurrentModule, currentDate]);
 
-    const loadCalendarData = async () => {
+    const loadTimeData = async () => {
         try {
             setLoading(true);
-            // Mock data
-            const mockEvents: CalendarEvent[] = [
-                {
-                    id: '1',
-                    title: 'All-Hands Meeting',
-                    description: 'Monthly company-wide meeting',
-                    startDate: '2024-01-15',
-                    endDate: '2024-01-15',
-                    startTime: '10:00',
-                    endTime: '11:00',
-                    type: 'All-Hands',
-                    location: 'Conference Room A',
-                    attendees: ['1', '2', '3'],
-                    isAllDay: false,
-                    isRecurring: true,
-                    recurrenceRule: 'MONTHLY',
-                    createdBy: '1',
-                    createdAt: '2024-01-01'
-                },
-                {
-                    id: '2',
-                    title: 'React Training Workshop',
-                    description: 'Advanced React patterns and best practices',
-                    startDate: '2024-01-18',
-                    endDate: '2024-01-19',
-                    startTime: '09:00',
-                    endTime: '17:00',
-                    type: 'Training',
-                    location: 'Training Room B',
-                    attendees: ['2', '3'],
-                    isAllDay: false,
-                    isRecurring: false,
-                    createdBy: '1',
-                    createdAt: '2024-01-05'
-                },
-                {
-                    id: '3',
-                    title: 'New Year Holiday',
-                    startDate: '2024-01-01',
-                    endDate: '2024-01-01',
-                    type: 'Holiday',
-                    isAllDay: true,
-                    isRecurring: false,
-                    createdBy: '1',
-                    createdAt: '2023-12-01'
-                },
-                {
-                    id: '4',
-                    title: 'Project Alpha Deadline',
-                    description: 'Final delivery for Project Alpha',
-                    startDate: '2024-01-25',
-                    endDate: '2024-01-25',
-                    type: 'Deadline',
-                    isAllDay: true,
-                    isRecurring: false,
-                    createdBy: '1',
-                    createdAt: '2024-01-10'
-                }
-            ];
+            const [
+                availabilityData,
+                travelData,
+                appointmentsData,
+                eventsData,
+                metricsData
+            ] = await Promise.all([
+                timeManagementService.getCEOAvailability(),
+                timeManagementService.listTravelRequests(),
+                timeManagementService.listAppointmentRequests(),
+                timeManagementService.listCompanyEvents(),
+                timeManagementService.getDashboardMetrics()
+            ]);
 
-            const mockAgendaItems: AgendaItem[] = [
-                {
-                    id: '1',
-                    title: 'Review Q4 Performance Reports',
-                    description: 'Analyze entities performance metrics and prepare feedback',
-                    date: new Date().toISOString().split('T')[0],
-                    time: '09:00',
-                    priority: 'High',
-                    status: 'Pending',
-                    category: 'Review',
-                    createdBy: '1'
-                },
-                {
-                    id: '2',
-                    title: 'Client Check-in Call',
-                    description: 'Weekly status update with key client',
-                    date: new Date().toISOString().split('T')[0],
-                    time: '14:00',
-                    priority: 'Medium',
-                    status: 'Pending',
-                    category: 'Meeting',
-                    createdBy: '1'
-                },
-                {
-                    id: '3',
-                    title: 'Budget Planning Session',
-                    description: 'Plan Q1 budget allocation',
-                    date: new Date().toISOString().split('T')[0],
-                    time: '16:00',
-                    priority: 'High',
-                    status: 'In Progress',
-                    category: 'Decision',
-                    createdBy: '1'
-                }
-            ];
-
-            setEvents(mockEvents);
-            setAgendaItems(mockAgendaItems);
+            setAvailability(availabilityData);
+            setTravelRequests(travelData);
+            setAppointments(appointmentsData);
+            setEvents(eventsData);
+            setMetrics(metricsData);
         } catch (error) {
-            toast.error('Failed to load calendar data');
+            toast.error('Failed to load time management data');
         } finally {
             setLoading(false);
         }
     };
 
-    const getDaysInMonth = () => {
-        const year = currentDate.getFullYear();
-        const month = currentDate.getMonth();
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
-        const daysInMonth = lastDay.getDate();
-        const startingDayOfWeek = firstDay.getDay();
-
-        const days = [];
-
-        // Add empty cells for days before the first day of the month
-        for (let i = 0; i < startingDayOfWeek; i++) {
-            days.push(null);
+    const getAvailabilityColor = (status: string) => {
+        switch (status) {
+            case 'available': return 'bg-green-100 text-green-800 border-green-200';
+            case 'limited': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            case 'unavailable': return 'bg-red-100 text-red-800 border-red-200';
+            case 'traveling': return 'bg-blue-100 text-blue-800 border-blue-200';
+            case 'strategic-block': return 'bg-purple-100 text-purple-800 border-purple-200';
+            default: return 'bg-gray-100 text-gray-800 border-gray-200';
         }
-
-        // Add days of the month
-        for (let day = 1; day <= daysInMonth; day++) {
-            const date = new Date(year, month, day);
-            const dateString = date.toISOString().split('T')[0];
-            const dayEvents = events.filter(e => e.startDate === dateString);
-            days.push({ day, date: dateString, events: dayEvents });
-        }
-
-        return days;
     };
 
-    const navigateMonth = (direction: 'prev' | 'next') => {
-        setCurrentDate(prev => {
-            const newDate = new Date(prev);
-            if (direction === 'prev') {
-                newDate.setMonth(prev.getMonth() - 1);
-            } else {
-                newDate.setMonth(prev.getMonth() + 1);
-            }
-            return newDate;
-        });
+    const getAvailabilityIcon = (status: string) => {
+        switch (status) {
+            case 'available': return <CheckCircle className="h-3 w-3" />;
+            case 'limited': return <AlertTriangle className="h-3 w-3" />;
+            case 'unavailable': return <XCircle className="h-3 w-3" />;
+            case 'traveling': return <Plane className="h-3 w-3" />;
+            case 'strategic-block': return <Clock className="h-3 w-3" />;
+            default: return <Clock className="h-3 w-3" />;
+        }
     };
 
     const getEventTypeColor = (type: string) => {
         switch (type) {
-            case 'Meeting':
-                return 'bg-blue-100 text-blue-800';
-            case 'Training':
-                return 'bg-green-100 text-green-800';
-            case 'Holiday':
-                return 'bg-red-100 text-red-800';
-            case 'Deadline':
-                return 'bg-orange-100 text-orange-800';
-            case 'All-Hands':
-                return 'bg-purple-100 text-purple-800';
-            case 'Personal':
-                return 'bg-gray-100 text-gray-800';
-            default:
-                return 'bg-gray-100 text-gray-800';
+            case 'corporate': return 'bg-blue-100 text-blue-800';
+            case 'recognition': return 'bg-green-100 text-green-800';
+            case 'team-building': return 'bg-purple-100 text-purple-800';
+            case 'training': return 'bg-orange-100 text-orange-800';
+            case 'innovation': return 'bg-pink-100 text-pink-800';
+            case 'social': return 'bg-yellow-100 text-yellow-800';
+            case 'csr': return 'bg-teal-100 text-teal-800';
+            default: return 'bg-gray-100 text-gray-800';
         }
     };
 
-    const getPriorityColor = (priority: string) => {
-        switch (priority) {
-            case 'High':
-                return 'bg-red-100 text-red-800';
-            case 'Medium':
-                return 'bg-yellow-100 text-yellow-800';
-            case 'Low':
-                return 'bg-green-100 text-green-800';
-            default:
-                return 'bg-gray-100 text-gray-800';
+    const getEventTypeIcon = (type: string) => {
+        switch (type) {
+            case 'corporate': return <Building className="h-3 w-3" />;
+            case 'recognition': return <Trophy className="h-3 w-3" />;
+            case 'team-building': return <Users2 className="h-3 w-3" />;
+            case 'training': return <FileText className="h-3 w-3" />;
+            case 'innovation': return <Lightbulb className="h-3 w-3" />;
+            case 'social': return <Heart className="h-3 w-3" />;
+            case 'csr': return <Users className="h-3 w-3" />;
+            default: return <Calendar className="h-3 w-3" />;
         }
     };
 
-    const getStatusColor = (status: string) => {
+    const getTravelStatusColor = (status: string) => {
         switch (status) {
-            case 'Completed':
-                return 'bg-green-100 text-green-800';
-            case 'In Progress':
-                return 'bg-blue-100 text-blue-800';
-            case 'Pending':
-                return 'bg-yellow-100 text-yellow-800';
-            default:
-                return 'bg-gray-100 text-gray-800';
+            case 'planned': return 'bg-yellow-100 text-yellow-800';
+            case 'confirmed': return 'bg-blue-100 text-blue-800';
+            case 'in-progress': return 'bg-green-100 text-green-800';
+            case 'completed': return 'bg-gray-100 text-gray-800';
+            default: return 'bg-gray-100 text-gray-800';
         }
     };
 
-    const todayAgenda = agendaItems.filter(item =>
-        item.date === new Date().toISOString().split('T')[0]
-    );
-
-    const upcomingEvents = events.filter(event => {
-        const eventDate = new Date(event.startDate);
-        const today = new Date();
-        const nextWeek = new Date();
-        nextWeek.setDate(today.getDate() + 7);
-        return eventDate >= today && eventDate <= nextWeek;
-    }).slice(0, 5);
-
-    const canManage = user?.role === 'CEO' || user?.role === 'Admin' || user?.role === 'Manager';
-
-    // Mobile navigation tabs
-    const MobileNavigation = () => (
-        <div className="sm:hidden">
-            <div className="grid grid-cols-3 gap-1 mb-4">
-                <Button
-                    variant={mobileView === 'calendar' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setMobileView('calendar')}
-                    className="text-xs"
-                >
-                    <Calendar className="h-3 w-3 mr-1" />
-                    Calendar
-                </Button>
-                <Button
-                    variant={mobileView === 'agenda' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setMobileView('agenda')}
-                    className="text-xs"
-                >
-                    <Clock className="h-3 w-3 mr-1" />
-                    Agenda
-                </Button>
-                <Button
-                    variant={mobileView === 'events' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setMobileView('events')}
-                    className="text-xs"
-                >
-                    <Users className="h-3 w-3 mr-1" />
-                    Events
-                </Button>
-            </div>
-        </div>
-    );
+    const isCEO = user?.role === 'CEO';
+    const isPA = user?.role === 'Admin' || user?.role === 'Executive Assistant';
+    const canManageEvents = user?.role === 'HR' || user?.role === 'Admin';
+    const canViewCEO = isCEO || isPA || user?.role === 'Top Admin';
 
     if (loading) {
         return <TableSkeleton />;
     }
 
     return (
-        <div className="space-y-6 p-4 sm:p-6">
+        <div className="space-y-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center">
                         <Calendar className="h-6 w-6 sm:h-8 sm:w-8 mr-2 sm:mr-3" />
-                        Time & Calendar
+                        Time & Calendar Management
                     </h1>
                     <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-                        Manage company calendar and daily agenda
+                        CEO Calendar, Travel Management & Company Events
                     </p>
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <Select value={viewMode} onValueChange={(value: any) => setViewMode(value)}>
-                        <SelectTrigger className="w-full sm:w-[120px] text-sm">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="month">Month</SelectItem>
-                            <SelectItem value="week">Week</SelectItem>
-                            <SelectItem value="day">Day</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    {canManage && (
+                    {/* Appointment Request Button - Show for all employees */}
+                    <Button asChild variant="outline" className="flex-1 sm:flex-none text-sm">
+                        <Link href="/time/appointments/new">
+                            <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                            Request Appointment
+                        </Link>
+                    </Button>
+
+                    {/* Event Creation Button - Show for authorized users */}
+                    {(user?.role === 'HR' || user?.role === 'Admin' || user?.role === 'CEO' || user?.role === 'Manager') && (
                         <Button asChild className="flex-1 sm:flex-none text-sm">
-                            <Link href="/time/new">
+                            <Link href="/time/events/new">
                                 <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                                New Event
+                                Create Event
+                            </Link>
+                        </Button>
+                    )}
+
+                    {/* CEO Agenda Button - Show for CEO and PA */}
+                    {(user?.role === 'CEO' || user?.role === 'Admin') && (
+                        <Button asChild variant="outline" className="flex-1 sm:flex-none text-sm">
+                            <Link href="/time/ceo-agenda">
+                                <User className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                CEO Agenda
                             </Link>
                         </Button>
                     )}
                 </div>
             </div>
 
-            {/* Mobile Navigation */}
-            <MobileNavigation />
+            {/* Tabs */}
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
+                    <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="ceo-calendar">CEO Calendar</TabsTrigger>
+                    <TabsTrigger value="travel">Travel</TabsTrigger>
+                    <TabsTrigger value="events">Company Events</TabsTrigger>
+                </TabsList>
 
-            <div className="grid gap-6 lg:grid-cols-3">
-                {/* Calendar - Hidden on mobile when not active */}
-                <div className={`${mobileView === 'calendar' ? 'block' : 'hidden'} sm:block lg:col-span-2`}>
-                    <Card>
-                        <CardHeader>
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-                                <CardTitle className="flex items-center text-lg sm:text-xl">
-                                    <Calendar className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                                    {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                                </CardTitle>
-                                <div className="flex items-center gap-2 w-full sm:w-auto">
-                                    <Button variant="outline" size="sm" onClick={() => navigateMonth('prev')} className="flex-1 sm:flex-none">
-                                        <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
-                                    </Button>
-                                    <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())} className="flex-1 sm:flex-none text-xs">
-                                        Today
-                                    </Button>
-                                    <Button variant="outline" size="sm" onClick={() => navigateMonth('next')} className="flex-1 sm:flex-none">
-                                        <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
-                                    </Button>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            {/* Day headers */}
-                            <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-3 sm:mb-4">
-                                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                                    <div key={day} className="p-1 sm:p-2 text-center text-xs sm:text-sm font-medium text-muted-foreground">
-                                        {day}
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* Calendar grid */}
-                            <div className="grid grid-cols-7 gap-1 sm:gap-2">
-                                {getDaysInMonth().map((dayData, index) => (
-                                    <div key={index} className="min-h-[60px] sm:min-h-[80px] lg:min-h-[100px]">
-                                        {dayData ? (
-                                            <div className={`h-full p-1 sm:p-2 border rounded-lg hover:bg-muted/50 cursor-pointer text-xs sm:text-sm ${
-                                                dayData.date === new Date().toISOString().split('T')[0] ? 'bg-blue-50 border-blue-200' : ''
-                                            }`}>
-                                                <div className="font-medium mb-1">{dayData.day}</div>
-                                                <div className="space-y-0.5 sm:space-y-1">
-                                                    {dayData.events.slice(0, 2).map(event => (
-                                                        <div key={event.id} className="truncate">
-                                                            <Badge
-                                                                variant="secondary"
-                                                                className={`text-[10px] sm:text-xs ${getEventTypeColor(event.type)} truncate max-w-full`}
-                                                            >
-                                                                {event.title}
-                                                            </Badge>
-                                                        </div>
-                                                    ))}
-                                                    {dayData.events.length > 2 && (
-                                                        <div className="text-[10px] sm:text-xs text-muted-foreground">
-                                                            +{dayData.events.length - 2} more
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="h-full" />
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Sidebar - Hidden on mobile when not active */}
-                <div className={`space-y-6 ${mobileView !== 'calendar' ? 'block' : 'hidden'} sm:block`}>
-                    {/* Today's Agenda */}
-                    {user?.role === 'CEO' && (
-                        <div className={`${mobileView === 'agenda' ? 'block' : 'hidden'} sm:block`}>
+                {/* Overview Tab */}
+                <TabsContent value="overview" className="space-y-6">
+                    {metrics && (
+                        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
                             <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center text-lg sm:text-xl">
-                                        <Clock className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                                        Today's Agenda
-                                    </CardTitle>
-                                    <CardDescription className="text-sm">
-                                        {new Date().toLocaleDateString('en-US', {
-                                            weekday: 'long',
-                                            year: 'numeric',
-                                            month: 'long',
-                                            day: 'numeric'
-                                        })}
-                                    </CardDescription>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Upcoming Trips</CardTitle>
+                                    <Plane className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
                                 <CardContent>
-                                    {todayAgenda.length === 0 ? (
-                                        <div className="text-center py-4 sm:py-6 text-muted-foreground">
-                                            <Clock className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 opacity-50" />
-                                            <p className="text-xs sm:text-sm">No agenda items for today</p>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-2 sm:space-y-3">
-                                            {todayAgenda.map(item => (
-                                                <div key={item.id} className="flex items-start space-x-2 sm:space-x-3 p-2 sm:p-3 border rounded-lg">
-                                                    <div className="flex-1 space-y-1 min-w-0">
-                                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-0">
-                                                            <h4 className="font-medium text-sm truncate">{item.title}</h4>
-                                                            <Badge variant="outline" className={`text-xs ${getPriorityColor(item.priority)} w-fit sm:w-auto`}>
-                                                                {item.priority}
-                                                            </Badge>
-                                                        </div>
-                                                        {item.description && (
-                                                            <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
-                                                        )}
-                                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-0">
-                                                            <div className="text-xs text-muted-foreground">
-                                                                {item.time}
-                                                            </div>
-                                                            <Badge variant="secondary" className={`text-xs ${getStatusColor(item.status)} w-fit sm:w-auto`}>
-                                                                {item.status}
-                                                            </Badge>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                    <div className="text-2xl font-bold">{metrics.upcomingTrips}</div>
+                                    <p className="text-xs text-muted-foreground">
+                                        {metrics.travelDaysThisQuarter} days this quarter
+                                    </p>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Pending Approvals</CardTitle>
+                                    <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{metrics.pendingApprovals}</div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Travel & appointments
+                                    </p>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Company Events</CardTitle>
+                                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{metrics.totalEvents}</div>
+                                    <p className="text-xs text-muted-foreground">
+                                        {metrics.attendanceRate}% attendance
+                                    </p>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Employee Satisfaction</CardTitle>
+                                    <Heart className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{metrics.employeeSatisfaction}/5</div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Event feedback score
+                                    </p>
                                 </CardContent>
                             </Card>
                         </div>
                     )}
 
-                    {/* Upcoming Events */}
-                    <div className={`${mobileView === 'events' ? 'block' : 'hidden'} sm:block`}>
+                    <div className="grid gap-6 lg:grid-cols-2">
+                        {/* Upcoming Travel */}
                         <Card>
                             <CardHeader>
-                                <CardTitle className="text-lg sm:text-xl">Upcoming Events</CardTitle>
-                                <CardDescription className="text-sm">Next 7 days</CardDescription>
+                                <CardTitle className="flex items-center">
+                                    <Plane className="h-5 w-5 mr-2" />
+                                    Upcoming Travel
+                                </CardTitle>
+                                <CardDescription>CEO business trips</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                {upcomingEvents.length === 0 ? (
-                                    <div className="text-center py-4 sm:py-6 text-muted-foreground">
-                                        <Calendar className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 opacity-50" />
-                                        <p className="text-xs sm:text-sm">No upcoming events</p>
+                                {travelRequests.filter(t => t.status === 'confirmed' || t.status === 'planned').length === 0 ? (
+                                    <div className="text-center py-6 text-muted-foreground">
+                                        <Plane className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                        <p className="text-sm">No upcoming trips</p>
                                     </div>
                                 ) : (
-                                    <div className="space-y-2 sm:space-y-3">
-                                        {upcomingEvents.map(event => (
-                                            <div key={event.id} className="flex items-start space-x-2 sm:space-x-3 p-2 sm:p-3 border rounded-lg">
-                                                <div className="flex-1 space-y-1 min-w-0">
-                                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-0">
-                                                        <h4 className="font-medium text-sm truncate">{event.title}</h4>
-                                                        <Badge variant="outline" className={`text-xs ${getEventTypeColor(event.type)} w-fit sm:w-auto`}>
-                                                            {event.type}
-                                                        </Badge>
-                                                    </div>
-                                                    {event.description && (
-                                                        <p className="text-xs text-muted-foreground line-clamp-2">{event.description}</p>
-                                                    )}
-                                                    <div className="space-y-1 text-xs text-muted-foreground">
-                                                        <div className="flex items-center">
-                                                            <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
-                                                            <span className="truncate">
-                                {new Date(event.startDate).toLocaleDateString()}
-                                                                {event.startTime && ` at ${event.startTime}`}
-                              </span>
+                                    <div className="space-y-3">
+                                        {travelRequests
+                                            .filter(t => t.status === 'confirmed' || t.status === 'planned')
+                                            .slice(0, 3)
+                                            .map(trip => (
+                                                <div key={trip.id} className="flex items-start space-x-3 p-3 border rounded-lg">
+                                                    <div className="flex-1 space-y-1 min-w-0">
+                                                        <div className="flex items-center justify-between">
+                                                            <h4 className="font-medium text-sm">{trip.destination}</h4>
+                                                            <Badge variant="outline" className={getTravelStatusColor(trip.status)}>
+                                                                {trip.status}
+                                                            </Badge>
                                                         </div>
-                                                        {event.location && (
-                                                            <div className="flex items-center">
-                                                                <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
-                                                                <span className="truncate">{event.location}</span>
-                                                            </div>
-                                                        )}
-                                                        {event.attendees && event.attendees.length > 0 && (
-                                                            <div className="flex items-center">
-                                                                <Users className="h-3 w-3 mr-1 flex-shrink-0" />
-                                                                <span>
-                                  {event.attendees.length} attendee{event.attendees.length !== 1 ? 's' : ''}
-                                </span>
-                                                            </div>
-                                                        )}
+                                                        <p className="text-xs text-muted-foreground">{trip.purpose}</p>
+                                                        <div className="text-xs text-muted-foreground">
+                                                            {new Date(trip.departureDate).toLocaleDateString()} - {new Date(trip.returnDate).toLocaleDateString()}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ))}
                                     </div>
+                                )}
+                                {travelRequests.filter(t => t.status === 'confirmed' || t.status === 'planned').length > 3 && (
+                                    <Button variant="outline" size="sm" className="w-full mt-3" asChild>
+                                        <Link href="/time/travel">View All Travel</Link>
+                                    </Button>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* Upcoming Events */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center">
+                                    <Calendar className="h-5 w-5 mr-2" />
+                                    Upcoming Events
+                                </CardTitle>
+                                <CardDescription>Company events</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {events.filter(e => e.status === 'approved').length === 0 ? (
+                                    <div className="text-center py-6 text-muted-foreground">
+                                        <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                        <p className="text-sm">No upcoming events</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {events
+                                            .filter(e => e.status === 'approved')
+                                            .slice(0, 3)
+                                            .map(event => (
+                                                <div key={event.id} className="flex items-start space-x-3 p-3 border rounded-lg">
+                                                    <div className="flex-1 space-y-1 min-w-0">
+                                                        <div className="flex items-center justify-between">
+                                                            <h4 className="font-medium text-sm">{event.title}</h4>
+                                                            <Badge variant="outline" className={getEventTypeColor(event.type)}>
+                                                                {getEventTypeIcon(event.type)}
+                                                                <span className="ml-1">{event.type}</span>
+                                                            </Badge>
+                                                        </div>
+                                                        <p className="text-xs text-muted-foreground">{event.venue}</p>
+                                                        <div className="text-xs text-muted-foreground">
+                                                            {new Date(event.startDate).toLocaleDateString()}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                    </div>
+                                )}
+                                {events.filter(e => e.status === 'approved').length > 3 && (
+                                    <Button variant="outline" size="sm" className="w-full mt-3" asChild>
+                                        <Link href="/time/events">View All Events</Link>
+                                    </Button>
                                 )}
                             </CardContent>
                         </Card>
                     </div>
-                </div>
-            </div>
+                </TabsContent>
+
+                {/* CEO Calendar Tab */}
+                <TabsContent value="ceo-calendar">
+                    {canViewCEO ? (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>CEO Availability</CardTitle>
+                                <CardDescription>This week's schedule and availability</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-4">
+                                    {availability.slice(0, 7).map(day => (
+                                        <div key={day.id} className="flex items-center justify-between p-3 border rounded-lg">
+                                            <div className="flex items-center space-x-3">
+                                                <Badge variant="outline" className={getAvailabilityColor(day.status)}>
+                                                    {getAvailabilityIcon(day.status)}
+                                                    <span className="ml-1 capitalize">{day.status.replace('-', ' ')}</span>
+                                                </Badge>
+                                                <div>
+                                                    <div className="font-medium">
+                                                        {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                                                    </div>
+                                                    <div className="text-sm text-muted-foreground">{day.location}</div>
+                                                </div>
+                                            </div>
+                                            {day.notes && (
+                                                <div className="text-sm text-muted-foreground text-right">
+                                                    {day.notes}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                                {(isCEO || isPA) && (
+                                    <Button className="w-full mt-4" asChild>
+                                        <Link href="/time/ceo-agenda">Manage CEO Agenda</Link>
+                                    </Button>
+                                )}
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <Card>
+                            <CardContent className="pt-6">
+                                <div className="text-center py-8">
+                                    <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                                    <h3 className="text-lg font-medium text-muted-foreground mb-2">Access Restricted</h3>
+                                    <p className="text-sm text-muted-foreground mb-4">
+                                        CEO calendar access is limited to executive team members
+                                    </p>
+                                    <Button asChild>
+                                        <Link href="/time/appointments/new">Request Appointment</Link>
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+                </TabsContent>
+
+                {/* Travel Tab */}
+                <TabsContent value="travel">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Travel Management</CardTitle>
+                            <CardDescription>CEO business trips and travel plans</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {travelRequests.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <Plane className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                                    <h3 className="text-lg font-medium text-muted-foreground mb-2">No travel plans</h3>
+                                    <p className="text-sm text-muted-foreground mb-4">
+                                        {isPA ? 'Create a travel request to get started' : 'No upcoming business trips'}
+                                    </p>
+                                    {isPA && (
+                                        <Button asChild>
+                                            <Link href="/time/travel/new">Create Travel Request</Link>
+                                        </Button>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {travelRequests.map(trip => (
+                                        <div key={trip.id} className="p-4 border rounded-lg">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h4 className="font-medium">{trip.destination}</h4>
+                                                <Badge variant="outline" className={getTravelStatusColor(trip.status)}>
+                                                    {trip.status}
+                                                </Badge>
+                                            </div>
+                                            <p className="text-sm text-muted-foreground mb-2">{trip.purpose}</p>
+                                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                                <div>
+                                                    <span className="font-medium">Dates:</span>{' '}
+                                                    {new Date(trip.departureDate).toLocaleDateString()} - {new Date(trip.returnDate).toLocaleDateString()}
+                                                </div>
+                                                <div>
+                                                    <span className="font-medium">Budget:</span>{' '}
+                                                    {trip.budgetEstimate.toLocaleString()} XAF
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {isPA && (
+                                        <Button className="w-full" asChild>
+                                            <Link href="/time/travel/new">Create New Travel Request</Link>
+                                        </Button>
+                                    )}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* Events Tab */}
+                <TabsContent value="events">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Company Events</CardTitle>
+                            <CardDescription>Upcoming and past company events</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {events.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                                    <h3 className="text-lg font-medium text-muted-foreground mb-2">No events scheduled</h3>
+                                    <p className="text-sm text-muted-foreground mb-4">
+                                        {canManageEvents ? 'Create a company event to get started' : 'No upcoming company events'}
+                                    </p>
+                                    {canManageEvents && (
+                                        <Button asChild>
+                                            <Link href="/time/events/new">Create Event</Link>
+                                        </Button>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {events.map(event => (
+                                        <div key={event.id} className="p-4 border rounded-lg">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h4 className="font-medium">{event.title}</h4>
+                                                <Badge variant="outline" className={getEventTypeColor(event.type)}>
+                                                    {getEventTypeIcon(event.type)}
+                                                    <span className="ml-1 capitalize">{event.type.replace('-', ' ')}</span>
+                                                </Badge>
+                                            </div>
+                                            <p className="text-sm text-muted-foreground mb-2">{event.objective}</p>
+                                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                                <div>
+                                                    <span className="font-medium">Date:</span>{' '}
+                                                    {new Date(event.startDate).toLocaleDateString()}
+                                                </div>
+                                                <div>
+                                                    <span className="font-medium">Venue:</span> {event.venue}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {canManageEvents && (
+                                        <Button className="w-full" asChild>
+                                            <Link href="/time/events/new">Create New Event</Link>
+                                        </Button>
+                                    )}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }
