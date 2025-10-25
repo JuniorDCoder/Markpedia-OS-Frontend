@@ -529,7 +529,7 @@ export default function OrganigramClient({
                     <Button variant="outline" asChild size="sm" className="flex-1 sm:flex-none text-xs">
                         <Link href="/strategy/organigram/employees/new">
                             <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                            Add
+                            Add Employee
                         </Link>
                     </Button>
                     {canManage && (
