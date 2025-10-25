@@ -95,7 +95,7 @@ export default function TimePage() {
                 {
                     id: '1',
                     title: 'Review Q4 Performance Reports',
-                    description: 'Analyze team performance metrics and prepare feedback',
+                    description: 'Analyze entities performance metrics and prepare feedback',
                     date: new Date().toISOString().split('T')[0],
                     time: '09:00',
                     priority: 'High',

@@ -1,133 +1,234 @@
+// app/people/warnings/[id]/page.tsx
+"use client";
+
+import { useState, useEffect } from "react";
 import { notFound } from "next/navigation";
 import { warningsService } from "@/lib/api/warnings";
+import { Warning } from "@/types/warnings";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ArrowLeft, Edit, ShieldAlert, TrendingUp } from "lucide-react";
+import { ArrowLeft, Edit, AlertTriangle, Calendar, User, Target } from "lucide-react";
 
 interface PageProps {
     params: { id: string };
 }
 
-export async function generateStaticParams() {
-    try {
-        const warnings = await warningsService.getAllWarnings();
-        return warnings.map((warning) => ({
-            id: warning.id.toString(),
-        }));
-    } catch (error) {
-        console.error('Error generating static params:', error);
-        return [];
-    }
-}
+export default function ViewWarningPage({ params }: PageProps) {
+    const [data, setData] = useState<Warning | null>(null);
+    const [loading, setLoading] = useState(true);
 
-export default async function ViewWarningPage({ params }: PageProps) {
-    const data = await warningsService.getWarning(params.id);
-    if (!data) notFound();
+    useEffect(() => {
+        loadWarning();
+    }, [params.id]);
+
+    const loadWarning = async () => {
+        try {
+            const warning = await warningsService.getWarning(params.id);
+            if (!warning) {
+                notFound();
+            }
+            setData(warning);
+        } catch (error) {
+            console.error('Error loading warning:', error);
+            notFound();
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            </div>
+        );
+    }
+
+    if (!data) {
+        notFound();
+    }
+
+    const levelInfo = warningsService.getLevelInfo(data.level);
 
     return (
-        <div className="space-y-4 md:space-y-6">
+        <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 md:gap-4">
-                    <Button variant="ghost" asChild className="mb-0 flex-shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <Button variant="ghost" asChild className="flex-shrink-0">
                         <Link href="/people/warnings">
-                            <ArrowLeft className="h-4 w-4 mr-1 md:mr-2" />
-                            <span className="hidden sm:inline">Back to Warnings List</span>
-                            <span className="sm:hidden">Back</span>
+                            <ArrowLeft className="h-4 w-4 mr-2" />
+                            Back
                         </Link>
                     </Button>
                     <div className="min-w-0 flex-1">
-                        <h1 className="text-xl md:text-2xl lg:text-3xl font-bold tracking-tight flex items-center gap-2 md:gap-3">
-                            <ShieldAlert className="h-5 w-5 md:h-6 md:w-6 lg:h-8 lg:w-8" />
-                            <span className="truncate">Viewing Warning #{data.id}</span>
+                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-3">
+                            <AlertTriangle className="h-6 w-6 md:h-8 md:w-8" />
+                            <span className="truncate">{levelInfo.name}</span>
                         </h1>
+                        <p className="text-muted-foreground mt-1 text-sm">
+                            Issued to {data.employeeName} by {data.issuedBy}
+                        </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
-                    <Badge variant={data.status === "Active" ? "destructive" : "outline"} className="text-xs hidden sm:flex">
+
+                <div className="flex items-center gap-2 flex-shrink-0">
+                    <Badge variant={
+                        data.status === "Active" ? "destructive" :
+                            data.status === "Resolved" ? "default" :
+                                data.status === "Appealed" ? "secondary" : "outline"
+                    } className="text-sm">
                         {data.status}
                     </Badge>
-                    <Button asChild variant="outline" size="sm" className="hidden sm:flex">
+                    <Button asChild variant="outline" size="sm">
                         <Link href={`/people/warnings/${data.id}/edit`}>
-                            <Edit className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
-                            <span className="hidden md:inline">Edit Warning</span>
-                            <span className="md:hidden">Edit</span>
-                        </Link>
-                    </Button>
-                    <Button asChild variant="outline" size="icon" className="sm:hidden">
-                        <Link href={`/people/warnings/${data.id}/edit`}>
-                            <Edit className="h-4 w-4" />
-                        </Link>
-                    </Button>
-                    <Button asChild size="sm" className="hidden sm:flex">
-                        <Link href="/people/warnings">
-                            <span className="hidden md:inline">Back to List</span>
-                            <span className="md:hidden">List</span>
-                        </Link>
-                    </Button>
-                    <Button asChild size="icon" className="sm:hidden">
-                        <Link href="/people/warnings">
-                            <ArrowLeft className="h-4 w-4" />
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
                         </Link>
                     </Button>
                 </div>
             </div>
 
-            {/* Mobile Status Badge */}
-            <div className="sm:hidden flex justify-center">
-                <Badge variant={data.status === "Active" ? "destructive" : "outline"} className="text-sm">
-                    {data.status}
-                </Badge>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Main Details */}
+                <div className="lg:col-span-2 space-y-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Warning Details</CardTitle>
+                            <CardDescription>
+                                Comprehensive information about this disciplinary action
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <div className="text-sm font-medium text-muted-foreground">Employee</div>
+                                    <div className="flex items-center gap-2">
+                                        <User className="h-4 w-4" />
+                                        <span className="font-medium">{data.employeeName}</span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <div className="text-sm font-medium text-muted-foreground">Issued By</div>
+                                    <div className="flex items-center gap-2">
+                                        <User className="h-4 w-4" />
+                                        <span className="font-medium">{data.issuedBy}</span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <div className="text-sm font-medium text-muted-foreground">Level</div>
+                                    <Badge variant="outline" className={
+                                        data.level === 'L1' ? 'bg-blue-50 text-blue-700' :
+                                            data.level === 'L2' ? 'bg-orange-50 text-orange-700' :
+                                                data.level === 'L3' ? 'bg-red-50 text-red-700' :
+                                                    'bg-purple-50 text-purple-700'
+                                    }>
+                                        {levelInfo.name}
+                                    </Badge>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <div className="text-sm font-medium text-muted-foreground">Points Deducted</div>
+                                    <div className="flex items-center gap-2">
+                                        <Target className="h-4 w-4 text-red-500" />
+                                        <span className="font-medium text-red-600">-{data.pointsDeducted}</span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <div className="text-sm font-medium text-muted-foreground">Date Issued</div>
+                                    <div className="flex items-center gap-2">
+                                        <Calendar className="h-4 w-4" />
+                                        <span className="font-medium">{new Date(data.dateIssued).toLocaleDateString()}</span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <div className="text-sm font-medium text-muted-foreground">Expiry Date</div>
+                                    <div className="flex items-center gap-2">
+                                        <Calendar className="h-4 w-4" />
+                                        <span className="font-medium">{new Date(data.expiryDate).toLocaleDateString()}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <div className="text-sm font-medium text-muted-foreground">Reason</div>
+                                <div className="bg-muted rounded-lg p-4">
+                                    <p className="text-sm">{data.reason}</p>
+                                </div>
+                            </div>
+
+                            {data.resolutionComment && (
+                                <div className="space-y-2">
+                                    <div className="text-sm font-medium text-muted-foreground">Resolution Comment</div>
+                                    <div className="bg-muted rounded-lg p-4">
+                                        <p className="text-sm">{data.resolutionComment}</p>
+                                    </div>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Sidebar */}
+                <div className="space-y-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Status Information</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                                <div className="text-sm font-medium text-muted-foreground">Acknowledgment</div>
+                                <Badge variant={data.acknowledgment ? "default" : "secondary"} className="text-sm">
+                                    {data.acknowledgment ?
+                                        `Acknowledged on ${new Date(data.acknowledgmentDate!).toLocaleDateString()}` :
+                                        "Pending Acknowledgment"
+                                    }
+                                </Badge>
+                            </div>
+
+                            <div className="space-y-2">
+                                <div className="text-sm font-medium text-muted-foreground">Performance Month</div>
+                                <div className="font-medium">{data.performanceMonth}</div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <div className="text-sm font-medium text-muted-foreground">Active Status</div>
+                                <Badge variant={data.active ? "destructive" : "outline"} className="text-sm">
+                                    {data.active ? "Active" : "Inactive"}
+                                </Badge>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Level Impact</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            <div className="flex justify-between text-sm">
+                                <span>Validity Period:</span>
+                                <span className="font-medium">{levelInfo.validity} days</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                                <span>Performance Impact:</span>
+                                <span className="font-medium text-red-600">-{levelInfo.points} points</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                                <span>Days Remaining:</span>
+                                <span className="font-medium">
+                                    {Math.ceil((new Date(data.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days
+                                </span>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
-
-            <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-lg md:text-2xl">Warning Details</CardTitle>
-                    <CardDescription className="text-sm">
-                        Issued to <span className="font-semibold">{data.employeeName}</span> by <span className="font-semibold">{data.issuedBy}</span>
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-0">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 py-2">
-                        <div className="space-y-2">
-                            <div className="text-muted-foreground text-sm">Warning Level</div>
-                            <Badge variant="secondary" className="text-sm">{data.level}</Badge>
-                        </div>
-                        <div className="space-y-2">
-                            <div className="text-muted-foreground text-sm">Date Issued</div>
-                            <div className="font-medium text-sm md:text-base">{new Date(data.dateIssued).toLocaleDateString()}</div>
-                        </div>
-                        <div className="space-y-2">
-                            <div className="text-muted-foreground text-sm">Acknowledged</div>
-                            <Badge variant={data.acknowledgment ? "default" : "outline"} className="text-sm">
-                                {data.acknowledgment ? "Yes" : "No"}
-                            </Badge>
-                        </div>
-                        <div className="space-y-2">
-                            <div className="text-muted-foreground text-sm">Status</div>
-                            <Badge variant={data.status === "Active" ? "destructive" : "outline"} className="text-sm">
-                                {data.status}
-                            </Badge>
-                        </div>
-                    </div>
-
-                    {data.reason && (
-                        <div className="mt-4 md:mt-6 pt-4 border-t">
-                            <div className="text-muted-foreground text-sm mb-2">Reason</div>
-                            <div className="bg-muted rounded p-3 text-sm md:text-base">{data.reason}</div>
-                        </div>
-                    )}
-
-                    {data.notes && (
-                        <div className="mt-4 pt-4 border-t">
-                            <div className="text-muted-foreground text-sm mb-2">Notes</div>
-                            <div className="bg-muted rounded p-3 text-sm md:text-base">{data.notes}</div>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
         </div>
     );
 }

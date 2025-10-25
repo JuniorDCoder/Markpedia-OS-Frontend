@@ -113,7 +113,7 @@ export default function GoalsPage() {
                 {
                     id: '3',
                     title: 'Sales Department Revenue Target',
-                    description: 'Achieve 70% of company revenue target through sales team efforts',
+                    description: 'Achieve 70% of company revenue target through sales entities efforts',
                     type: 'Department',
                     category: 'Revenue',
                     targetValue: 700000,
@@ -138,7 +138,7 @@ export default function GoalsPage() {
                 {
                     id: '4',
                     title: 'Improve Team Productivity',
-                    description: 'Increase overall team productivity by 20% through process optimization and training',
+                    description: 'Increase overall entities productivity by 20% through process optimization and training',
                     type: 'Department',
                     category: 'Efficiency',
                     targetValue: 120,

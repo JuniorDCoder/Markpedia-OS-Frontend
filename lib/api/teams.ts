@@ -2,7 +2,7 @@ import { TeamMember, Department, Role } from '@/types';
 
 // Mock data
 const mockDepartments: Department[] = [
-    { id: '1', name: 'Engineering', description: 'Software development team' },
+    { id: '1', name: 'Engineering', description: 'Software development entities' },
     { id: '2', name: 'Product', description: 'Product management and design' },
     { id: '3', name: 'Sales', description: 'Sales and business development' },
     { id: '4', name: 'Marketing', description: 'Marketing and communications' },

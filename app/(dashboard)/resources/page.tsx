@@ -45,7 +45,7 @@ const mockSOPs: SOP[] = [
     {
         id: '1',
         title: 'New Employee Onboarding',
-        description: 'Step-by-step process for onboarding new team members',
+        description: 'Step-by-step process for onboarding new entities members',
         category: 'HR',
         department: 'Human Resources',
         steps: [

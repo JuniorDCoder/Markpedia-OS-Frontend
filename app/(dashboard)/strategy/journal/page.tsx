@@ -69,7 +69,7 @@ const mockQuickCaptures: QuickCapture[] = [
     {
         id: '2',
         content: 'Team lunch next Friday to celebrate Q4 results',
-        tags: ['team-building', 'celebration'],
+        tags: ['entities-building', 'celebration'],
         authorId: '1',
         createdAt: '2024-01-15T14:30:00Z',
         processed: true,

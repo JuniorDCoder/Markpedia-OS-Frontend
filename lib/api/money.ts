@@ -5,7 +5,7 @@ const mockMoneyRequests: MoneyRequest[] = [
     {
         id: '1',
         title: 'Office Equipment Purchase',
-        description: 'Need to purchase new laptops for the development team',
+        description: 'Need to purchase new laptops for the development entities',
         amount: 5000,
         category: 'Equipment',
         requestedBy: '2',

@@ -407,7 +407,7 @@ const mockTasks: Task[] = [
         proof_of_completion: {
             attachments: ['setup_guide.pdf', 'environment_config.yml'],
             links: ['https://github.com/company/dev-setup'],
-            notes: 'Environment ready for team onboarding'
+            notes: 'Environment ready for entities onboarding'
         },
         progress: 100,
         start_date: '2024-01-15',
@@ -624,7 +624,7 @@ const mockJobDescriptions: JobDescription[] = [
             'Manage marketing budget and resources',
             'Lead digital marketing campaigns',
             'Analyze market trends and customer insights',
-            'Manage marketing team members',
+            'Manage marketing entities members',
             'Collaborate with sales and product teams'
         ],
         kpis: [
@@ -720,7 +720,7 @@ const mockJobDescriptions: JobDescription[] = [
         id: '4',
         title: 'Sales Development Representative',
         department: 'sales',
-        summary: 'Generate qualified leads and opportunities for the sales team',
+        summary: 'Generate qualified leads and opportunities for the sales entities',
         purpose: 'Identify and qualify potential customers to fuel the sales pipeline',
         vision: 'Become a top performer and advance to Account Executive role',
         mission: 'Consistently exceed lead generation targets and qualify high-value opportunities',
@@ -1070,7 +1070,7 @@ const mockProblems: Problem[] = [
                 'Why are KYC approvals delayed? - Manual verification required for 30% of applications',
                 'Why is manual verification needed? - Automated system flags false positives',
                 'Why false positives? - Data validation rules too strict',
-                'Why strict rules? - Compliance requirements from legal team',
+                'Why strict rules? - Compliance requirements from legal entities',
                 'Why no optimization? - No regular review process for validation rules'
             ],
             rootCause: 'Lack of regular review process for KYC validation rules and compliance requirements'
@@ -1086,7 +1086,7 @@ const mockProblems: Problem[] = [
             },
             {
                 id: 'ca-002',
-                description: 'Temporarily increase manual review team capacity',
+                description: 'Temporarily increase manual review entities capacity',
                 assignedTo: 'Operations Manager',
                 dueDate: '2025-01-18',
                 status: 'Done'

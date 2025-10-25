@@ -41,7 +41,7 @@ export default function RecognitionPage() {
                     nominatedBy: '1',
                     nominatorName: 'John Smith',
                     category: 'Excellence',
-                    description: 'Sarah consistently delivers high-quality work and goes above and beyond to help team members. Her dedication to excellence is truly inspiring.',
+                    description: 'Sarah consistently delivers high-quality work and goes above and beyond to help entities members. Her dedication to excellence is truly inspiring.',
                     month: 'January',
                     year: 2024,
                     status: 'Winner',
@@ -55,7 +55,7 @@ export default function RecognitionPage() {
                     nominatedBy: '2',
                     nominatorName: 'Sarah Johnson',
                     category: 'Innovation',
-                    description: 'Mike proposed and implemented a new automated testing framework that reduced our deployment time by 50%. His innovative thinking saves the team hours every week.',
+                    description: 'Mike proposed and implemented a new automated testing framework that reduced our deployment time by 50%. His innovative thinking saves the entities hours every week.',
                     month: 'January',
                     year: 2024,
                     status: 'Nominated',
@@ -69,7 +69,7 @@ export default function RecognitionPage() {
                     nominatedBy: '3',
                     nominatorName: 'Mike Employee',
                     category: 'Leadership',
-                    description: 'John has shown exceptional leadership during our recent project challenges. He kept the team motivated and focused, ensuring we delivered on time despite obstacles.',
+                    description: 'John has shown exceptional leadership during our recent project challenges. He kept the entities motivated and focused, ensuring we delivered on time despite obstacles.',
                     month: 'December',
                     year: 2023,
                     status: 'Winner',
@@ -83,7 +83,7 @@ export default function RecognitionPage() {
                     nominatedBy: '1',
                     nominatorName: 'John Smith',
                     category: 'Teamwork',
-                    description: 'Alice is always willing to help others and collaborate effectively. She mentors junior developers and creates a positive team environment.',
+                    description: 'Alice is always willing to help others and collaborate effectively. She mentors junior developers and creates a positive entities environment.',
                     month: 'January',
                     year: 2024,
                     status: 'Nominated',
@@ -356,7 +356,7 @@ export default function RecognitionPage() {
                             <p className="text-xs sm:text-sm text-muted-foreground mb-4">
                                 {searchTerm || categoryFilter !== 'all' || statusFilter !== 'all'
                                     ? 'Try adjusting your search or filter criteria'
-                                    : 'Start recognizing your team members for their great work!'
+                                    : 'Start recognizing your entities members for their great work!'
                                 }
                             </p>
                             {!searchTerm && categoryFilter === 'all' && statusFilter === 'all' && (

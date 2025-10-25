@@ -28,9 +28,21 @@ export interface Employee {
     reportsTo?: string;
     team?: string[];
     isActive: boolean;
+    entityId?: string;
 }
 
-// Add these new interfaces for Dashboard
+export interface Entity {
+    id: string;
+    name: string;
+    level: 'Global' | 'Regional' | 'Country';
+    parentId?: string;
+    country: string;
+    headName: string;
+    email: string;
+    establishedDate: string;
+    active: boolean;
+}
+// New interfaces for Dashboard
 export interface DepartmentPerformance {
     id: string;
     name: string;

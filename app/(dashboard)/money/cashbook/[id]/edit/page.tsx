@@ -1,5 +1,6 @@
-import { cashbookService } from "@/lib/api/cashbook";
-import CashbookFormClient from "@/components/sections/CashbookFormClient";
+import { notFound } from 'next/navigation';
+import { cashManagementService } from '@/lib/api/cash-management';
+import CashbookFormClient from '@/components/sections/CashbookFormClient';
 
 interface Props {
     params: { id: string };
@@ -7,8 +8,8 @@ interface Props {
 
 export async function generateStaticParams() {
     try {
-        const cashbooks = await cashbookService.list()
-        return cashbooks.map(entry => ({ id: entry.id.toString() }))
+        const entries = await cashManagementService.listCashbookEntries();
+        return entries.map(entry => ({ id: entry.id.toString() }));
     } catch (error) {
         console.error('Error generating static params:', error);
         return [];
@@ -16,9 +17,12 @@ export async function generateStaticParams() {
 }
 
 export default async function EditCashbookPage({ params }: Props) {
-    const entry = await cashbookService.get(params.id);
+    const entries = await cashManagementService.listCashbookEntries();
+    const entry = entries.find(e => e.id === params.id);
+
     if (!entry) {
-        return <div className="p-6 text-red-600">Entry not found.</div>;
+        notFound();
     }
+
     return <CashbookFormClient mode="edit" initialData={entry} />;
 }

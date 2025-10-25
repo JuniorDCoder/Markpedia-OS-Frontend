@@ -49,7 +49,7 @@ export default function CommunityFeedPage() {
                     comments: [
                         {
                             id: '1',
-                            content: 'Congratulations to the whole team! This is amazing news.',
+                            content: 'Congratulations to the whole entities! This is amazing news.',
                             authorId: '2',
                             authorName: 'Sarah Johnson',
                             createdAt: '2024-01-15T11:00:00Z',
@@ -60,7 +60,7 @@ export default function CommunityFeedPage() {
                 },
                 {
                     id: '2',
-                    content: 'Just finished an amazing training session on React best practices. The knowledge sharing in our team is incredible! 💪',
+                    content: 'Just finished an amazing training session on React best practices. The knowledge sharing in our entities is incredible! 💪',
                     authorId: '2',
                     authorName: 'Sarah Johnson',
                     createdAt: '2024-01-14T15:45:00Z',

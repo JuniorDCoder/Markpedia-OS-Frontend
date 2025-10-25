@@ -108,14 +108,8 @@ const navigation = {
             name: 'Warnings & PIPs',
             href: '/people/warnings',
             icon: Shield,
-            roles: ['CEO', 'Admin', 'Manager', 'CXO'],
+            roles: ['CEO', 'Admin', 'Manager', 'CXO', 'Employee'],
         },
-        {
-            name: 'Team',
-            href: '/people/team',
-            icon: Users,
-            roles: ['CEO', 'Admin', 'Manager', 'CXO'],
-        }
     ],
     money: [
         {
@@ -143,6 +137,12 @@ const navigation = {
             href: '/strategy/journal',
             icon: BookOpen,
             roles: ['CEO', 'Admin', 'Manager', 'Employee', 'CXO'],
+        },
+        {
+            name: 'Entities',
+            href: '/strategy/entities',
+            icon: Users,
+            roles: ['CEO', 'Admin', 'Manager', 'CXO'],
         },
         {
             name: 'Organigram',

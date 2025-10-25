@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Employee, OrganigramSnapshot, Department, User } from '@/types';
+import { Employee, OrganigramSnapshot, Department, User, Entity } from '@/types';
 import {
     Plus,
     Download,
@@ -21,13 +21,19 @@ import {
     Trash2,
     Save,
     ChevronDown,
-    Menu
+    Menu,
+    Globe,
+    MapPin,
+    Flag,
+    Eye,
+    Layers
 } from 'lucide-react';
 
 interface OrganigramClientProps {
     employees: Employee[];
     snapshots: OrganigramSnapshot[];
     departments: Department[];
+    entities: Entity[];
     user: User;
 }
 
@@ -43,16 +49,46 @@ export default function OrganigramClient({
                                              employees,
                                              snapshots,
                                              departments,
+                                             entities,
                                              user
                                          }: OrganigramClientProps) {
     const [searchTerm, setSearchTerm] = useState('');
     const [departmentFilter, setDepartmentFilter] = useState('all');
+    const [levelFilter, setLevelFilter] = useState<'all' | 'Global' | 'Regional' | 'Country'>('all');
+    const [scopeFilter, setScopeFilter] = useState<'all' | 'Global' | 'Regional' | 'Country'>('all');
     const [selectedSnapshot, setSelectedSnapshot] = useState<OrganigramSnapshot | null>(snapshots[0] || null);
     const [isDragging, setIsDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const [selectedNode, setSelectedNode] = useState<string | null>(null);
     const [mobileView, setMobileView] = useState<'organigram' | 'list'>('organigram');
+    const [viewMode, setViewMode] = useState<'tree' | 'matrix' | 'map'>('tree');
     const organigramRef = useRef<HTMLDivElement>(null);
+
+    // Get entity level for an employee
+    const getEmployeeLevel = (employee: Employee): 'Global' | 'Regional' | 'Country' => {
+        const entity = entities.find(e => e.id === employee.entityId);
+        return entity?.level || 'Global';
+    };
+
+    // Get level color
+    const getLevelColor = (level: string) => {
+        switch (level) {
+            case 'Global': return '#001F3F'; // Navy
+            case 'Regional': return '#22C55E'; // Green
+            case 'Country': return '#FACC15'; // Gold
+            default: return '#6B7280'; // Gray
+        }
+    };
+
+    // Get level icon
+    const getLevelIcon = (level: string) => {
+        switch (level) {
+            case 'Global': return <Globe className="h-3 w-3" />;
+            case 'Regional': return <MapPin className="h-3 w-3" />;
+            case 'Country': return <Flag className="h-3 w-3" />;
+            default: return <Building className="h-3 w-3" />;
+        }
+    };
 
     // Build organigram tree from snapshot
     const buildOrganigramTree = useCallback((snapshot: OrganigramSnapshot): OrganigramNode[] => {
@@ -82,8 +118,12 @@ export default function OrganigramClient({
         const matchesSearch = employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             employee.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
             employee.department.toLowerCase().includes(searchTerm.toLowerCase());
+
         const matchesDepartment = departmentFilter === 'all' || employee.department === departmentFilter;
-        return matchesSearch && matchesDepartment;
+
+        const matchesLevel = levelFilter === 'all' || getEmployeeLevel(employee) === levelFilter;
+
+        return matchesSearch && matchesDepartment && matchesLevel;
     });
 
     const canManage = user?.role === 'CEO' || user?.role === 'Admin' || user?.role === 'CXO';
@@ -118,6 +158,9 @@ export default function OrganigramClient({
 
     const renderOrganigramNode = (node: OrganigramNode, level: number = 0) => {
         const { employee, position, children } = node;
+        const employeeLevel = getEmployeeLevel(employee);
+        const levelColor = getLevelColor(employeeLevel);
+        const levelIcon = getLevelIcon(employeeLevel);
 
         return (
             <div key={node.id} className="flex flex-col items-center">
@@ -129,35 +172,36 @@ export default function OrganigramClient({
             relative bg-white border-2 rounded-lg p-3 sm:p-4 shadow-sm cursor-move min-w-[160px] sm:min-w-[200px]
             transition-all duration-200 hover:shadow-md hover:border-blue-300
             ${selectedNode === node.id ? 'border-blue-500 shadow-md' : 'border-gray-200'}
-            ${employee.department === 'Executive' ? 'border-purple-300 bg-purple-50' : ''}
-            ${employee.department === 'Technology' ? 'border-blue-300 bg-blue-50' : ''}
-            ${employee.department === 'Marketing' ? 'border-green-300 bg-green-50' : ''}
+            ${employeeLevel === 'Global' ? 'border-blue-300 bg-blue-50' : ''}
+            ${employeeLevel === 'Regional' ? 'border-green-300 bg-green-50' : ''}
+            ${employeeLevel === 'Country' ? 'border-yellow-300 bg-yellow-50' : ''}
           `}
                     style={{
                         transform: `translate(${position.x}px, ${position.y}px)`,
                         position: 'absolute'
                     }}
                 >
-                    {/* Department color indicator */}
+                    {/* Level color indicator */}
                     <div
                         className="absolute top-0 left-0 w-full h-1 rounded-t-lg"
-                        style={{
-                            backgroundColor: departments.find(d => d.name === employee.department)?.color || '#6B7280'
-                        }}
+                        style={{ backgroundColor: levelColor }}
                     />
 
                     <div className="text-center">
                         <div className="flex items-center justify-between mb-2 gap-1">
-                            <Badge
-                                variant="secondary"
-                                className="text-xs capitalize flex-1 truncate"
-                                style={{
-                                    backgroundColor: departments.find(d => d.name === employee.department)?.color + '20',
-                                    color: departments.find(d => d.name === employee.department)?.color
-                                }}
-                            >
-                                {employee.department}
-                            </Badge>
+                            <div className="flex items-center gap-1 flex-1">
+                                {levelIcon}
+                                <Badge
+                                    variant="secondary"
+                                    className="text-xs capitalize flex-1 truncate"
+                                    style={{
+                                        backgroundColor: levelColor + '20',
+                                        color: levelColor
+                                    }}
+                                >
+                                    {employeeLevel}
+                                </Badge>
+                            </div>
                             {canManage && (
                                 <div className="flex gap-1 flex-shrink-0">
                                     <Button variant="ghost" size="icon" className="h-5 w-5 sm:h-6 sm:w-6">
@@ -176,6 +220,9 @@ export default function OrganigramClient({
                         )}
                         {employee.role === 'CXO' && (
                             <Badge variant="default" className="mt-2 bg-blue-500 text-xs">CXO</Badge>
+                        )}
+                        {employee.role === 'Manager' && (
+                            <Badge variant="default" className="mt-2 bg-green-500 text-xs">Manager</Badge>
                         )}
                     </div>
 
@@ -230,41 +277,235 @@ export default function OrganigramClient({
     // Employee List View for Mobile
     const EmployeeListView = () => (
         <div className="space-y-3">
-            {filteredEmployees.map(employee => (
-                <Card key={employee.id} className="border">
-                    <CardContent className="pt-4">
-                        <div className="flex items-start justify-between">
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <Badge
-                                        variant="secondary"
-                                        className="text-xs"
-                                        style={{
-                                            backgroundColor: departments.find(d => d.name === employee.department)?.color + '20',
-                                            color: departments.find(d => d.name === employee.department)?.color
-                                        }}
-                                    >
-                                        {employee.department}
-                                    </Badge>
-                                    {employee.role === 'CEO' && (
-                                        <Badge variant="default" className="bg-purple-500 text-xs">CEO</Badge>
-                                    )}
-                                    {employee.role === 'CXO' && (
-                                        <Badge variant="default" className="bg-blue-500 text-xs">CXO</Badge>
-                                    )}
+            {filteredEmployees.map(employee => {
+                const employeeLevel = getEmployeeLevel(employee);
+                const levelColor = getLevelColor(employeeLevel);
+                const levelIcon = getLevelIcon(employeeLevel);
+
+                return (
+                    <Card key={employee.id} className="border">
+                        <CardContent className="pt-4">
+                            <div className="flex items-start justify-between">
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="flex items-center gap-1">
+                                            {levelIcon}
+                                            <Badge
+                                                variant="secondary"
+                                                className="text-xs"
+                                                style={{
+                                                    backgroundColor: levelColor + '20',
+                                                    color: levelColor
+                                                }}
+                                            >
+                                                {employeeLevel}
+                                            </Badge>
+                                        </div>
+                                        {employee.role === 'CEO' && (
+                                            <Badge variant="default" className="bg-purple-500 text-xs">CEO</Badge>
+                                        )}
+                                        {employee.role === 'CXO' && (
+                                            <Badge variant="default" className="bg-blue-500 text-xs">CXO</Badge>
+                                        )}
+                                        {employee.role === 'Manager' && (
+                                            <Badge variant="default" className="bg-green-500 text-xs">Manager</Badge>
+                                        )}
+                                    </div>
+                                    <h3 className="font-semibold text-sm mb-1">{employee.name}</h3>
+                                    <p className="text-xs text-muted-foreground mb-1">{employee.title}</p>
+                                    <p className="text-xs text-muted-foreground">{employee.email}</p>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <Badge
+                                            variant="outline"
+                                            className="text-xs"
+                                            style={{
+                                                borderColor: departments.find(d => d.name === employee.department)?.color,
+                                                color: departments.find(d => d.name === employee.department)?.color
+                                            }}
+                                        >
+                                            {employee.department}
+                                        </Badge>
+                                    </div>
                                 </div>
-                                <h3 className="font-semibold text-sm mb-1">{employee.name}</h3>
-                                <p className="text-xs text-muted-foreground mb-1">{employee.title}</p>
-                                <p className="text-xs text-muted-foreground">{employee.email}</p>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                    <MoreVertical className="h-4 w-4" />
+                                </Button>
                             </div>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                <MoreVertical className="h-4 w-4" />
-                            </Button>
-                        </div>
+                        </CardContent>
+                    </Card>
+                );
+            })}
+        </div>
+    );
+
+    // Filters Section
+    const FiltersSection = () => (
+        <Card className="border shadow-sm">
+            <CardHeader className="pb-3 sm:pb-4">
+                <CardTitle className="text-base sm:text-lg">Filters</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 sm:space-y-4">
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-3 w-3 sm:h-4 sm:w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                        placeholder="Search employees..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-9 sm:pl-10 text-sm"
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium mb-2">Scope</label>
+                    <Select value={scopeFilter} onValueChange={(value: any) => setScopeFilter(value)}>
+                        <SelectTrigger className="text-sm">
+                            <SelectValue placeholder="All Scopes" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Scopes</SelectItem>
+                            <SelectItem value="Global">Global</SelectItem>
+                            <SelectItem value="Regional">Regional</SelectItem>
+                            <SelectItem value="Country">Country</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium mb-2">Level</label>
+                    <Select value={levelFilter} onValueChange={(value: any) => setLevelFilter(value)}>
+                        <SelectTrigger className="text-sm">
+                            <SelectValue placeholder="All Levels" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Levels</SelectItem>
+                            <SelectItem value="Global">Global</SelectItem>
+                            <SelectItem value="Regional">Regional</SelectItem>
+                            <SelectItem value="Country">Country</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium mb-2">Department</label>
+                    <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                        <SelectTrigger className="text-sm">
+                            <SelectValue placeholder="All Departments" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Departments</SelectItem>
+                            {departments.map(dept => (
+                                <SelectItem key={dept.id} value={dept.name}>
+                                    {dept.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium mb-2">View Mode</label>
+                    <Select value={viewMode} onValueChange={(value: any) => setViewMode(value)}>
+                        <SelectTrigger className="text-sm">
+                            <SelectValue placeholder="Tree View" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="tree">Tree View</SelectItem>
+                            <SelectItem value="matrix">Matrix View</SelectItem>
+                            <SelectItem value="map">Map View</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </CardContent>
+        </Card>
+    );
+
+    // Stats Cards
+    const StatsCards = () => {
+        const globalCount = employees.filter(e => getEmployeeLevel(e) === 'Global').length;
+        const regionalCount = employees.filter(e => getEmployeeLevel(e) === 'Regional').length;
+        const countryCount = employees.filter(e => getEmployeeLevel(e) === 'Country').length;
+
+        return (
+            <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
+                <Card className="border shadow-sm">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-xs sm:text-sm font-medium">Total Employees</CardTitle>
+                        <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-xl sm:text-2xl font-bold">{employees.length}</div>
                     </CardContent>
                 </Card>
-            ))}
-        </div>
+                <Card className="border shadow-sm">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-xs sm:text-sm font-medium">Entities</CardTitle>
+                        <Building className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-xl sm:text-2xl font-bold">{entities.length}</div>
+                    </CardContent>
+                </Card>
+                <Card className="border shadow-sm">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-xs sm:text-sm font-medium">Global</CardTitle>
+                        <Globe className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-xl sm:text-2xl font-bold">{globalCount}</div>
+                    </CardContent>
+                </Card>
+                <Card className="border shadow-sm">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-xs sm:text-sm font-medium">Regional/Country</CardTitle>
+                        <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-xl sm:text-2xl font-bold">{regionalCount + countryCount}</div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    };
+
+    // Level Legend
+    const LevelLegend = () => (
+        <Card className="border shadow-sm">
+            <CardHeader className="pb-3 sm:pb-4">
+                <CardTitle className="text-base sm:text-lg">Level Legend</CardTitle>
+                <CardDescription className="text-sm">Organization hierarchy colors</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded-sm bg-blue-600 border-2 border-blue-300" />
+                            <span className="text-sm">Global Level</span>
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                            {employees.filter(e => getEmployeeLevel(e) === 'Global').length}
+                        </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded-sm bg-green-500 border-2 border-green-300" />
+                            <span className="text-sm">Regional Level</span>
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                            {employees.filter(e => getEmployeeLevel(e) === 'Regional').length}
+                        </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded-sm bg-yellow-500 border-2 border-yellow-300" />
+                            <span className="text-sm">Country Level</span>
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                            {employees.filter(e => getEmployeeLevel(e) === 'Country').length}
+                        </Badge>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
     );
 
     return (
@@ -274,10 +515,10 @@ export default function OrganigramClient({
                 <div className="flex-1 min-w-0">
                     <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight flex items-center">
                         <Building className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8 mr-2 sm:mr-3" />
-                        Organigram
+                        Markpedia OS Organigram
                     </h1>
                     <p className="text-muted-foreground mt-1 sm:mt-2 text-xs sm:text-sm">
-                        Visualize and manage your organization structure
+                        Global → Regional → Country Hierarchy • v2.0
                     </p>
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
@@ -303,46 +544,7 @@ export default function OrganigramClient({
             </div>
 
             {/* Stats Cards */}
-            <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
-                <Card className="border shadow-sm">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-xs sm:text-sm font-medium">Total Employees</CardTitle>
-                        <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-xl sm:text-2xl font-bold">{employees.length}</div>
-                    </CardContent>
-                </Card>
-                <Card className="border shadow-sm">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-xs sm:text-sm font-medium">Departments</CardTitle>
-                        <Building className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-xl sm:text-2xl font-bold">{departments.length}</div>
-                    </CardContent>
-                </Card>
-                <Card className="border shadow-sm">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-xs sm:text-sm font-medium">Snapshots</CardTitle>
-                        <Camera className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-xl sm:text-2xl font-bold">{snapshots.length}</div>
-                    </CardContent>
-                </Card>
-                <Card className="border shadow-sm">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-xs sm:text-sm font-medium">Managers</CardTitle>
-                        <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-xl sm:text-2xl font-bold">
-                            {employees.filter(e => e.role === 'Manager' || e.role === 'CXO').length}
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+            <StatsCards />
 
             {/* Mobile Navigation */}
             <MobileNavigation />
@@ -351,39 +553,10 @@ export default function OrganigramClient({
                 {/* Sidebar - Hidden on mobile when in organigram view */}
                 <div className={`space-y-4 sm:space-y-6 ${mobileView === 'organigram' ? 'hidden sm:block' : 'block'}`}>
                     {/* Filters */}
-                    <Card className="border shadow-sm">
-                        <CardHeader className="pb-3 sm:pb-4">
-                            <CardTitle className="text-base sm:text-lg">Filters</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3 sm:space-y-4">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 h-3 w-3 sm:h-4 sm:w-4 -translate-y-1/2 text-muted-foreground" />
-                                <Input
-                                    placeholder="Search employees..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="pl-9 sm:pl-10 text-sm"
-                                />
-                            </div>
+                    <FiltersSection />
 
-                            <div>
-                                <label className="block text-sm font-medium mb-2">Department</label>
-                                <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                                    <SelectTrigger className="text-sm">
-                                        <SelectValue placeholder="All Departments" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All Departments</SelectItem>
-                                        {departments.map(dept => (
-                                            <SelectItem key={dept.id} value={dept.name}>
-                                                {dept.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </CardContent>
-                    </Card>
+                    {/* Level Legend */}
+                    <LevelLegend />
 
                     {/* Snapshots */}
                     <Card className="border shadow-sm">
@@ -458,7 +631,10 @@ export default function OrganigramClient({
                                         {selectedSnapshot?.name || 'Current Organization Structure'}
                                     </CardTitle>
                                     <CardDescription className="text-xs sm:text-sm">
-                                        {canManage ? 'Drag to rearrange • Click to select' : 'Organization structure view'}
+                                        {canManage
+                                            ? 'Global → Regional → Country Hierarchy • Drag to rearrange'
+                                            : 'Multi-level organization structure view'
+                                        }
                                     </CardDescription>
                                 </div>
                                 <div className="flex gap-2">
@@ -503,7 +679,7 @@ export default function OrganigramClient({
                                                 </h3>
                                                 <p className="text-xs sm:text-sm text-muted-foreground mb-4">
                                                     {canManage
-                                                        ? 'Start by adding employees and creating your organization structure'
+                                                        ? 'Start by adding employees and creating your multi-level organization structure'
                                                         : 'Organization structure will be available soon'
                                                     }
                                                 </p>

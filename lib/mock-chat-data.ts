@@ -100,7 +100,7 @@ export const mockChannels: Channel[] = [
     {
         id: '2',
         name: 'engineering',
-        description: 'Engineering team discussions',
+        description: 'Engineering entities discussions',
         type: 'department',
         members: ['2', '4'],
         isPrivate: false,
@@ -260,7 +260,7 @@ export const mockGroups: Group[] = [
     {
         id: '2',
         name: 'Product Launch',
-        description: 'Q1 product launch team',
+        description: 'Q1 product launch entities',
         members: ['1', '2', '3', '4', '5'],
         createdBy: '2',
         createdAt: '2024-01-16T00:00:00Z',
