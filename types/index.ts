@@ -153,7 +153,7 @@ export interface DashboardData {
     lastUpdated: string;
 }
 
-// Keep all your existing interfaces below (they remain unchanged)
+// Keep all existing interfaces below (they remain unchanged)
 export interface OrganigramNode {
     id: string;
     employeeId: string;

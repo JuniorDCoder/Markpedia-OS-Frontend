@@ -1,63 +1,33 @@
 import { notFound } from 'next/navigation';
-import { JournalEntry, User } from '@/types';
+import { JournalEntry, User } from '@/types/journal';
 import JournalViewClient from "@/components/sections/JournalViewClient";
+import { JournalService } from '@/services/journalService';
 
-// Mock data
-const mockJournalEntry: JournalEntry = {
-    createdBy: "",
-    id: '1',
-    title: 'Customer Support Process Improvement',
-    content: `## Issue Identified
-Noticed that response times are increasing during peak hours (2-4 PM).
-
-## Proposed Solution
-Implement a tiered support system:
-1. **AI Assistant**: Handle simple, common queries automatically
-2. **Level 1 Support**: Standard issue resolution
-3. **Level 2 Support**: Complex technical issues
-
-## Expected Impact
-- Reduce average response time by 40%
-- Improve customer satisfaction scores
-- Free up senior support staff for complex issues
-
-## Next Steps
-- [ ] Research AI support tools
-- [ ] Create training materials
-- [ ] Pilot program with small team`,
-    type: 'learning',
-    category: 'Process Improvement',
-    tags: ['support', 'efficiency', 'ai', 'customer-satisfaction'],
-    isPrivate: false,
-    authorId: '1',
-    authorName: 'Sarah Chen',
-    department: 'Customer Support',
-    status: 'published',
-    relatedGoalId: '3',
-    createdAt: '2024-01-15T10:30:00Z',
-    updatedAt: '2024-01-15T10:30:00Z',
-    publishedAt: '2024-01-15T10:30:00Z'
-};
-
+// Mock user data
 const mockUser: User = {
-    createdAt: "", isActive: false, lastName: "",
     id: '1',
-    firstName: 'Sarah Chen',
+    firstName: 'Sarah',
+    lastName: 'Chen',
     email: 'sarah@company.com',
     role: 'Manager',
-    department: 'Customer Support'
+    department: 'Customer Support',
+    createdAt: '2023-01-15T00:00:00Z',
+    isActive: true
 };
 
 async function getJournalEntry(id: string): Promise<JournalEntry | null> {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve(id === '1' ? mockJournalEntry : null);
-        }, 100);
-    });
+    try {
+        const entries = await JournalService.getJournalEntries();
+        return entries.find(entry => entry.id === id) || null;
+    } catch (error) {
+        console.error('Error fetching journal entry:', error);
+        return null;
+    }
 }
 
 export async function generateStaticParams() {
-    return [{ id: '1' }];
+    // In a real app, you'd fetch all entry IDs
+    return [{ id: '1' }, { id: '2' }, { id: '3' }, { id: '4' }, { id: '5' }];
 }
 
 export default async function JournalViewPage({ params }: { params: { id: string } }) {
@@ -68,8 +38,11 @@ export default async function JournalViewPage({ params }: { params: { id: string
     }
 
     // Check if user can view private entries
-    const canView = !entry.isPrivate || entry.authorId === mockUser.id ||
-        mockUser.role === 'CEO' || mockUser.role === 'Admin';
+    const canView = entry.visibilityLevel !== 'Private' ||
+        entry.createdBy === mockUser.id ||
+        mockUser.role === 'CEO' ||
+        mockUser.role === 'Admin' ||
+        entry.sharedWith.includes(mockUser.id);
 
     if (!canView) {
         notFound();

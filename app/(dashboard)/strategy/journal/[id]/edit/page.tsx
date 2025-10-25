@@ -1,45 +1,32 @@
 import { notFound, redirect } from 'next/navigation';
-import { JournalEntry, User } from '@/types';
+import { JournalEntry, User } from '@/types/journal';
 import JournalEditClient from "@/components/sections/JournalEditClient";
+import { JournalService } from '@/services/journalService';
 
-// Mock data
-const mockJournalEntry: JournalEntry = {
-    createdBy: "",
-    id: '1',
-    title: 'Customer Support Process Improvement',
-    content: 'Noticed that response times are increasing during peak hours...',
-    type: 'learning',
-    category: 'Process Improvement',
-    tags: ['support', 'efficiency', 'ai'],
-    isPrivate: false,
-    authorId: '1',
-    authorName: 'Sarah Chen',
-    department: 'Customer Support',
-    status: 'published',
-    createdAt: '2024-01-15T10:30:00Z',
-    updatedAt: '2024-01-15T10:30:00Z',
-    publishedAt: '2024-01-15T10:30:00Z'
-};
-
+// Mock user data
 const mockUser: User = {
-    createdAt: "", isActive: false, lastName: "",
     id: '1',
-    firstName: 'Sarah Chen',
+    firstName: 'Sarah',
+    lastName: 'Chen',
     email: 'sarah@company.com',
     role: 'Manager',
-    department: 'Customer Support'
+    department: 'Customer Support',
+    createdAt: '2023-01-15T00:00:00Z',
+    isActive: true
 };
 
 async function getJournalEntry(id: string): Promise<JournalEntry | null> {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve(id === '1' ? mockJournalEntry : null);
-        }, 100);
-    });
+    try {
+        const entries = await JournalService.getJournalEntries();
+        return entries.find(entry => entry.id === id) || null;
+    } catch (error) {
+        console.error('Error fetching journal entry:', error);
+        return null;
+    }
 }
 
 export async function generateStaticParams() {
-    return [{ id: '1' }];
+    return [{ id: '1' }, { id: '2' }, { id: '3' }, { id: '4' }, { id: '5' }];
 }
 
 export default async function JournalEditPage({ params }: { params: { id: string } }) {
@@ -52,7 +39,7 @@ export default async function JournalEditPage({ params }: { params: { id: string
     // Check permissions
     const canEdit = mockUser.role === 'CEO' || mockUser.role === 'Admin' ||
         (mockUser.role === 'Manager' && entry.department === mockUser.department) ||
-        mockUser.id === entry.authorId;
+        mockUser.id === entry.createdBy;
 
     if (!canEdit) {
         redirect('/strategy/journal');
