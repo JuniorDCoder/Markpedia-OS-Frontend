@@ -325,6 +325,7 @@ export interface LeaveRequest {
     updated_at: string;
     backup_person?: string;
     contact_during_leave?: string;
+    task_project?: string; // New field - task/project to work on during leave
 }
 
 export interface LeaveBalance {

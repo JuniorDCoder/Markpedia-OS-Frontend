@@ -10,9 +10,23 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, ArrowLeft, Plus, Loader2, Upload, User, Phone, Mail } from 'lucide-react';
+import { Calendar, ArrowLeft, Plus, Loader2, Upload, User, Phone, Mail, Briefcase } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+
+// Mock data for tasks/projects - in a real app, this would come from an API
+const MOCK_TASKS = [
+    { id: '1', name: 'Q4 Sales Report Preparation', project: 'Sales Reporting', department: 'Sales' },
+    { id: '2', name: 'Customer Database Cleanup', project: 'CRM Maintenance', department: 'Sales' },
+    { id: '3', name: 'Marketing Campaign Analysis', project: 'Q1 Campaign Review', department: 'Marketing' },
+    { id: '4', name: 'Website Content Updates', project: 'Website Revamp', department: 'Marketing' },
+    { id: '5', name: 'Employee Training Materials', project: 'Training Development', department: 'HR' },
+    { id: '6', name: 'Recruitment Process Documentation', project: 'HR Process Improvement', department: 'HR' },
+    { id: '7', name: 'Budget Planning for Next Quarter', project: 'Financial Planning', department: 'Finance' },
+    { id: '8', name: 'Expense Report Automation', project: 'Process Automation', department: 'Finance' },
+    { id: '9', name: 'Product Feature Documentation', project: 'Product Development', department: 'Engineering' },
+    { id: '10', name: 'Code Review and Refactoring', project: 'Technical Debt Reduction', department: 'Engineering' },
+];
 
 export default function NewLeaveRequestPage() {
     const router = useRouter();
@@ -26,9 +40,15 @@ export default function NewLeaveRequestPage() {
         reason: '',
         backup_person: '',
         contact_during_leave: '',
+        task_project: '', // New field
         proof: null as File | null
     });
     const [selectedReason, setSelectedReason] = useState('');
+
+    // Filter tasks based on user's department
+    const filteredTasks = MOCK_TASKS.filter(task =>
+        user?.department && task.department === user.department
+    );
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -56,7 +76,7 @@ export default function NewLeaveRequestPage() {
 
             await leaveRequestService.createLeaveRequest({
                 employee_id: user.id,
-                department_id: user.departmentId || '1', // Default department
+                department_id: user.departmentId || '1',
                 userName: user.name,
                 departmentName: user.department || 'General',
                 leave_type: formData.leave_type,
@@ -69,6 +89,7 @@ export default function NewLeaveRequestPage() {
                 applied_on: new Date().toISOString().split('T')[0],
                 backup_person: formData.backup_person,
                 contact_during_leave: formData.contact_during_leave,
+                task_project: formData.task_project, // Include new field
                 balance_before: undefined,
                 balance_after: undefined,
                 remarks: '',
@@ -238,6 +259,32 @@ export default function NewLeaveRequestPage() {
                             </div>
                         </div>
 
+                        {/* Task/Project Selection */}
+                        <div className="space-y-2">
+                            <Label htmlFor="task_project">
+                                <Briefcase className="h-4 w-4 inline mr-1" />
+                                Task/Project to Work On During Leave
+                                <span className="text-muted-foreground text-sm ml-2">(Optional)</span>
+                            </Label>
+                            <Select value={formData.task_project} onValueChange={(value) => setFormData(prev => ({ ...prev, task_project: value }))}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a task or project you plan to work on" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">None - Complete time off</SelectItem>
+                                    {filteredTasks.map((task) => (
+                                        <SelectItem key={task.id} value={task.name}>
+                                            {task.name} ({task.project})
+                                        </SelectItem>
+                                    ))}
+                                    <SelectItem value="other">Other (specify in reason)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">
+                                Select a task you plan to work on remotely during your leave, if applicable
+                            </p>
+                        </div>
+
                         {/* Reason Selection */}
                         <div className="space-y-2">
                             <Label htmlFor="reason-select">Select Reason *</Label>
@@ -366,6 +413,7 @@ export default function NewLeaveRequestPage() {
                                 <li>• Maternity Leave: 14 weeks (4 before + 10 after childbirth)</li>
                                 <li>• Paternity Leave: 3-5 days during childbirth period</li>
                                 <li>• All leave requests subject to manager and HR approval</li>
+                                <li>• Remote work during leave is optional and requires prior agreement</li>
                             </ul>
                         </div>
 

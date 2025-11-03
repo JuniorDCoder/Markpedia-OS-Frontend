@@ -21,13 +21,7 @@ import {
     FileText,
     MapPin,
     Building,
-    User,
-    CheckCircle,
-    AlertCircle,
-    List,
-    Target,
-    ShieldAlert,
-    Paperclip,
+    ArrowRight,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -79,32 +73,12 @@ export default function MinutesPage() {
         }
     };
 
-    const getActionItemStatusColor = (status: string) => {
-        switch (status) {
-            case 'Completed':
-                return 'bg-green-100 text-green-800';
-            case 'In Progress':
-                return 'bg-blue-100 text-blue-800';
-            case 'Pending':
-                return 'bg-yellow-100 text-yellow-800';
-            case 'Cancelled':
-                return 'bg-red-100 text-red-800';
-            default:
-                return 'bg-gray-100 text-gray-800';
-        }
-    };
-
-    const getRiskImpactColor = (impact: string) => {
-        switch (impact) {
-            case 'High':
-                return 'bg-red-100 text-red-800 border-red-200';
-            case 'Medium':
-                return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-            case 'Low':
-                return 'bg-green-100 text-green-800 border-green-200';
-            default:
-                return 'bg-gray-100 text-gray-800 border-gray-200';
-        }
+    const getQuickStats = (meeting: Meeting) => {
+        return {
+            decisions: meeting.decisions?.length || 0,
+            actionItems: meeting.actionItems?.length || 0,
+            risks: meeting.risks?.length || 0,
+        };
     };
 
     if (loading) return <TableSkeleton />;
@@ -202,216 +176,92 @@ export default function MinutesPage() {
                 </Card>
             ) : (
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                    {filteredMeetings.map((meeting) => (
-                        <Card key={meeting.id} className="hover:shadow-md transition-shadow flex flex-col">
-                            <CardHeader className="pb-3">
-                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                                    <div className="space-y-2 flex-1">
-                                        <CardTitle className="text-lg break-words">
-                                            <Link href={`/work/minutes/${meeting.id}`} className="hover:underline">
+                    {filteredMeetings.map((meeting) => {
+                        const stats = getQuickStats(meeting);
+                        return (
+                            <Card key={meeting.id} className="hover:shadow-md transition-shadow group">
+                                <CardHeader className="pb-4">
+                                    <div className="flex justify-between items-start gap-4">
+                                        <div className="space-y-3 flex-1">
+                                            <CardTitle className="text-lg break-words line-clamp-2">
                                                 {meeting.title}
-                                            </Link>
-                                        </CardTitle>
-                                        <CardDescription className="line-clamp-2">{meeting.purpose}</CardDescription>
-                                        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                                            <div className="flex items-center">
-                                                <Calendar className="h-4 w-4 mr-1" />
-                                                {new Date(meeting.date).toLocaleDateString()} • {meeting.startTime} - {meeting.endTime}
+                                            </CardTitle>
+                                            <CardDescription className="line-clamp-2">
+                                                {meeting.purpose}
+                                            </CardDescription>
+                                            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                                                <div className="flex items-center">
+                                                    <Calendar className="h-4 w-4 mr-1" />
+                                                    {new Date(meeting.date).toLocaleDateString()}
+                                                </div>
+                                                <div className="flex items-center">
+                                                    <Clock className="h-4 w-4 mr-1" />
+                                                    {meeting.startTime} - {meeting.endTime}
+                                                </div>
+                                                <div className="flex items-center">
+                                                    <MapPin className="h-4 w-4 mr-1" />
+                                                    {meeting.location}
+                                                </div>
                                             </div>
-                                            <div className="flex items-center">
-                                                <MapPin className="h-4 w-4 mr-1" />
-                                                {meeting.location}
+                                        </div>
+                                        <Badge variant="secondary" className={getStatusColor(meeting.status)}>
+                                            {meeting.status}
+                                        </Badge>
+                                    </div>
+                                </CardHeader>
+
+                                <CardContent className="space-y-4">
+                                    {/* Departments */}
+                                    <div className="flex flex-wrap gap-2">
+                                        {meeting.department.map((dept) => (
+                                            <Badge key={dept} variant="outline" className="text-xs">
+                                                <Building className="h-3 w-3 mr-1" />
+                                                {dept}
+                                            </Badge>
+                                        ))}
+                                    </div>
+
+                                    {/* Quick Stats */}
+                                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                                        <div className="text-center">
+                                            <div className="font-semibold text-blue-600">{stats.decisions}</div>
+                                            <div className="text-xs text-muted-foreground">Decisions</div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="font-semibold text-orange-600">{stats.actionItems}</div>
+                                            <div className="text-xs text-muted-foreground">Actions</div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="font-semibold text-red-600">{stats.risks}</div>
+                                            <div className="text-xs text-muted-foreground">Risks</div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="font-semibold text-gray-600">
+                                                {meeting.participants.length}
                                             </div>
-                                            <div className="flex items-center">
-                                                <Users className="h-4 w-4 mr-1" />
-                                                {meeting.participants.length} participants
+                                            <div className="text-xs text-muted-foreground flex items-center">
+                                                <Users className="h-3 w-3 mr-1" />
+                                                People
                                             </div>
                                         </div>
-                                        <div className="flex flex-wrap gap-2">
-                                            {meeting.department.map((dept) => (
-                                                <Badge key={dept} variant="outline" className="text-xs">
-                                                    <Building className="h-3 w-3 mr-1" />
-                                                    {dept}
-                                                </Badge>
-                                            ))}
-                                        </div>
                                     </div>
-                                    <Badge variant="secondary" className={getStatusColor(meeting.status)}>
-                                        {meeting.status}
-                                    </Badge>
-                                </div>
-                            </CardHeader>
 
-                            <CardContent className="flex-1 space-y-4">
-                                {/* Meeting Details */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                                    <div className="flex items-center gap-2">
-                                        <User className="h-4 w-4 text-muted-foreground" />
-                                        <span className="font-medium">Called by:</span>
-                                        <span>{meeting.calledBy}</span>
+                                    {/* Caller Info */}
+                                    <div className="text-sm text-muted-foreground">
+                                        Called by: <span className="font-medium text-foreground">{meeting.calledBy}</span>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <User className="h-4 w-4 text-muted-foreground" />
-                                        <span className="font-medium">Facilitator:</span>
-                                        <span>{meeting.facilitator}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <FileText className="h-4 w-4 text-muted-foreground" />
-                                        <span className="font-medium">Minute Taker:</span>
-                                        <span>{meeting.minuteTaker}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Users className="h-4 w-4 text-muted-foreground" />
-                                        <span className="font-medium">Absent:</span>
-                                        <span>{meeting.absent.length > 0 ? meeting.absent.join(', ') : 'None'}</span>
-                                    </div>
-                                </div>
 
-                                {/* Agenda */}
-                                {meeting.agenda?.length > 0 && (
-                                    <div>
-                                        <h4 className="font-medium mb-2 flex items-center">
-                                            <List className="h-4 w-4 mr-2" /> Agenda ({meeting.agenda.length} items)
-                                        </h4>
-                                        <div className="space-y-2">
-                                            {meeting.agenda.slice(0, 3).map((item) => (
-                                                <div key={item.id} className="flex justify-between items-start text-sm p-2 bg-gray-50 rounded border">
-                                                    <div>
-                                                        <p className="font-medium">{item.item}</p>
-                                                        <p className="text-xs text-muted-foreground">Presenter: {item.presenter}</p>
-                                                    </div>
-                                                    <Badge variant="outline" className="text-xs">
-                                                        {item.duration}
-                                                    </Badge>
-                                                </div>
-                                            ))}
-                                            {meeting.agenda.length > 3 && (
-                                                <p className="text-xs text-muted-foreground text-center">
-                                                    +{meeting.agenda.length - 3} more agenda items
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Decisions */}
-                                {meeting.decisions?.length > 0 && (
-                                    <div>
-                                        <h4 className="font-medium mb-2 flex items-center">
-                                            <CheckCircle className="h-4 w-4 mr-2 text-green-600" /> Decisions ({meeting.decisions.length})
-                                        </h4>
-                                        <div className="space-y-2">
-                                            {meeting.decisions.slice(0, 2).map((decision) => (
-                                                <div key={decision.id} className="text-sm p-2 bg-green-50 rounded border border-green-100">
-                                                    <p className="font-medium">{decision.description}</p>
-                                                    <div className="flex flex-wrap gap-2 mt-1 text-xs text-muted-foreground">
-                                                        <span>Responsible: {decision.responsible}</span>
-                                                        <span>•</span>
-                                                        <span>Due: {new Date(decision.deadline).toLocaleDateString()}</span>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                            {meeting.decisions.length > 2 && (
-                                                <p className="text-xs text-muted-foreground text-center">
-                                                    +{meeting.decisions.length - 2} more decisions
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Action Items */}
-                                {meeting.actionItems?.length > 0 && (
-                                    <div>
-                                        <h4 className="font-medium mb-2 flex items-center">
-                                            <AlertCircle className="h-4 w-4 mr-2 text-orange-600" /> Action Items ({meeting.actionItems.length})
-                                        </h4>
-                                        <div className="space-y-2">
-                                            {meeting.actionItems.slice(0, 3).map((item) => (
-                                                <div key={item.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm p-2 bg-orange-50 rounded border border-orange-100 gap-2">
-                                                    <div className="flex-1">
-                                                        <p className="font-medium">{item.description}</p>
-                                                        <div className="flex flex-wrap gap-2 mt-1 text-xs text-muted-foreground">
-                                                            <span>Assignee: {item.assignedTo}</span>
-                                                            <span>•</span>
-                                                            <span>Dept: {item.department}</span>
-                                                            <span>•</span>
-                                                            <span>Due: {new Date(item.dueDate).toLocaleDateString()}</span>
-                                                        </div>
-                                                    </div>
-                                                    <Badge variant="outline" className={getActionItemStatusColor(item.status)}>
-                                                        {item.status}
-                                                    </Badge>
-                                                </div>
-                                            ))}
-                                            {meeting.actionItems.length > 3 && (
-                                                <p className="text-xs text-muted-foreground text-center">
-                                                    +{meeting.actionItems.length - 3} more action items
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Risks */}
-                                {meeting.risks?.length > 0 && (
-                                    <div>
-                                        <h4 className="font-medium mb-2 flex items-center">
-                                            <ShieldAlert className="h-4 w-4 mr-2 text-red-600" /> Risks ({meeting.risks.length})
-                                        </h4>
-                                        <div className="space-y-2">
-                                            {meeting.risks.slice(0, 2).map((risk) => (
-                                                <div key={risk.id} className="text-sm p-2 bg-red-50 rounded border border-red-100">
-                                                    <div className="flex justify-between items-start mb-1">
-                                                        <p className="font-medium">{risk.risk}</p>
-                                                        <Badge variant="outline" className={getRiskImpactColor(risk.impact)}>
-                                                            {risk.impact} Impact
-                                                        </Badge>
-                                                    </div>
-                                                    <p className="text-xs text-muted-foreground">Mitigation: {risk.mitigation}</p>
-                                                    <p className="text-xs text-muted-foreground mt-1">Owner: {risk.owner}</p>
-                                                </div>
-                                            ))}
-                                            {meeting.risks.length > 2 && (
-                                                <p className="text-xs text-muted-foreground text-center">
-                                                    +{meeting.risks.length - 2} more risks
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Attachments */}
-                                {meeting.attachments?.length > 0 && (
-                                    <div>
-                                        <h4 className="font-medium mb-2 flex items-center">
-                                            <Paperclip className="h-4 w-4 mr-2" /> Attachments ({meeting.attachments.length})
-                                        </h4>
-                                        <div className="flex flex-wrap gap-2">
-                                            {meeting.attachments.slice(0, 3).map((attachment, index) => (
-                                                <Badge key={index} variant="outline" className="text-xs">
-                                                    {attachment}
-                                                </Badge>
-                                            ))}
-                                            {meeting.attachments.length > 3 && (
-                                                <Badge variant="outline" className="text-xs">
-                                                    +{meeting.attachments.length - 3} more
-                                                </Badge>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Quick Stats */}
-                                <div className="flex justify-between items-center pt-2 border-t text-xs text-muted-foreground">
-                                    <span>{meeting.discussion?.length || 0} discussions</span>
-                                    <span>{meeting.decisions?.length || 0} decisions</span>
-                                    <span>{meeting.actionItems?.length || 0} actions</span>
-                                    <span>{meeting.risks?.length || 0} risks</span>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
+                                    {/* View Details Button */}
+                                    <Button asChild variant="outline" className="w-full group-hover:border-blue-300 transition-colors">
+                                        <Link href={`/work/minutes/${meeting.id}`} className="flex items-center justify-center">
+                                            View Full Details
+                                            <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                                        </Link>
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        );
+                    })}
                 </div>
             )}
         </div>
