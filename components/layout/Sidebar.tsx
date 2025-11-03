@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/tooltip';
 import { useAuthStore } from '@/store/auth';
 import { useAppStore } from '@/store/app';
+import { getCurrentPhase, isRouteAllowed } from '@/lib/phases';
 import {
     LayoutDashboard,
     Users,
@@ -36,6 +37,7 @@ import {
     Lightbulb,
     Shield,
     HeartHandshake,
+    Lock,
 } from 'lucide-react';
 
 const navigation = {
@@ -45,6 +47,7 @@ const navigation = {
             href: '/dashboard',
             icon: LayoutDashboard,
             roles: ['CEO', 'Admin', 'Manager', 'Employee', 'CXO'],
+            phase: 1,
         },
     ],
     work: [
@@ -53,36 +56,42 @@ const navigation = {
             href: '/work/projects',
             icon: Briefcase,
             roles: ['CEO', 'Admin', 'Manager', 'Employee', 'CXO'],
+            phase: 1,
         },
         {
             name: 'Tasks',
             href: '/work/tasks',
             icon: FileText,
             roles: ['CEO', 'Admin', 'Manager', 'Employee', 'CXO'],
+            phase: 1,
         },
         {
             name: 'Minutes',
             href: '/work/minutes',
             icon: Clock,
             roles: ['CEO', 'Admin', 'Manager', 'Employee', 'CXO'],
+            phase: 1,
         },
         {
             name: 'Problems',
             href: '/work/problems',
             icon: Shield,
             roles: ['CEO', 'Admin', 'Manager', 'Employee', 'CXO'],
+            phase: 1,
         },
         {
             name: 'Job Descriptions',
             href: '/work/job-descriptions',
             icon: FileText,
             roles: ['CEO', 'Admin', 'Manager', 'Employee', 'CXO'],
+            phase: 1,
         },
         {
             name: 'Departmental Frameworks',
             href: '/work/departmental-frameworks',
             icon: Briefcase,
             roles: ['CEO', 'Admin', 'Manager', 'Employee', 'CXO'],
+            phase: 1,
         }
     ],
     people: [
@@ -91,24 +100,28 @@ const navigation = {
             href: '/people/attendance',
             icon: UserCheck,
             roles: ['CEO', 'Admin', 'Manager', 'CXO', 'Employee'],
+            phase: 1,
         },
         {
             name: 'Leave Requests',
             href: '/people/leave',
             icon: Calendar,
             roles: ['CEO', 'Admin', 'Manager', 'Employee', 'CXO'],
+            phase: 1,
         },
         {
             name: 'Performance',
             href: '/people/performance',
             icon: TrendingUp,
             roles: ['CEO', 'Admin', 'Manager', 'CXO'],
+            phase: 1,
         },
         {
             name: 'Warnings & PIPs',
             href: '/people/warnings',
             icon: Shield,
             roles: ['CEO', 'Admin', 'Manager', 'CXO', 'Employee'],
+            phase: 1,
         },
     ],
     money: [
@@ -117,12 +130,14 @@ const navigation = {
             href: '/money/cashbook',
             icon: Wallet,
             roles: ['CEO', 'Admin', 'CXO'],
+            phase: 1,
         },
         {
             name: 'Requests & Money Flow',
             href: '/money/requests',
             icon: DollarSign,
             roles: ['CEO', 'Admin', 'Manager', 'CXO'],
+            phase: 1,
         },
     ],
     strategy: [
@@ -131,24 +146,28 @@ const navigation = {
             href: '/strategy/goals',
             icon: Target,
             roles: ['CEO', 'Admin', 'Manager', 'CXO'],
+            phase: 1,
         },
         {
             name: 'Journal',
             href: '/strategy/journal',
             icon: BookOpen,
             roles: ['CEO', 'Admin', 'Manager', 'Employee', 'CXO'],
+            phase: 1,
         },
         {
             name: 'Entities',
             href: '/strategy/entities',
             icon: Users,
             roles: ['CEO', 'Admin', 'Manager', 'CXO'],
+            phase: 1,
         },
         {
             name: 'Organigram',
             href: '/strategy/organigram',
             icon: Users,
             roles: ['CEO', 'Admin', 'Manager', 'Employee', 'CXO'],
+            phase: 1,
         }
     ],
     resources: [
@@ -157,6 +176,7 @@ const navigation = {
             href: '/resources',
             icon: BookOpen,
             roles: ['CEO', 'Admin', 'Manager', 'Employee', 'CXO'],
+            phase: 1,
         }
     ],
     community: [
@@ -165,12 +185,14 @@ const navigation = {
             href: '/community/feed',
             icon: MessageSquare,
             roles: ['CEO', 'Admin', 'Manager', 'Employee', 'CXO'],
+            phase: 2,
         },
         {
             name: 'Recognition',
             href: '/community/recognition',
             icon: HeartHandshake,
             roles: ['CEO', 'Admin', 'Manager', 'Employee', 'CXO'],
+            phase: 2,
         },
     ],
     chats: [
@@ -179,6 +201,7 @@ const navigation = {
             href: '/chats',
             icon: MessageSquare,
             roles: ['CEO', 'Admin', 'Manager', 'Employee', 'CXO'],
+            phase: 2,
         }
     ],
     other: [
@@ -187,12 +210,14 @@ const navigation = {
             href: '/time',
             icon: Calendar,
             roles: ['CEO', 'Admin', 'Manager', 'Employee', 'CXO'],
+            phase: 2,
         },
         {
             name: 'Settings',
             href: '/settings',
             icon: Settings,
             roles: ['CEO', 'Admin', 'CXO'],
+            phase: 1,
         },
     ],
 };
@@ -213,11 +238,14 @@ export function Sidebar() {
     const pathname = usePathname();
     const { user } = useAuthStore();
     const { sidebarCollapsed, toggleSidebar } = useAppStore();
+    const currentPhase = getCurrentPhase();
 
     if (!user) return null;
 
-    const filterItemsByRole = (items: typeof navigation.main) => {
-        return items.filter(item => item.roles.includes(user.role));
+    const filterItemsByRoleAndPhase = (items: typeof navigation.main) => {
+        return items.filter(item =>
+            item.roles.includes(user.role) && item.phase <= currentPhase
+        );
     };
 
     // Tooltip wrapper component for sidebar items
@@ -245,6 +273,12 @@ export function Sidebar() {
                     className="bg-popover text-popover-foreground border"
                 >
                     <p className="font-medium">{item.name}</p>
+                    {item.phase > currentPhase && (
+                        <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
+                            <Lock className="h-3 w-3" />
+                            Phase {item.phase}
+                        </p>
+                    )}
                     {item.roles && (
                         <p className="text-xs text-muted-foreground mt-1">
                             Available for: {item.roles.join(', ')}
@@ -298,9 +332,50 @@ export function Sidebar() {
                     className="bg-popover text-popover-foreground border"
                 >
                     <p className="font-medium">Markpedia OS</p>
-                    <p className="text-xs text-muted-foreground">Business Operating System</p>
+                    <p className="text-xs text-muted-foreground">Phase {currentPhase}</p>
                 </TooltipContent>
             </Tooltip>
+        );
+    };
+
+    const SidebarItem = ({ item }: { item: typeof navigation.main[0] }) => {
+        const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const isAvailable = item.phase <= currentPhase;
+
+        if (!isAvailable) {
+            return (
+                <SidebarItemWithTooltip item={item} isActive={isActive}>
+                    <div
+                        className={cn(
+                            'flex items-center rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground/50 cursor-not-allowed',
+                            sidebarCollapsed ? 'justify-center' : 'justify-start'
+                        )}
+                    >
+                        <Lock className="h-4 w-4" />
+                        {!sidebarCollapsed && (
+                            <span className="ml-3">{item.name}</span>
+                        )}
+                    </div>
+                </SidebarItemWithTooltip>
+            );
+        }
+
+        return (
+            <SidebarItemWithTooltip item={item} isActive={isActive}>
+                <Link
+                    href={item.href}
+                    className={cn(
+                        'flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors',
+                        isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground',
+                        sidebarCollapsed ? 'justify-center' : 'justify-start'
+                    )}
+                >
+                    <item.icon className="h-4 w-4" />
+                    {!sidebarCollapsed && (
+                        <span className="ml-3">{item.name}</span>
+                    )}
+                </Link>
+            </SidebarItemWithTooltip>
         );
     };
 
@@ -317,7 +392,10 @@ export function Sidebar() {
                     {!sidebarCollapsed ? (
                         <Link href="/dashboard" className="flex items-center space-x-2">
                             <Building className="h-6 w-6 text-primary" />
-                            <span className="font-bold text-lg">Markpedia OS</span>
+                            <div>
+                                <span className="font-bold text-lg">Markpedia OS</span>
+                                <div className="text-xs text-muted-foreground">Phase {currentPhase}</div>
+                            </div>
                         </Link>
                     ) : (
                         <BrandWithTooltip>
@@ -344,7 +422,7 @@ export function Sidebar() {
                 <ScrollArea className="flex-1 px-2 py-4">
                     <div className="space-y-6">
                         {sections.map(section => {
-                            const filteredItems = filterItemsByRole(section.items);
+                            const filteredItems = filterItemsByRoleAndPhase(section.items);
                             if (filteredItems.length === 0) return null;
 
                             return (
@@ -357,26 +435,9 @@ export function Sidebar() {
                                         </div>
                                     )}
                                     <div className="space-y-1">
-                                        {filteredItems.map(item => {
-                                            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                                            return (
-                                                <SidebarItemWithTooltip key={item.name} item={item} isActive={isActive}>
-                                                    <Link
-                                                        href={item.href}
-                                                        className={cn(
-                                                            'flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors',
-                                                            isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground',
-                                                            sidebarCollapsed ? 'justify-center' : 'justify-start'
-                                                        )}
-                                                    >
-                                                        <item.icon className="h-4 w-4" />
-                                                        {!sidebarCollapsed && (
-                                                            <span className="ml-3">{item.name}</span>
-                                                        )}
-                                                    </Link>
-                                                </SidebarItemWithTooltip>
-                                            );
-                                        })}
+                                        {filteredItems.map(item => (
+                                            <SidebarItem key={item.name} item={item} />
+                                        ))}
                                     </div>
                                     {section.key !== 'other' && !sidebarCollapsed && (
                                         <Separator className="my-4" />
