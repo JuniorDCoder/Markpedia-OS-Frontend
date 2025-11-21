@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useAuthStore } from '@/store/auth';
-import { taskService } from '@/services/api';
+import { taskService, departmentService } from '@/services/api';
 import { Task } from '@/types';
 import {
     ArrowLeft,
@@ -50,12 +50,32 @@ export default function TaskDetailClient({ initialTask, taskId }: TaskDetailClie
     const { user } = useAuthStore();
     const [task, setTask] = useState<Task | null>(initialTask);
     const [loading, setLoading] = useState(!initialTask);
+    const [departmentName, setDepartmentName] = useState<string | null>(null);
 
     useEffect(() => {
         if (!initialTask) {
             loadTask();
         }
     }, [taskId, initialTask]);
+
+    // Resolve department name from id
+    useEffect(() => {
+        const resolveDepartment = async () => {
+            const deptId = task?.department_id;
+            if (!deptId) {
+                setDepartmentName(null);
+                return;
+            }
+            try {
+                const depts = await departmentService.list({ limit: 1000 });
+                const match: any = (depts || []).find((d: any) => d.id === deptId);
+                setDepartmentName(match?.name || null);
+            } catch (e) {
+                setDepartmentName(null);
+            }
+        };
+        resolveDepartment();
+    }, [task?.department_id]);
 
     const loadTask = async () => {
         try {
@@ -366,7 +386,7 @@ export default function TaskDetailClient({ initialTask, taskId }: TaskDetailClie
                                             <span className="text-sm text-slate-600">Department</span>
                                             <span className="text-sm font-medium flex items-center">
                                                 <Building className="h-4 w-4 mr-1" />
-                                                {task.department_id}
+                                                {departmentName || task.department_id}
                                             </span>
                                         </div>
                                     )}

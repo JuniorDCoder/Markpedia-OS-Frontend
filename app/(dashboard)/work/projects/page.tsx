@@ -45,45 +45,92 @@ import {
     DropdownMenuTrigger,
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import toast from 'react-hot-toast';
+import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationNext, PaginationLink } from '@/components/ui/pagination';
 
 export default function ProjectsPage() {
     const { setCurrentModule } = useAppStore();
     const { user } = useAuthStore();
     const [projects, setProjects] = useState<Project[]>([]);
+    const [total, setTotal] = useState(0);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(20);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [priorityFilter, setPriorityFilter] = useState('all');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
+    // Delete confirmation state
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+    const [deleting, setDeleting] = useState(false);
+
     useEffect(() => {
         setCurrentModule('work');
-        loadProjects();
     }, [setCurrentModule]);
+
+    useEffect(() => {
+        loadProjects();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [page, pageSize, statusFilter, priorityFilter]);
 
     const loadProjects = async () => {
         try {
             setLoading(true);
-            const data = await projectService.getProjects();
-            setProjects(data);
+            const params: any = { skip: (page - 1) * pageSize, limit: pageSize };
+            if (statusFilter !== 'all') params.status = statusFilter;
+            if (priorityFilter !== 'all') params.priority = priorityFilter;
+            const { projects: items, total } = await projectService.listProjects(params);
+            // simple client-side search on current page; backend search can be wired if available
+            const filtered = searchTerm
+                ? items.filter(p => p.title.toLowerCase().includes(searchTerm.toLowerCase()) || p.purpose.toLowerCase().includes(searchTerm.toLowerCase()))
+                : items;
+            setProjects(filtered);
+            setTotal(total || filtered.length);
         } catch (error) {
+            console.log(error)
             toast.error('Failed to load projects');
         } finally {
             setLoading(false);
         }
     };
 
-    const deleteProject = async (projectId: string) => {
-        if (window.confirm('Are you sure you want to delete this project?')) {
-            try {
-                await projectService.deleteProject(projectId);
-                setProjects(projects.filter((project) => project.id !== projectId));
-                toast.success('Project deleted successfully');
-            } catch (error) {
-                toast.error('Failed to delete project');
-            }
+    const handleDeleteClick = (project: Project) => {
+        setProjectToDelete(project);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!projectToDelete) return;
+
+        try {
+            setDeleting(true);
+            await projectService.deleteProject(projectToDelete.id);
+            setProjects(projects.filter((project) => project.id !== projectToDelete.id));
+            toast.success('Project deleted successfully');
+        } catch (error) {
+            toast.error('Failed to delete project');
+        } finally {
+            setDeleting(false);
+            setDeleteDialogOpen(false);
+            setProjectToDelete(null);
         }
+    };
+
+    const handleDeleteCancel = () => {
+        setDeleteDialogOpen(false);
+        setProjectToDelete(null);
     };
 
     const projectStats = useMemo(() => {
@@ -195,6 +242,42 @@ export default function ProjectsPage() {
 
     return (
         <div className="space-y-6 px-4 sm:px-6 lg:px-8 py-6">
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the project
+                            "{projectToDelete?.title}" and all its associated data including tasks,
+                            milestones, budget information, and team assignments.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={handleDeleteCancel} disabled={deleting}>
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDeleteConfirm}
+                            disabled={deleting}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {deleting ? (
+                                <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                    Deleting...
+                                </>
+                            ) : (
+                                <>
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete Project
+                                </>
+                            )}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="space-y-1">
@@ -406,7 +489,7 @@ export default function ProjectsPage() {
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem
-                                                        onClick={() => deleteProject(project.id)}
+                                                        onClick={() => handleDeleteClick(project)}
                                                         className="text-red-600"
                                                     >
                                                         <Trash2 className="h-4 w-4 mr-2" />
@@ -541,6 +624,48 @@ export default function ProjectsPage() {
                     </CardContent>
                 </Card>
             )}
+
+            {/* Pagination controls */}
+            <div className="flex items-center justify-between px-4 py-6">
+                <div className="text-sm text-muted-foreground">
+                    {total > 0 ? (
+                        <span>
+                            Showing {(page - 1) * pageSize + 1}
+                            {' '}–{' '}
+                            {Math.min(page * pageSize, total)} of {total}
+                        </span>
+                    ) : (
+                        <span>No projects</span>
+                    )}
+                </div>
+                <Pagination>
+                    <PaginationContent>
+                        <PaginationItem>
+                            <PaginationPrevious
+                                href="#"
+                                onClick={(e: any) => { e.preventDefault(); if (page > 1) setPage(page - 1); }}
+                            />
+                        </PaginationItem>
+                        {Array.from({ length: Math.max(1, Math.ceil(total / pageSize)) }).slice(Math.max(0, page - 3), page + 2).map((_, idx) => {
+                            const p = Math.max(1, page - 2) + idx;
+                            if (p > Math.ceil(total / pageSize)) return null;
+                            return (
+                                <PaginationItem key={p}>
+                                    <PaginationLink href="#" isActive={p === page} onClick={(e: any) => { e.preventDefault(); setPage(p); }}>
+                                        {p}
+                                    </PaginationLink>
+                                </PaginationItem>
+                            );
+                        })}
+                        <PaginationItem>
+                            <PaginationNext
+                                href="#"
+                                onClick={(e: any) => { e.preventDefault(); if (page * pageSize < total) setPage(page + 1); }}
+                            />
+                        </PaginationItem>
+                    </PaginationContent>
+                </Pagination>
+            </div>
         </div>
     );
 }

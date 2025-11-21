@@ -6,7 +6,7 @@ export interface User {
     email: string;
     firstName: string;
     lastName: string;
-    role: 'CEO' | 'Admin' | 'Manager' | 'Employee' | 'CXO';
+    role: string; // backend-provided role
     department?: string;
     position?: string;
     avatar?: string;
@@ -382,7 +382,6 @@ export interface Meeting {
     absent: string[];
     status: 'Scheduled' | 'In Progress' | 'Completed' | 'Cancelled';
 
-    // Structured sections matching the Markpedia template
     purpose: string;
     agenda: AgendaItem[];
     discussion: DiscussionItem[];
@@ -398,40 +397,44 @@ export interface Meeting {
 
 export interface AgendaItem {
     id: string;
-    item: string;
+    topic: string;
     presenter: string;
     duration: string;
-    order: number;
+    notes?: string;
 }
 
 export interface DiscussionItem {
     id: string;
-    agendaItem: string;
-    summary: string;
-    agreements: string;
+    topic: string;
+    speaker: string;
+    points: string[];
+    timestamp?: string;
 }
 
 export interface Decision {
     id: string;
-    description: string;
-    responsible: string;
-    approvedBy: string;
-    deadline: string;
+    topic: string;
+    decision: string;
+    rationale?: string;
+    voted: string[];
+    opposed: string[];
+    abstained: string[];
 }
 
 export interface ActionItem {
     id: string;
-    description: string;
-    assignedTo: string;
-    department: string;
+    item: string;
+    owner: string;
     dueDate: string;
-    status: 'Pending' | 'In Progress' | 'Completed' | 'Cancelled';
+    status: 'Not Started' | 'In Progress' | 'Completed' | 'Delayed';
+    priority: 'Low' | 'Medium' | 'High' | 'Critical';
 }
 
 export interface RiskItem {
     id: string;
     risk: string;
     impact: 'Low' | 'Medium' | 'High';
+    likelihood: 'Low' | 'Medium' | 'High';
     mitigation: string;
     owner: string;
 }
@@ -447,7 +450,7 @@ export interface MeetingConfig {
     };
     automation: {
         autoCreateTasks: boolean;
-        taskPriority: 'low' | 'medium' | 'high';
+        taskPriority: string;
         defaultAssignee: string;
         syncWithCalendar: boolean;
     };
@@ -456,6 +459,7 @@ export interface MeetingConfig {
         customTemplates: string[];
     };
 }
+
 export interface OtterAIWebhookPayload {
     meetingId: string;
     transcript: string;

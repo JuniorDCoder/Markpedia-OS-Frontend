@@ -1,43 +1,57 @@
+// app/(dashboard)/work/tasks/[id]/page.tsx
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { taskService } from '@/services/api';
 import { Task } from '@/types';
 import TaskDetailClient from '../../../../../components/sections/TaskDetailClient';
+import { LoadingSpinner } from '@/components/ui/loading';
 
-// This function runs at build time to generate static paths
-export async function generateStaticParams() {
-    try {
-        // Fetch all tasks to generate static paths
-        const tasks = await taskService.getTasks();
-        return tasks.map((task: Task) => ({
-            id: task.id,
-        }));
-    } catch (error) {
-        console.error('Failed to fetch tasks for static generation:', error);
-        return [];
-    }
-}
+export default function TaskDetailPage() {
+    const params = useParams();
+    const taskId = params.id as string;
+    const [task, setTask] = useState<Task | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-// This function runs at request time for non-pre-rendered pages
-export async function generateMetadata({ params }: { params: { id: string } }) {
-    try {
-        const task = await taskService.getTask(params.id);
-        return {
-            title: `${task.title} | Task Details`,
+    useEffect(() => {
+        const loadTask = async () => {
+            try {
+                setLoading(true);
+                const taskData = await taskService.getTask(taskId);
+                setTask(taskData);
+            } catch (err: any) {
+                console.error('Failed to load task:', err);
+                setError(err.message || 'Failed to load task');
+            } finally {
+                setLoading(false);
+            }
         };
-    } catch (error) {
-        return {
-            title: 'Task Not Found',
-        };
-    }
-}
 
-export default async function TaskDetailPage({ params }: { params: { id: string } }) {
-    let task: Task | null = null;
+        if (taskId) {
+            loadTask();
+        }
+    }, [taskId]);
 
-    try {
-        task = await taskService.getTask(params.id);
-    } catch (error) {
-        console.error('Failed to load task:', error);
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <LoadingSpinner size="lg" />
+            </div>
+        );
     }
 
-    return <TaskDetailClient initialTask={task} taskId={params.id} />;
+    if (error) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <h2 className="text-xl font-semibold text-red-600 mb-2">Error</h2>
+                    <p className="text-muted-foreground">{error}</p>
+                </div>
+            </div>
+        );
+    }
+
+    return <TaskDetailClient initialTask={task} taskId={taskId} />;
 }

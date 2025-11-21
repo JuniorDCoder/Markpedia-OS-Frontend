@@ -13,7 +13,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, ArrowLeft, Save, Target, Building, FileText, User } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
-import { taskService } from '@/services/api';
+import { taskService, projectService, departmentService, userService } from '@/services/api';
 import { Task } from '@/types';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -81,12 +81,18 @@ export default function TaskEditClient({ initialTask, taskId }: TaskEditClientPr
         setLoading(true);
 
         try {
-            await taskService.updateTask(taskId, {
+            // Sanitize optional relations: send null when not selected
+            const sanitized: any = {
                 ...formData,
+                department_id: formData.department_id && formData.department_id !== 'none' ? formData.department_id : undefined,
+                project_id: formData.project_id && formData.project_id !== 'none' ? formData.project_id : undefined,
+                owner_id: formData.owner_id,
+                manager_id: formData.manager_id,
                 start_date: startDate?.toISOString() || initialTask?.start_date,
                 due_date: dueDate?.toISOString() || initialTask?.due_date,
                 updated_at: new Date().toISOString(),
-            });
+            };
+            await taskService.updateTask(taskId, sanitized);
             toast.success('Task updated successfully');
             router.push(`/work/tasks/${taskId}`);
         } catch (error) {
@@ -110,32 +116,38 @@ export default function TaskEditClient({ initialTask, taskId }: TaskEditClientPr
         }));
     };
 
-    const departments = [
-        { id: 'engineering', name: 'Engineering' },
-        { id: 'marketing', name: 'Marketing' },
-        { id: 'sales', name: 'Sales' },
-        { id: 'hr', name: 'Human Resources' },
-        { id: 'finance', name: 'Finance' },
-        { id: 'operations', name: 'Operations' },
-        { id: 'design', name: 'Design' },
-        { id: 'product', name: 'Product' }
-    ];
+    const [departments, setDepartments] = useState<Array<{ id: string; name: string }>>([]);
+    const [projects, setProjects] = useState<Array<{ id: string; name: string }>>([]);
+    const [users, setUsers] = useState<Array<{ id: string; name: string }>>([]);
+    const [listsLoading, setListsLoading] = useState(false);
+    const [listsError, setListsError] = useState<string | null>(null);
 
-    const projects = [
-        { id: '1', name: 'Website Redesign' },
-        { id: '2', name: 'Mobile App Development' },
-        { id: '3', name: 'Q2 Marketing Campaign' },
-        { id: '4', name: 'Database Migration' },
-        { id: '5', name: 'Employee Training Program' }
-    ];
-
-    const users = [
-        { id: '1', name: 'Admin User' },
-        { id: '2', name: 'John Designer' },
-        { id: '3', name: 'Sarah Manager' },
-        { id: '4', name: 'Mike Developer' },
-        { id: '5', name: 'Lisa HR' }
-    ];
+    useEffect(() => {
+        const loadLists = async () => {
+            try {
+                setListsLoading(true);
+                setListsError(null);
+                // Departments
+                const deptRes = await departmentService.list({ limit: 1000 });
+                const deptOpts = (deptRes || []).map((d: any) => ({ id: d.id, name: d.name }));
+                setDepartments(deptOpts);
+                // Projects
+                const projRes = await projectService.listProjects({ limit: 1000 });
+                const projOpts = (projRes.projects || []).map((p: any) => ({ id: p.id, name: p.name || p.title || 'Untitled' }));
+                setProjects(projOpts);
+                // Users
+                const userRes = await userService.getUsers();
+                const userOpts = (userRes || []).map((u: any) => ({ id: u.id, name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email }));
+                setUsers(userOpts);
+            } catch (e: any) {
+                console.error('Failed to load lists', e);
+                setListsError(e?.message || 'Failed to load reference data');
+            } finally {
+                setListsLoading(false);
+            }
+        };
+        loadLists();
+    }, []);
 
     if (!initialTask) {
         return (

@@ -9,7 +9,9 @@ import {
     Meeting,
     OtterAIWebhookPayload,
     Decision, ActionItem, Problem, JobDescription, Department, Framework, ProblemAnalytics, ProblemKPI
-} from '@/types';
+} from '@/types'
+
+import { MeetingConfig } from '@/types';
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || '/api',
@@ -1385,267 +1387,234 @@ export const authService = {
 
 export const userService = {
   getUsers: async (): Promise<User[]> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return mockUsers;
+    const { adminApi } = await import('@/lib/api/admin');
+    return adminApi.getUsers();
   },
 
   getUser: async (id: string): Promise<User> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const user = mockUsers.find(u => u.id === id);
+    const users = await userService.getUsers();
+    const user = users.find(u => u.id === id);
     if (!user) throw new Error('User not found');
     return user;
   },
 
   updateUser: async (id: string, userData: Partial<User>): Promise<User> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const index = mockUsers.findIndex(u => u.id === id);
-    if (index === -1) throw new Error('User not found');
-    mockUsers[index] = { ...mockUsers[index], ...userData };
-    return mockUsers[index];
+    // Placeholder: backend endpoint not specified; return merged local for now
+    const current = await userService.getUser(id);
+    return { ...current, ...userData } as User;
   },
 };
 
 export const projectService = {
   getProjects: async (): Promise<Project[]> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return mockProjects;
+    const { projectsApi } = await import('@/lib/api/projects');
+    return projectsApi.listAll();
+  },
+
+  listProjects: async (params?: {
+    skip?: number;
+    limit?: number;
+    status?: string | null;
+    priority?: string | null;
+    owner?: string | null;
+    department?: string | null;
+  }): Promise<{ projects: Project[]; total: number }> => {
+    const { projectsApi } = await import('@/lib/api/projects');
+    return projectsApi.list(params || {});
   },
 
   getProject: async (id: string): Promise<Project> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const project = mockProjects.find(p => p.id === id);
-    if (!project) throw new Error('Project not found');
-    return project;
+    const { projectsApi } = await import('@/lib/api/projects');
+    return projectsApi.getById(id);
   },
 
   createProject: async (projectData: Omit<Project, 'id'>): Promise<Project> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const newProject: Project = {
-      id: Math.random().toString(36).substr(2, 9),
-      ...projectData,
-    };
-    mockProjects.push(newProject);
-    return newProject;
+    const { projectsApi } = await import('@/lib/api/projects');
+    return projectsApi.create(projectData);
   },
 
   updateProject: async (id: string, projectData: Partial<Project>): Promise<Project> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const index = mockProjects.findIndex(p => p.id === id);
-    if (index === -1) throw new Error('Project not found');
-    mockProjects[index] = { ...mockProjects[index], ...projectData };
-    return mockProjects[index];
+    const { projectsApi } = await import('@/lib/api/projects');
+    return projectsApi.update(id, projectData);
   },
 
   deleteProject: async (id: string): Promise<void> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const index = mockProjects.findIndex(p => p.id === id);
-    if (index === -1) throw new Error('Project not found');
-    mockProjects.splice(index, 1);
+    const { projectsApi } = await import('@/lib/api/projects');
+    return projectsApi.remove(id);
+  },
+  searchProjects: async (term: string): Promise<Project[]> => {
+    const { projectsApi } = await import('@/lib/api/projects');
+    return projectsApi.search(term);
+  },
+};
+
+export const departmentService = {
+  list: async (params?: { skip?: number; limit?: number; status?: string | null; parent_department?: string | null }): Promise<Department[]> => {
+    const { departmentsApi } = await import('@/lib/api/departments');
+    return departmentsApi.getAll(params || {});
+  },
+  names: async (): Promise<string[]> => {
+    const { departmentsApi } = await import('@/lib/api/departments');
+    return departmentsApi.getNames();
   },
 };
 
 export const taskService = {
-    getTasks: async (): Promise<Task[]> => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        return mockTasks;
-    },
+  // Back-compat helper: returns only array of tasks (used in Dashboard, SSG, etc.)
+  getTasks: async (): Promise<Task[]> => {
+    const { tasksApi } = await import('@/lib/api/tasks');
+    const { tasks } = await tasksApi.list({ skip: 0, limit: 100 });
+    return tasks;
+  },
 
-    getTask: async (id: string): Promise<Task> => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        const task = mockTasks.find(t => t.id === id);
-        if (!task) throw new Error('Task not found');
-        return task;
-    },
+  // Paginated list with filters
+  listTasks: async (params?: {
+    skip?: number;
+    limit?: number;
+    owner_id?: string | null;
+    manager_id?: string | null;
+    department_id?: string | null;
+    project_id?: string | null;
+    status?: string | null;
+    priority?: string | null;
+  }): Promise<{ tasks: Task[]; total: number }> => {
+    const { tasksApi } = await import('@/lib/api/tasks');
+    return tasksApi.list(params || {});
+  },
 
-    createTask: async (taskData: Omit<Task, 'id' | 'created_at' | 'updated_at'>): Promise<Task> => {
-        await new Promise(resolve => setTimeout(resolve, 500));
+  getTask: async (id: string): Promise<Task> => {
+    const { tasksApi } = await import('@/lib/api/tasks');
+    return tasksApi.getById(id);
+  },
 
-        // Check task limit (max 5 active tasks per user)
-        const userActiveTasks = mockTasks.filter(t =>
-            t.owner_id === taskData.owner_id &&
-            ['Draft', 'Approved', 'In Progress'].includes(t.status)
-        );
+  createTask: async (taskData: Partial<Task>): Promise<Task> => {
+    const { tasksApi } = await import('@/lib/api/tasks');
+    return tasksApi.create(taskData);
+  },
 
-        if (userActiveTasks.length >= 5) {
-            throw new Error('Task limit reached: Maximum 5 active tasks per user');
-        }
+  updateTask: async (id: string, taskData: Partial<Task>): Promise<Task> => {
+    const { tasksApi } = await import('@/lib/api/tasks');
+    return tasksApi.update(id, taskData);
+  },
 
-        const newTask: Task = {
-            id: Math.random().toString(36).substr(2, 9),
-            ...taskData,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-        };
-        mockTasks.push(newTask);
-        return newTask;
-    },
+  deleteTask: async (id: string): Promise<void> => {
+    const { tasksApi } = await import('@/lib/api/tasks');
+    return tasksApi.remove(id);
+  },
 
-    updateTask: async (id: string, taskData: Partial<Task>): Promise<Task> => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        const index = mockTasks.findIndex(t => t.id === id);
-        if (index === -1) throw new Error('Task not found');
-        mockTasks[index] = {
-            ...mockTasks[index],
-            ...taskData,
-            updated_at: new Date().toISOString()
-        };
-        return mockTasks[index];
-    },
+  validateTask: async (id: string, managerId: string): Promise<Task> => {
+    const { tasksApi } = await import('@/lib/api/tasks');
+    return tasksApi.validate(id, managerId);
+  },
 
-    deleteTask: async (id: string): Promise<void> => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        const index = mockTasks.findIndex(t => t.id === id);
-        if (index === -1) throw new Error('Task not found');
-        mockTasks.splice(index, 1);
-    },
-
-    validateTask: async (id: string, managerId: string): Promise<Task> => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        const index = mockTasks.findIndex(t => t.id === id);
-        if (index === -1) throw new Error('Task not found');
-
-        mockTasks[index] = {
-            ...mockTasks[index],
-            status: 'Approved',
-            validated_by: managerId,
-            validated_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-        };
-        return mockTasks[index];
-    },
-
-    submitTaskReport: async (taskId: string, reportData: {
-        content: string;
-        attachments?: File[];
-        proof_of_completion?: any;
-    }): Promise<Task> => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        const index = mockTasks.findIndex(t => t.id === taskId);
-        if (index === -1) throw new Error('Task not found');
-
-        mockTasks[index] = {
-            ...mockTasks[index],
-            status: 'Done',
-            report_submitted: true,
-            completed_date: new Date().toISOString(),
-            proof_of_completion: reportData.proof_of_completion,
-            updated_at: new Date().toISOString()
-        };
-        return mockTasks[index];
-    },
-
-    getWeeklyReport: async (employeeId: string, weekStart: string): Promise<TaskReport> => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        const weekTasks = mockTasks.filter(task =>
-            task.owner_id === employeeId &&
-            new Date(task.created_at) >= new Date(weekStart) &&
-            new Date(task.created_at) < new Date(new Date(weekStart).getTime() + 7 * 24 * 60 * 60 * 1000)
-        );
-
-        const completedTasks = weekTasks.filter(task => task.status === 'Done');
-        const overdueTasks = weekTasks.filter(task => task.status === 'Overdue');
-        const averageProgress = weekTasks.length > 0
-            ? weekTasks.reduce((sum, task) => sum + task.progress, 0) / weekTasks.length
-            : 0;
-
-        return {
-            id: Math.random().toString(36).substr(2, 9),
-            employee_id: employeeId,
-            week_start: weekStart,
-            week_end: new Date(new Date(weekStart).getTime() + 6 * 24 * 60 * 60 * 1000).toISOString(),
-            total_tasks: weekTasks.length,
-            completed_tasks: completedTasks.length,
-            overdue_tasks: overdueTasks.length,
-            average_progress: averageProgress,
-            manager_rating: 4.5, // Mock rating
-            final_score: 85, // Mock score
-            generated_at: new Date().toISOString()
-        };
+  submitTaskReport: async (
+    taskId: string,
+    reportData: {
+      content: string;
+      attachments?: File[];
+      proof_of_completion?: any;
     }
+  ): Promise<Task> => {
+    const { tasksApi } = await import('@/lib/api/tasks');
+    // Convert File[] to string names if provided to match API contract
+    const attachmentNames = reportData.attachments?.map((f) => (typeof f === 'string' ? f : (f as File).name));
+    return tasksApi.submitReport(taskId, {
+      content: reportData.content,
+      attachments: attachmentNames,
+      proof_of_completion: reportData.proof_of_completion ?? null,
+    });
+  },
+
+  getWeeklyReport: async (employeeId: string, weekStart: string): Promise<TaskReport> => {
+    const { tasksApi } = await import('@/lib/api/tasks');
+    return tasksApi.weeklyReport(employeeId, weekStart);
+  },
+
+  byOwner: async (owner_id: string, params?: { skip?: number; limit?: number }): Promise<{ tasks: Task[]; total: number }> => {
+    const { tasksApi } = await import('@/lib/api/tasks');
+    return tasksApi.byOwner(owner_id, params);
+  },
+
+  byManager: async (manager_id: string, params?: { skip?: number; limit?: number }): Promise<{ tasks: Task[]; total: number }> => {
+    const { tasksApi } = await import('@/lib/api/tasks');
+    return tasksApi.byManager(manager_id, params);
+  },
+
+  activeCount: async (owner_id: string): Promise<number> => {
+    const { tasksApi } = await import('@/lib/api/tasks');
+    return tasksApi.activeCount(owner_id);
+  },
 };
 
 export const meetingService = {
-    async getConfig(): Promise<MeetingConfig> {
-        return {
-            id: 'default',
-            notifications: {
-                beforeMeeting: true,
-                beforeMeetingTime: 15,
-                afterMeeting: true,
-                actionItemsDue: true,
-                decisionFollowUp: true,
-            },
-            automation: {
-                autoCreateTasks: false,
-                taskPriority: 'medium',
-                defaultAssignee: '',
-                syncWithCalendar: true,
-            },
-            templates: {
-                defaultTemplate: 'standard',
-                customTemplates: [],
-            },
-        };
-    },
-
-    async saveConfig(config: MeetingConfig): Promise<void> {
-        await Promise.resolve();
-    },
-
+    // Back-compat helper: returns only array of meetings (used in Dashboard, SSG, etc.)
     getMeetings: async (): Promise<Meeting[]> => {
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        return mockMeetings;
+        const { meetingsApi } = await import('@/lib/api/meetings');
+        const { meetings } = await meetingsApi.list({ skip: 0, limit: 100 });
+        return meetings;
+    },
+
+    // Paginated list with filters
+    listMeetings: async (params?: {
+        skip?: number;
+        limit?: number;
+        status?: string | null;
+        department?: string | null;
+        search?: string | null;
+    }): Promise<{ meetings: Meeting[]; total: number }> => {
+        const { meetingsApi } = await import('@/lib/api/meetings');
+        return meetingsApi.list(params || {});
     },
 
     getMeeting: async (id: string): Promise<Meeting> => {
-        await new Promise(resolve => setTimeout(resolve, 300));
-        const meeting = mockMeetings.find(m => m.id === id);
-        if (!meeting) throw new Error('Meeting not found');
-        return meeting;
+        const { meetingsApi } = await import('@/lib/api/meetings');
+        return meetingsApi.getById(id);
     },
 
-    updateMeeting: async (id: string, data: Partial<Meeting>): Promise<Meeting> => {
-        await new Promise(resolve => setTimeout(resolve, 300));
-        const index = mockMeetings.findIndex(m => m.id === id);
-        if (index === -1) throw new Error('Meeting not found');
+    createMeeting: async (meetingData: Partial<Meeting>): Promise<Meeting> => {
+        const { meetingsApi } = await import('@/lib/api/meetings');
+        return meetingsApi.create(meetingData);
+    },
 
-        const updatedMeeting = { ...mockMeetings[index], ...data, updatedAt: new Date().toISOString() };
-        mockMeetings[index] = updatedMeeting;
-        return updatedMeeting;
+    updateMeeting: async (id: string, meetingData: Partial<Meeting>): Promise<Meeting> => {
+        const { meetingsApi } = await import('@/lib/api/meetings');
+        return meetingsApi.update(id, meetingData);
+    },
+
+    deleteMeeting: async (id: string): Promise<void> => {
+        const { meetingsApi } = await import('@/lib/api/meetings');
+        return meetingsApi.remove(id);
     },
 
     addDecision: async (meetingId: string, decision: Decision): Promise<Meeting> => {
-        const meeting = await meetingService.getMeeting(meetingId);
-        const newDecision = { ...decision, id: `decision-${Date.now()}` };
-        const updatedDecisions = [...meeting.decisions, newDecision];
-
-        return meetingService.updateMeeting(meetingId, { decisions: updatedDecisions });
+        const { meetingsApi } = await import('@/lib/api/meetings');
+        return meetingsApi.addDecision(meetingId, decision);
     },
 
     addActionItem: async (meetingId: string, actionItem: ActionItem): Promise<Meeting> => {
-        const meeting = await meetingService.getMeeting(meetingId);
-        const newActionItem = { ...actionItem, id: `action-${Date.now()}` };
-        const updatedActionItems = [...meeting.actionItems, newActionItem];
-
-        return meetingService.updateMeeting(meetingId, { actionItems: updatedActionItems });
+        const { meetingsApi } = await import('@/lib/api/meetings');
+        return meetingsApi.addActionItem(meetingId, actionItem);
     },
 
     updateActionItemStatus: async (meetingId: string, itemId: string, status: string): Promise<Meeting> => {
-        const meeting = await meetingService.getMeeting(meetingId);
-        const updatedActionItems = meeting.actionItems.map(item =>
-            item.id === itemId ? { ...item, status } : item
-        );
-
-        return meetingService.updateMeeting(meetingId, { actionItems: updatedActionItems });
+        const { meetingsApi } = await import('@/lib/api/meetings');
+        return meetingsApi.updateActionItemStatus(meetingId, itemId, status);
     },
 
-    // Remove OtterAI related methods:
-    // - syncWithOtterAI
-    // - createTasksFromActionItems
-    // - handleOtterWebhook
-    // - testOtterIntegration
+    getConfig: async (): Promise<MeetingConfig> => {
+        const { meetingsApi } = await import('@/lib/api/meetings');
+        return meetingsApi.getConfig();
+    },
+
+    saveConfig: async (config: MeetingConfig): Promise<void> => {
+        const { meetingsApi } = await import('@/lib/api/meetings');
+        return meetingsApi.saveConfig(config);
+    },
+
+    getStats: async (): Promise<any> => {
+        const { meetingsApi } = await import('@/lib/api/meetings');
+        return meetingsApi.getStats();
+    },
 };
 
 export const problemService = {

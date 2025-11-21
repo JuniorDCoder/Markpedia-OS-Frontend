@@ -14,6 +14,7 @@ import { useAppStore } from '@/store/app';
 import { useAuthStore } from '@/store/auth';
 import { Task } from '@/types';
 import { taskService } from '@/services/api';
+import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationNext, PaginationLink } from '@/components/ui/pagination';
 import {
     Plus,
     Search,
@@ -31,8 +32,6 @@ import {
     Trash2,
     ArrowRight,
     BarChart3,
-    ChevronDown,
-    ChevronUp,
     Target,
     AlertTriangle,
     PlayCircle,
@@ -48,6 +47,16 @@ import {
     DropdownMenuTrigger,
     DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import toast from 'react-hot-toast';
 import ReportModal from '../../../../components/sections/ReportModal';
@@ -66,6 +75,9 @@ export default function TasksPage() {
     const { setCurrentModule } = useAppStore();
     const { user } = useAuthStore();
     const [tasks, setTasks] = useState<Task[]>([]);
+    const [total, setTotal] = useState(0);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(20);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
@@ -75,7 +87,11 @@ export default function TasksPage() {
     const [showReportModal, setShowReportModal] = useState(false);
     const [showReviewModal, setShowReviewModal] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
-    const [showFilters, setShowFilters] = useState(false);
+
+    // Delete confirmation state
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+    const [deleting, setDeleting] = useState(false);
 
     // Check if user is privileged (CEO, manager, etc.)
     const isPrivilegedUser = useMemo(() =>
@@ -115,13 +131,22 @@ export default function TasksPage() {
     useEffect(() => {
         setCurrentModule('work');
         loadTasks();
-    }, [setCurrentModule]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [setCurrentModule, page, pageSize, statusFilter, priorityFilter, assigneeFilter, user.id]);
 
     const loadTasks = async () => {
         try {
             setLoading(true);
-            const data = await taskService.getTasks();
-            setTasks(data);
+            const params: any = {
+                skip: (page - 1) * pageSize,
+                limit: pageSize,
+            };
+            if (statusFilter !== 'all') params.status = statusFilter;
+            if (priorityFilter !== 'all') params.priority = priorityFilter;
+            if (assigneeFilter === 'me') params.owner_id = user.id;
+            const { tasks: items, total } = await taskService.listTasks(params);
+            setTasks(items);
+            setTotal(total || items.length);
         } catch (error) {
             toast.error('Failed to load tasks');
         } finally {
@@ -188,16 +213,31 @@ export default function TasksPage() {
         }
     };
 
-    const deleteTask = async (taskId: string) => {
-        if (window.confirm('Are you sure you want to delete this task?')) {
-            try {
-                await taskService.deleteTask(taskId);
-                setTasks(tasks.filter(task => task.id !== taskId));
-                toast.success('Task deleted successfully');
-            } catch (error) {
-                toast.error('Failed to delete task');
-            }
+    const handleDeleteClick = (task: Task) => {
+        setTaskToDelete(task);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!taskToDelete) return;
+
+        try {
+            setDeleting(true);
+            await taskService.deleteTask(taskToDelete.id);
+            setTasks(tasks.filter(task => task.id !== taskToDelete.id));
+            toast.success('Task deleted successfully');
+        } catch (error) {
+            toast.error('Failed to delete task');
+        } finally {
+            setDeleting(false);
+            setDeleteDialogOpen(false);
+            setTaskToDelete(null);
         }
+    };
+
+    const handleDeleteCancel = () => {
+        setDeleteDialogOpen(false);
+        setTaskToDelete(null);
     };
 
     const onDragStart = () => {
@@ -339,14 +379,24 @@ export default function TasksPage() {
         submittedBy: t.owner_id,
     }));
 
-    const handleReviewReport = (taskId: string) => {
-        setTasks(tasks => tasks.map(task =>
-            task.id === taskId ? {
-                ...task,
-                performance_score: Math.floor(Math.random() * 20) + 80 // Mock score 80-100
-            } : task
-        ));
-        toast.success('Task reviewed and scored!');
+    const handleReviewReport = async (taskId: string) => {
+        try {
+            const scoreStr = typeof window !== 'undefined' ? window.prompt('Enter performance score (0-100):', '90') : '90';
+            const comments = typeof window !== 'undefined' ? window.prompt('Manager comments (optional):', '') : '';
+            const score = Math.max(0, Math.min(100, Number(scoreStr || 0)));
+            const now = new Date().toISOString();
+            const updated = await taskService.updateTask(taskId, {
+                performance_score: score,
+                manager_comments: comments || undefined,
+                validated_by: user.id,
+                validated_at: now,
+            });
+            setTasks(prev => prev.map(t => (t.id === taskId ? updated : t)));
+            toast.success('Report reviewed and saved');
+        } catch (e) {
+            console.error(e);
+            toast.error('Failed to review report');
+        }
     };
 
     if (loading) {
@@ -355,6 +405,42 @@ export default function TasksPage() {
 
     return (
         <div className="space-y-6 p-6">
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the task
+                            "{taskToDelete?.title}" and all its associated data including reports
+                            and progress tracking.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={handleDeleteCancel} disabled={deleting}>
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDeleteConfirm}
+                            disabled={deleting}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {deleting ? (
+                                <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                    Deleting...
+                                </>
+                            ) : (
+                                <>
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete Task
+                                </>
+                            )}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             {/* Header Section */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div className="space-y-2">
@@ -446,7 +532,7 @@ export default function TasksPage() {
                         className="bg-blue-600 hover:bg-blue-700"
                     >
                         <BarChart3 className="h-4 w-4 mr-2" />
-                        Review Reports ({mockReports.length})
+                        Review Reports
                     </Button>
                 )}
                 {(myTasksNeedingReports.length > 0 || shouldReport) && (
@@ -615,7 +701,10 @@ export default function TasksPage() {
                                                                                     </DropdownMenuItem>
                                                                                 )}
                                                                                 <DropdownMenuSeparator />
-                                                                                <DropdownMenuItem onClick={() => deleteTask(task.id)} className="text-red-600">
+                                                                                <DropdownMenuItem
+                                                                                    onClick={() => handleDeleteClick(task)}
+                                                                                    className="text-red-600"
+                                                                                >
                                                                                     <Trash2 className="h-4 w-4 mr-2" />
                                                                                     Delete
                                                                                 </DropdownMenuItem>
@@ -747,6 +836,49 @@ export default function TasksPage() {
                                     </div>
                                 </div>
                             ))}
+                        </div>
+
+                        {/* Pagination controls */}
+                        <div className="flex items-center justify-between px-4 py-3 border-t">
+                            <div className="text-sm text-muted-foreground">
+                                {total > 0 ? (
+                                    <span>
+                                        Showing {(page - 1) * pageSize + 1}
+                                        {' '}–{' '}
+                                        {Math.min(page * pageSize, total)} of {total}
+                                    </span>
+                                ) : (
+                                    <span>No tasks</span>
+                                )}
+                            </div>
+                            <Pagination>
+                                <PaginationContent>
+                                    <PaginationItem>
+                                        <PaginationPrevious
+                                            href="#"
+                                            onClick={(e: any) => { e.preventDefault(); if (page > 1) setPage(page - 1); }}
+                                        />
+                                    </PaginationItem>
+                                    {/* Simple pages around current */}
+                                    {Array.from({ length: Math.max(1, Math.ceil(total / pageSize)) }).slice(Math.max(0, page - 3), page + 2).map((_, idx) => {
+                                        const p = Math.max(1, page - 2) + idx;
+                                        if (p > Math.ceil(total / pageSize)) return null;
+                                        return (
+                                            <PaginationItem key={p}>
+                                                <PaginationLink href="#" isActive={p === page} onClick={(e: any) => { e.preventDefault(); setPage(p); }}>
+                                                    {p}
+                                                </PaginationLink>
+                                            </PaginationItem>
+                                        );
+                                    })}
+                                    <PaginationItem>
+                                        <PaginationNext
+                                            href="#"
+                                            onClick={(e: any) => { e.preventDefault(); if (page * pageSize < total) setPage(page + 1); }}
+                                        />
+                                    </PaginationItem>
+                                </PaginationContent>
+                            </Pagination>
                         </div>
                     </CardContent>
                 </Card>

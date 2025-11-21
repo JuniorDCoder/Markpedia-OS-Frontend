@@ -22,8 +22,29 @@ import {
     MapPin,
     Building,
     ArrowRight,
+    Trash2,
+    MoreVertical,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+// Alert Dialog Component
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export default function MinutesPage() {
     const { setCurrentModule } = useAppStore();
@@ -31,6 +52,12 @@ export default function MinutesPage() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [departmentFilter, setDepartmentFilter] = useState('all');
+
+    // Delete confirmation state
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [meetingToDelete, setMeetingToDelete] = useState<Meeting | null>(null);
+    const [deleting, setDeleting] = useState(false);
 
     useEffect(() => {
         setCurrentModule('work');
@@ -42,11 +69,41 @@ export default function MinutesPage() {
             setLoading(true);
             const data = await meetingService.getMeetings();
             setMeetings(data);
-        } catch {
+        } catch (error) {
+            console.error('Failed to load meetings:', error);
             toast.error('Failed to load meetings');
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleDeleteClick = (meeting: Meeting) => {
+        setMeetingToDelete(meeting);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!meetingToDelete) return;
+
+        try {
+            setDeleting(true);
+            await meetingService.deleteMeeting(meetingToDelete.id);
+
+            toast.success('Meeting deleted successfully');
+            setMeetings(prev => prev.filter(m => m.id !== meetingToDelete.id));
+        } catch (error) {
+            console.error('Failed to delete meeting:', error);
+            toast.error('Failed to delete meeting');
+        } finally {
+            setDeleting(false);
+            setDeleteDialogOpen(false);
+            setMeetingToDelete(null);
+        }
+    };
+
+    const handleDeleteCancel = () => {
+        setDeleteDialogOpen(false);
+        setMeetingToDelete(null);
     };
 
     const filteredMeetings = meetings.filter((meeting) => {
@@ -55,7 +112,8 @@ export default function MinutesPage() {
             meeting.purpose.toLowerCase().includes(searchTerm.toLowerCase()) ||
             meeting.department.some(dept => dept.toLowerCase().includes(searchTerm.toLowerCase()));
         const matchesStatus = statusFilter === 'all' || meeting.status === statusFilter;
-        return matchesSearch && matchesStatus;
+        const matchesDepartment = departmentFilter === 'all' || meeting.department.includes(departmentFilter);
+        return matchesSearch && matchesStatus && matchesDepartment;
     });
 
     const getStatusColor = (status: string) => {
@@ -81,10 +139,49 @@ export default function MinutesPage() {
         };
     };
 
+    // Get unique departments for filter
+    const departments = Array.from(new Set(meetings.flatMap(meeting => meeting.department)));
+
     if (loading) return <TableSkeleton />;
 
     return (
         <div className="space-y-6 px-4 sm:px-6 py-6">
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the meeting
+                            "{meetingToDelete?.title}" and all its associated data including decisions,
+                            action items, and risks.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={handleDeleteCancel} disabled={deleting}>
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDeleteConfirm}
+                            disabled={deleting}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {deleting ? (
+                                <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                    Deleting...
+                                </>
+                            ) : (
+                                <>
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete Meeting
+                                </>
+                            )}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
@@ -148,6 +245,18 @@ export default function MinutesPage() {
                                     <SelectItem value="Cancelled">Cancelled</SelectItem>
                                 </SelectContent>
                             </Select>
+                            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                                <SelectTrigger className="w-full sm:w-[180px]">
+                                    <Building className="h-4 w-4 mr-2" />
+                                    <SelectValue placeholder="Filter by department" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Departments</SelectItem>
+                                    {departments.map(dept => (
+                                        <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
                 </CardContent>
@@ -160,11 +269,11 @@ export default function MinutesPage() {
                         <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                         <h3 className="text-lg font-medium text-muted-foreground mb-2">No meetings found</h3>
                         <p className="text-sm text-muted-foreground mb-4">
-                            {searchTerm || statusFilter !== 'all'
+                            {searchTerm || statusFilter !== 'all' || departmentFilter !== 'all'
                                 ? 'Try adjusting your search or filters.'
                                 : 'Get started by scheduling your first meeting.'}
                         </p>
-                        {!searchTerm && statusFilter === 'all' && (
+                        {!searchTerm && statusFilter === 'all' && departmentFilter === 'all' && (
                             <Button asChild>
                                 <Link href="/work/minutes/new">
                                     <Plus className="h-4 w-4 mr-2" />
@@ -179,7 +288,38 @@ export default function MinutesPage() {
                     {filteredMeetings.map((meeting) => {
                         const stats = getQuickStats(meeting);
                         return (
-                            <Card key={meeting.id} className="hover:shadow-md transition-shadow group">
+                            <Card key={meeting.id} className="hover:shadow-md transition-shadow group relative">
+                                {/* Options Dropdown */}
+                                <div className="absolute top-4 right-4">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <MoreVertical className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem asChild>
+                                                <Link href={`/work/minutes/${meeting.id}`}>
+                                                    View Details
+                                                </Link>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem asChild>
+                                                <Link href={`/work/minutes/${meeting.id}/edit`}>
+                                                    Edit Meeting
+                                                </Link>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem
+                                                className="text-red-600 focus:text-red-600"
+                                                onClick={() => handleDeleteClick(meeting)}
+                                            >
+                                                <Trash2 className="h-4 w-4 mr-2" />
+                                                Delete Meeting
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
+
                                 <CardHeader className="pb-4">
                                     <div className="flex justify-between items-start gap-4">
                                         <div className="space-y-3 flex-1">

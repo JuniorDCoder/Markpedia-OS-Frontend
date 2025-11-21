@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -14,16 +14,33 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon, ArrowLeft, Save, AlertCircle, Clock, Crown, Target, Building, User, FileText } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { taskService } from '@/services/api';
+import { departmentsApi } from '@/lib/api/departments';
+import { projectsApi } from '@/lib/api/projects';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 
+interface Department {
+    id: string;
+    name: string;
+}
+
+interface Project {
+    id: string;
+    name: string;
+    title: string;
+}
+
 export default function NewTaskPage() {
     const { user } = useAuthStore();
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const [departments, setDepartments] = useState<Department[]>([]);
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [departmentsLoading, setDepartmentsLoading] = useState(true);
+    const [projectsLoading, setProjectsLoading] = useState(true);
     const [startDate, setStartDate] = useState<Date>(new Date());
     const [dueDate, setDueDate] = useState<Date>();
 
@@ -56,6 +73,44 @@ export default function NewTaskPage() {
 
     const canCreateTask = isPrivilegedUser || getCurrentWeeklyRhythmPhase() === 'creation';
 
+    // Fetch departments and projects on component mount
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                // Fetch departments
+                const departmentsData = await departmentsApi.getAll({ limit: 1000 });
+                setDepartments(departmentsData.map(dept => ({
+                    id: dept.id,
+                    name: dept.name
+                })));
+            } catch (error) {
+                console.error('Failed to fetch departments:', error);
+                toast.error('Failed to load departments');
+            } finally {
+                setDepartmentsLoading(false);
+            }
+
+            try {
+                // Fetch projects
+                const projectsData = await projectsApi.listAll();
+                setProjects(projectsData.map(project => ({
+                    id: project.id,
+                    name: project.title,
+                    title: project.title
+                })));
+            } catch (error) {
+                console.error('Failed to fetch projects:', error);
+                toast.error('Failed to load projects');
+            } finally {
+                setProjectsLoading(false);
+            }
+        };
+
+        if (canCreateTask) {
+            fetchData();
+        }
+    }, [canCreateTask]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -64,14 +119,14 @@ export default function NewTaskPage() {
             return;
         }
 
-        try {
-            const userTasks = await taskService.getTasks();
-            const userActiveTasks = userTasks.filter(t =>
-                t.owner_id === user.id &&
-                ['Draft', 'Approved', 'In Progress'].includes(t.status)
-            );
+        if (!dueDate) {
+            toast.error('Please select a due date');
+            return;
+        }
 
-            if (userActiveTasks.length >= 5) {
+        try {
+            const activeCount = await taskService.activeCount(user.id);
+            if (activeCount >= 5) {
                 toast.error('Task limit reached: Maximum 5 active tasks per user. Complete existing tasks first.');
                 return;
             }
@@ -84,7 +139,7 @@ export default function NewTaskPage() {
             await taskService.createTask({
                 ...formData,
                 start_date: startDate.toISOString(),
-                due_date: dueDate ? dueDate.toISOString() : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                due_date: dueDate.toISOString(),
                 weekly_rhythm_status: 'creation',
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
@@ -115,25 +170,6 @@ export default function NewTaskPage() {
             }
         }));
     };
-
-    const departments = [
-        { id: 'engineering', name: 'Engineering' },
-        { id: 'marketing', name: 'Marketing' },
-        { id: 'sales', name: 'Sales' },
-        { id: 'hr', name: 'Human Resources' },
-        { id: 'finance', name: 'Finance' },
-        { id: 'operations', name: 'Operations' },
-        { id: 'design', name: 'Design' },
-        { id: 'product', name: 'Product' }
-    ];
-
-    const projects = [
-        { id: '1', name: 'Website Redesign' },
-        { id: '2', name: 'Mobile App Development' },
-        { id: '3', name: 'Q2 Marketing Campaign' },
-        { id: '4', name: 'Database Migration' },
-        { id: '5', name: 'Employee Training Program' }
-    ];
 
     if (!canCreateTask) {
         return (
@@ -321,9 +357,12 @@ export default function NewTaskPage() {
                                             <Select
                                                 value={formData.department_id}
                                                 onValueChange={(value) => handleChange('department_id', value)}
+                                                disabled={departmentsLoading}
                                             >
                                                 <SelectTrigger className="text-sm">
-                                                    <SelectValue placeholder="Select department" />
+                                                    <SelectValue placeholder={
+                                                        departmentsLoading ? "Loading departments..." : "Select department"
+                                                    } />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {departments.map(dept => (
@@ -342,9 +381,12 @@ export default function NewTaskPage() {
                                             <Select
                                                 value={formData.project_id || "none"}
                                                 onValueChange={(value) => handleChange('project_id', value === "none" ? "" : value)}
+                                                disabled={projectsLoading}
                                             >
                                                 <SelectTrigger className="text-sm">
-                                                    <SelectValue placeholder="Select project" />
+                                                    <SelectValue placeholder={
+                                                        projectsLoading ? "Loading projects..." : "Select project"
+                                                    } />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="none">No Project</SelectItem>
@@ -499,7 +541,7 @@ export default function NewTaskPage() {
                                     </Button>
                                     <Button
                                         type="submit"
-                                        disabled={loading}
+                                        disabled={loading || departmentsLoading || projectsLoading}
                                         className="w-full sm:w-40"
                                     >
                                         <Save className="h-4 w-4 mr-2" />

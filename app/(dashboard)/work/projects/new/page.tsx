@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,8 @@ import { projectService } from '@/services/api';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import { adminApi } from '@/lib/api/admin';
+import { departmentsApi } from '@/lib/api/departments';
 
 export default function NewProjectPage() {
     const { user } = useAuthStore();
@@ -45,6 +47,47 @@ export default function NewProjectPage() {
     const [budgetBreakdown, setBudgetBreakdown] = useState([{ category: '', description: '', amount: 0, status: 'Pending' as 'Approved' | 'Pending' | 'In Progress' | 'Reserved' }]);
     const [risks, setRisks] = useState([{ risk: '', impact: 'Medium' as 'Low' | 'Medium' | 'High', likelihood: 'Medium' as 'Low' | 'Medium' | 'High', mitigation: '' }]);
 
+    const [departmentNames, setDepartmentNames] = useState<string[]>([]);
+    const [users, setUsers] = useState<{ id: string; name: string; department?: string }[]>([]);
+
+    const isPrivileged = useMemo(() => {
+        const r = (user?.role || '').toLowerCase();
+        return r.includes('admin') || r.includes('ceo') || r.includes('cxo');
+    }, [user?.role]);
+
+    const currentUserName = useMemo(() => {
+        const first = user?.firstName || '';
+        const last = user?.lastName || '';
+        return `${first} ${last}`.trim() || user?.email || '';
+    }, [user]);
+
+    useEffect(() => {
+        async function loadLookups() {
+            try {
+                const [deptNames, fetchedUsers] = await Promise.all([
+                    departmentsApi.getNames(),
+                    isPrivileged ? adminApi.getUsers() : Promise.resolve([])
+                ]);
+                setDepartmentNames(deptNames);
+                const mapped = (fetchedUsers as any[]).map((u: any) => ({ id: u.id, name: `${u.firstName} ${u.lastName}`.trim() || u.email, department: u.department }));
+                setUsers(mapped);
+            } catch (e: any) {
+                toast.error(e?.data?.detail || 'Failed to load options');
+            }
+        }
+        loadLookups();
+    }, [isPrivileged]);
+
+    useEffect(() => {
+        // Default values for non-privileged users
+        if (!isPrivileged) {
+            if (user?.department) {
+                setFormData(prev => ({ ...prev, department: user.department! }));
+            }
+            setFormData(prev => ({ ...prev, owner: currentUserName }));
+        }
+    }, [isPrivileged, user?.department, currentUserName]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -66,8 +109,9 @@ export default function NewProjectPage() {
             });
             toast.success('Project created successfully');
             router.push('/work/projects');
-        } catch (error) {
-            toast.error('Failed to create project');
+        } catch (error: any) {
+            const msg = error?.data?.detail?.[0]?.msg || error?.data?.detail || error?.message || 'Failed to create project';
+            toast.error(Array.isArray(msg) ? msg.join(', ') : String(msg));
         } finally {
             setLoading(false);
         }
@@ -92,10 +136,7 @@ export default function NewProjectPage() {
         setArray(newArray);
     };
 
-    const departments = [
-        'Trust & Safety', 'Tech Department', 'Engineering', 'Marketing',
-        'Sales', 'HR', 'Finance', 'Operations', 'IT', 'Design'
-    ];
+    // Departments are loaded from backend into departmentNames
 
     return (
         <div className="p-6 max-w-6xl mx-auto">
@@ -135,12 +176,13 @@ export default function NewProjectPage() {
                                         <Select
                                             value={formData.department}
                                             onValueChange={(value) => handleChange('department', value)}
+                                            disabled={!isPrivileged}
                                         >
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select department" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {departments.map(dept => (
+                                                {departmentNames.map(dept => (
                                                     <SelectItem key={dept} value={dept}>{dept}</SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -149,13 +191,30 @@ export default function NewProjectPage() {
 
                                     <div className="space-y-2">
                                         <Label htmlFor="owner">Project Owner *</Label>
-                                        <Input
-                                            id="owner"
-                                            value={formData.owner}
-                                            onChange={(e) => handleChange('owner', e.target.value)}
-                                            placeholder="Enter project owner"
-                                            required
-                                        />
+                                        {isPrivileged ? (
+                                            <Select
+                                                value={formData.owner}
+                                                onValueChange={(value) => handleChange('owner', value)}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select owner" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {users.map(u => (
+                                                        <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        ) : (
+                                            <Input
+                                                id="owner"
+                                                value={formData.owner || currentUserName}
+                                                onChange={(e) => handleChange('owner', e.target.value)}
+                                                placeholder="Owner"
+                                                required
+                                                readOnly
+                                            />
+                                        )}
                                     </div>
 
                                     <div className="space-y-2">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,8 @@ import { Project } from '@/types';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import { adminApi } from '@/lib/api/admin';
+import { departmentsApi } from '@/lib/api/departments';
 
 interface ProjectEditClientProps {
     initialProject: Project | null;
@@ -30,6 +32,8 @@ export default function ProjectEditClient({ initialProject, projectId }: Project
     const [loading, setLoading] = useState(false);
     const [startDate, setStartDate] = useState<Date>();
     const [endDate, setEndDate] = useState<Date>();
+    const [departmentsLoading, setDepartmentsLoading] = useState(true);
+
 
     const [formData, setFormData] = useState({
         title: '',
@@ -50,6 +54,20 @@ export default function ProjectEditClient({ initialProject, projectId }: Project
     const [tasks, setTasks] = useState([{ task: '', owner: '', dueDate: '', status: 'Not Started' as 'Not Started' | 'In Progress' | 'Done' | 'Delayed' }]);
     const [budgetBreakdown, setBudgetBreakdown] = useState([{ category: '', description: '', amount: 0, status: 'Pending' as 'Approved' | 'Pending' | 'In Progress' | 'Reserved' }]);
     const [risks, setRisks] = useState([{ risk: '', impact: 'Medium' as 'Low' | 'Medium' | 'High', likelihood: 'Medium' as 'Low' | 'Medium' | 'High', mitigation: '' }]);
+
+    const [departmentNames, setDepartmentNames] = useState<string[]>([]);
+    const [users, setUsers] = useState<{ id: string; name: string; department?: string }[]>([]);
+
+    const isPrivileged = useMemo(() => {
+        const r = (user?.role || '').toLowerCase();
+        return r.includes('admin') || r.includes('ceo') || r.includes('cxo');
+    }, [user?.role]);
+
+    const currentUserName = useMemo(() => {
+        const first = user?.firstName || '';
+        const last = user?.lastName || '';
+        return `${first} ${last}`.trim() || user?.email || '';
+    }, [user]);
 
     useEffect(() => {
         if (initialProject) {
@@ -75,6 +93,40 @@ export default function ProjectEditClient({ initialProject, projectId }: Project
             if (initialProject.budgetBreakdown) setBudgetBreakdown(initialProject.budgetBreakdown.length > 0 ? initialProject.budgetBreakdown : [{ category: '', description: '', amount: 0, status: 'Pending' }]);
         }
     }, [initialProject]);
+
+    useEffect(() => {
+        async function loadLookups() {
+            try {
+                setDepartmentsLoading(true);
+                const [deptNames, fetchedUsers] = await Promise.all([
+                    departmentsApi.getNames(),
+                    isPrivileged ? adminApi.getUsers() : Promise.resolve([])
+                ]);
+                setDepartmentNames(deptNames);
+                const mapped = (fetchedUsers as any[]).map((u: any) => ({
+                    id: u.id,
+                    name: `${u.firstName} ${u.lastName}`.trim() || u.email,
+                    department: u.department
+                }));
+                setUsers(mapped);
+            } catch (e: any) {
+                toast.error(e?.data?.detail || 'Failed to load options');
+            } finally {
+                setDepartmentsLoading(false);
+            }
+        }
+        loadLookups();
+    }, [isPrivileged]);
+
+    useEffect(() => {
+        // For non-privileged, lock owner to current user and department to their department
+        if (!isPrivileged) {
+            if (user?.department) {
+                setFormData(prev => ({ ...prev, department: user.department! }));
+            }
+            setFormData(prev => ({ ...prev, owner: currentUserName }));
+        }
+    }, [isPrivileged, user?.department, currentUserName]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -121,10 +173,7 @@ export default function ProjectEditClient({ initialProject, projectId }: Project
         setArray(newArray);
     };
 
-    const departments = [
-        'Trust & Safety', 'Tech Department', 'Engineering', 'Marketing',
-        'Sales', 'HR', 'Finance', 'Operations', 'IT', 'Design'
-    ];
+    // Departments loaded from backend
 
     if (!initialProject) {
         return (
@@ -175,16 +224,49 @@ export default function ProjectEditClient({ initialProject, projectId }: Project
                                         <Select
                                             value={formData.department}
                                             onValueChange={(value) => handleChange('department', value)}
+                                            disabled={!isPrivileged || departmentsLoading}
                                         >
                                             <SelectTrigger>
-                                                <SelectValue placeholder="Select department" />
+                                                <SelectValue placeholder={
+                                                    departmentsLoading ? "Loading departments..." : "Select department"
+                                                } />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {departments.map(dept => (
+                                                {departmentNames.map(dept => (
                                                     <SelectItem key={dept} value={dept}>{dept}</SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="owner">Project Owner *</Label>
+                                        {isPrivileged ? (
+                                            <Select
+                                                value={formData.owner}
+                                                onValueChange={(value) => handleChange('owner', value)}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select project owner" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {users.map(user => (
+                                                        <SelectItem key={user.id} value={user.name}>
+                                                            {user.name} {user.department ? `(${user.department})` : ''}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        ) : (
+                                            <Input
+                                                id="owner"
+                                                value={formData.owner}
+                                                onChange={(e) => handleChange('owner', e.target.value)}
+                                                placeholder="Enter project owner"
+                                                required
+                                                disabled
+                                            />
+                                        )}
                                     </div>
 
                                     <div className="space-y-2">

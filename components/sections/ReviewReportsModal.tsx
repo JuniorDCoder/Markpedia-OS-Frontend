@@ -1,8 +1,12 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { FileText, CheckCircle2 } from 'lucide-react';
+import { userService } from '@/services/api';
 
 interface Report {
   taskId: string;
@@ -20,6 +24,32 @@ interface ReviewReportsModalProps {
 }
 
 export default function ReviewReportsModal({ isOpen, onClose, reports, onReview, tasks }: ReviewReportsModalProps) {
+  const [userNames, setUserNames] = useState<Record<string, string>>({});
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      if (!isOpen) return;
+      try {
+        setLoadingUsers(true);
+        const users = await userService.getUsers();
+        const map: Record<string, string> = {};
+        (users || []).forEach((u: any) => {
+          const full = `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email || u.id;
+          map[u.id] = full;
+        });
+        setUserNames(map);
+      } catch (e) {
+        // ignore, fallback to id
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+    loadUsers();
+  }, [isOpen]);
+
+  const displayName = (id: string) => userNames[id] || id;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -63,7 +93,7 @@ export default function ReviewReportsModal({ isOpen, onClose, reports, onReview,
                       <strong>Report:</strong> {report.reportContent}
                     </div>
                     <div className="text-xs text-muted-foreground mt-2">
-                      Submitted by: {report.submittedBy}
+                      Submitted by: {displayName(report.submittedBy)}
                     </div>
                   </CardContent>
                 </Card>

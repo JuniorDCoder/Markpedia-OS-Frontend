@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { departmentsApi } from '@/lib/api/departments';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,18 +48,34 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
     const [editing, setEditing] = useState(false);
     const [saving, setSaving] = useState(false);
 
+    // Departments
+    const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
+    const [deptToAdd, setDeptToAdd] = useState<string>('');
+
     // New item states
     const [newAgendaItem, setNewAgendaItem] = useState({ item: '', presenter: '', duration: '' });
     const [newDiscussionItem, setNewDiscussionItem] = useState({ agendaItem: '', summary: '', agreements: '' });
     const [newDecision, setNewDecision] = useState({ description: '', responsible: '', approvedBy: '', deadline: '' });
-    const [newActionItem, setNewActionItem] = useState({ description: '', assignedTo: '', department: '', dueDate: '', status: 'Pending' as const });
-    const [newRiskItem, setNewRiskItem] = useState({ risk: '', impact: 'Medium' as 'Low' | 'Medium' | 'High', mitigation: '', owner: '' });
+    const [newActionItem, setNewActionItem] = useState({ item: '', owner: '', dueDate: '', status: 'Not Started' as 'Not Started' | 'In Progress' | 'Completed' | 'Delayed', priority: 'Medium' as 'Low' | 'Medium' | 'High' | 'Critical' });
+    const [newRiskItem, setNewRiskItem] = useState({ risk: '', impact: 'Medium' as 'Low' | 'Medium' | 'High', likelihood: 'Medium' as 'Low' | 'Medium' | 'High', mitigation: '', owner: '' });
 
     useEffect(() => {
         if (!initialMeeting) {
             loadMeeting();
         }
     }, [meetingId, initialMeeting]);
+
+    useEffect(() => {
+        // Load departments for editing
+        (async () => {
+            try {
+                const names = await departmentsApi.getNames();
+                setAvailableDepartments(names);
+            } catch (e) {
+                console.warn('Failed to load departments', e);
+            }
+        })();
+    }, []);
 
     const loadMeeting = async () => {
         try {
@@ -157,21 +174,26 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
     };
 
     const addActionItem = async () => {
-        if (!newActionItem.description.trim() || !meeting) return;
+        if (!meeting) return;
+        const { item, owner, dueDate, status, priority } = newActionItem;
+        if (!item.trim() || !owner.trim() || !dueDate.trim()) {
+            toast.error('Please provide item, owner, and due date');
+            return;
+        }
 
         try {
             const actionItem: ActionItem = {
                 id: `action-${Date.now()}`,
-                description: newActionItem.description,
-                assignedTo: newActionItem.assignedTo,
-                department: newActionItem.department,
-                dueDate: newActionItem.dueDate,
-                status: newActionItem.status
+                item,
+                owner,
+                dueDate,
+                status,
+                priority,
             };
 
             const updatedMeeting = await meetingService.addActionItem(meetingId, actionItem);
             setMeeting(updatedMeeting);
-            setNewActionItem({ description: '', assignedTo: '', department: '', dueDate: '', status: 'Pending' });
+            setNewActionItem({ item: '', owner: '', dueDate: '', status: 'Not Started', priority: 'Medium' });
             toast.success('Action item added successfully');
         } catch (error) {
             toast.error('Failed to add action item');
@@ -179,23 +201,26 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
     };
 
     const addRiskItem = async () => {
-        if (!newRiskItem.risk.trim() || !meeting) return;
+        if (!meeting) return;
+        const { risk, impact, likelihood, mitigation, owner } = newRiskItem;
+        if (!risk.trim() || !owner.trim()) {
+            toast.error('Please provide risk and owner');
+            return;
+        }
 
         try {
             const riskItem: RiskItem = {
                 id: `risk-${Date.now()}`,
-                risk: newRiskItem.risk,
-                impact: newRiskItem.impact,
-                mitigation: newRiskItem.mitigation,
-                owner: newRiskItem.owner
+                risk,
+                impact,
+                likelihood,
+                mitigation,
+                owner,
             };
 
-            const updatedMeeting = {
-                ...meeting,
-                risks: [...meeting.risks, riskItem]
-            };
-            setMeeting(updatedMeeting);
-            setNewRiskItem({ risk: '', impact: 'Medium', mitigation: '', owner: '' });
+            const updated = await meetingService.updateMeeting(meetingId, { risks: [...meeting.risks, riskItem] });
+            setMeeting(updated);
+            setNewRiskItem({ risk: '', impact: 'Medium', likelihood: 'Medium', mitigation: '', owner: '' });
             toast.success('Risk item added successfully');
         } catch (error) {
             toast.error('Failed to add risk item');
@@ -244,9 +269,9 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
                 return 'bg-green-100 text-green-800 border-green-200';
             case 'In Progress':
                 return 'bg-blue-100 text-blue-800 border-blue-200';
-            case 'Pending':
+            case 'Not Started':
                 return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-            case 'Cancelled':
+            case 'Delayed':
                 return 'bg-red-100 text-red-800 border-red-200';
             default:
                 return 'bg-gray-100 text-gray-800 border-gray-200';
@@ -307,16 +332,70 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
                                 meeting.title
                             )}
                         </h1>
-                        <div className="flex flex-wrap gap-2">
-                            {meeting.department.map((dept) => (
-                                <Badge key={dept} variant="outline" className="flex items-center gap-1">
-                                    <Building className="h-3 w-3" />
-                                    {dept}
-                                </Badge>
-                            ))}
-                            <Badge variant="secondary" className={getStatusColor(meeting.status)}>
-                                {meeting.status}
-                            </Badge>
+                        <div className="flex flex-wrap gap-2 items-center">
+                            {editing ? (
+                                <div className="flex flex-wrap gap-2 w-full sm:w-auto items-center">
+                                    <Select value={deptToAdd} onValueChange={(v) => setDeptToAdd(v)}>
+                                        <SelectTrigger className="w-[220px]"><SelectValue placeholder="Add Department" /></SelectTrigger>
+                                        <SelectContent>
+                                            {availableDepartments.map((d) => (
+                                                <SelectItem key={d} value={d}>{d}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        onClick={() => {
+                                            if (!deptToAdd) return;
+                                            if (!meeting.department.includes(deptToAdd)) {
+                                                setMeeting({ ...meeting, department: [...meeting.department, deptToAdd] });
+                                            }
+                                            setDeptToAdd('');
+                                        }}
+                                    >
+                                        Add
+                                    </Button>
+                                    <div className="flex flex-wrap gap-2">
+                                        {meeting.department.map((dept) => (
+                                            <Badge key={dept} variant="outline" className="flex items-center gap-1">
+                                                <Building className="h-3 w-3" />
+                                                {dept}
+                                                <button
+                                                    type="button"
+                                                    className="ml-1 text-xs text-red-500"
+                                                    onClick={() => setMeeting({ ...meeting, department: meeting.department.filter(d => d !== dept) })}
+                                                >
+                                                    ×
+                                                </button>
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                    <Select value={meeting.status} onValueChange={(v) => setMeeting({ ...meeting, status: v as any })}>
+                                        <SelectTrigger className="w-[180px]">
+                                            <SelectValue placeholder="Status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Scheduled">Scheduled</SelectItem>
+                                            <SelectItem value="In Progress">In Progress</SelectItem>
+                                            <SelectItem value="Completed">Completed</SelectItem>
+                                            <SelectItem value="Cancelled">Cancelled</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            ) : (
+                                <>
+                                    {meeting.department.map((dept) => (
+                                        <Badge key={dept} variant="outline" className="flex items-center gap-1">
+                                            <Building className="h-3 w-3" />
+                                            {dept}
+                                        </Badge>
+                                    ))}
+                                    <Badge variant="secondary" className={getStatusColor(meeting.status)}>
+                                        {meeting.status}
+                                    </Badge>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -351,18 +430,53 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
                         <div className="space-y-4">
                             <div className="flex items-center gap-3">
                                 <Calendar className="h-5 w-5 text-muted-foreground" />
-                                <div>
+                                <div className="w-full">
                                     <p className="text-sm font-medium">Date & Time</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        {new Date(meeting.date).toLocaleDateString()} • {meeting.startTime} - {meeting.endTime}
-                                    </p>
+                                    {editing ? (
+                                        <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                            <Input
+                                                type="date"
+                                                value={meeting.date?.slice(0, 10) || ''}
+                                                onChange={(e) => setMeeting({ ...meeting, date: e.target.value })}
+                                            />
+                                            <Input
+                                                type="time"
+                                                value={meeting.startTime || ''}
+                                                onChange={(e) => setMeeting({ ...meeting, startTime: e.target.value })}
+                                            />
+                                            <Input
+                                                type="time"
+                                                value={meeting.endTime || ''}
+                                                onChange={(e) => setMeeting({ ...meeting, endTime: e.target.value })}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground">
+                                            {new Date(meeting.date).toLocaleDateString()} • {meeting.startTime} - {meeting.endTime}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
                                 <MapPin className="h-5 w-5 text-muted-foreground" />
-                                <div>
+                                <div className="w-full">
                                     <p className="text-sm font-medium">Platform & Location</p>
-                                    <p className="text-sm text-muted-foreground">{meeting.platform}</p>
+                                    {editing ? (
+                                        <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            <Input
+                                                placeholder="Platform (e.g., Zoom, In-person)"
+                                                value={meeting.platform || ''}
+                                                onChange={(e) => setMeeting({ ...meeting, platform: e.target.value })}
+                                            />
+                                            <Input
+                                                placeholder="Location (e.g., Room 101 or URL)"
+                                                value={meeting.location || ''}
+                                                onChange={(e) => setMeeting({ ...meeting, location: e.target.value })}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground">{meeting.platform}{meeting.location ? ` • ${meeting.location}` : ''}</p>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -370,16 +484,34 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
                         <div className="space-y-4">
                             <div className="flex items-center gap-3">
                                 <User className="h-5 w-5 text-muted-foreground" />
-                                <div>
+                                <div className="w-full">
                                     <p className="text-sm font-medium">Called By</p>
-                                    <p className="text-sm text-muted-foreground">{meeting.calledBy}</p>
+                                    {editing ? (
+                                        <Input
+                                            className="mt-2"
+                                            placeholder="Called by"
+                                            value={meeting.calledBy || ''}
+                                            onChange={(e) => setMeeting({ ...meeting, calledBy: e.target.value })}
+                                        />
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground">{meeting.calledBy}</p>
+                                    )}
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
                                 <User className="h-5 w-5 text-muted-foreground" />
-                                <div>
+                                <div className="w-full">
                                     <p className="text-sm font-medium">Facilitator</p>
-                                    <p className="text-sm text-muted-foreground">{meeting.facilitator}</p>
+                                    {editing ? (
+                                        <Input
+                                            className="mt-2"
+                                            placeholder="Facilitator"
+                                            value={meeting.facilitator || ''}
+                                            onChange={(e) => setMeeting({ ...meeting, facilitator: e.target.value })}
+                                        />
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground">{meeting.facilitator}</p>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -387,18 +519,42 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
                         <div className="space-y-4">
                             <div className="flex items-center gap-3">
                                 <FileText className="h-5 w-5 text-muted-foreground" />
-                                <div>
+                                <div className="w-full">
                                     <p className="text-sm font-medium">Minute Taker</p>
-                                    <p className="text-sm text-muted-foreground">{meeting.minuteTaker}</p>
+                                    {editing ? (
+                                        <Input
+                                            className="mt-2"
+                                            placeholder="Minute taker"
+                                            value={meeting.minuteTaker || ''}
+                                            onChange={(e) => setMeeting({ ...meeting, minuteTaker: e.target.value })}
+                                        />
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground">{meeting.minuteTaker}</p>
+                                    )}
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
                                 <Users className="h-5 w-5 text-muted-foreground" />
-                                <div>
+                                <div className="w-full">
                                     <p className="text-sm font-medium">Attendance</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        {meeting.participants.length} present • {meeting.absent.length} absent
-                                    </p>
+                                    {editing ? (
+                                        <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            <Input
+                                                placeholder="Participants (comma separated)"
+                                                value={meeting.participants.join(', ')}
+                                                onChange={(e) => setMeeting({ ...meeting, participants: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+                                            />
+                                            <Input
+                                                placeholder="Absent (comma separated)"
+                                                value={meeting.absent.join(', ')}
+                                                onChange={(e) => setMeeting({ ...meeting, absent: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground">
+                                            {meeting.participants.length} present • {meeting.absent.length} absent
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -661,10 +817,10 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
                             <div key={item.id} className="p-3 bg-orange-50 rounded border border-orange-100">
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">
-                                        <p className="font-medium">{item.description}</p>
+                                        <p className="font-medium">{item.item}</p>
                                         <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-muted-foreground">
-                                            <span>Assignee: {item.assignedTo}</span>
-                                            <span>Department: {item.department}</span>
+                                            <span>Owner: {item.owner}</span>
+                                            <span>Priority: {item.priority}</span>
                                             <span>Due: {new Date(item.dueDate).toLocaleDateString()}</span>
                                         </div>
                                     </div>
@@ -677,10 +833,10 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="Pending">Pending</SelectItem>
+                                                <SelectItem value="Not Started">Not Started</SelectItem>
                                                 <SelectItem value="In Progress">In Progress</SelectItem>
                                                 <SelectItem value="Completed">Completed</SelectItem>
-                                                <SelectItem value="Cancelled">Cancelled</SelectItem>
+                                                <SelectItem value="Delayed">Delayed</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         {editing && (
@@ -709,27 +865,31 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
                             <h4 className="font-medium mb-3">Add Action Item</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <Input
-                                    placeholder="Action description"
-                                    value={newActionItem.description}
-                                    onChange={(e) => setNewActionItem({ ...newActionItem, description: e.target.value })}
+                                    placeholder="Action item"
+                                    value={newActionItem.item}
+                                    onChange={(e) => setNewActionItem({ ...newActionItem, item: e.target.value })}
                                 />
                                 <Input
-                                    placeholder="Assigned to"
-                                    value={newActionItem.assignedTo}
-                                    onChange={(e) => setNewActionItem({ ...newActionItem, assignedTo: e.target.value })}
+                                    placeholder="Owner"
+                                    value={newActionItem.owner}
+                                    onChange={(e) => setNewActionItem({ ...newActionItem, owner: e.target.value })}
                                 />
-                                <Input
-                                    placeholder="Department"
-                                    value={newActionItem.department}
-                                    onChange={(e) => setNewActionItem({ ...newActionItem, department: e.target.value })}
-                                />
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 items-center">
                                     <Input
                                         type="date"
                                         value={newActionItem.dueDate}
                                         onChange={(e) => setNewActionItem({ ...newActionItem, dueDate: e.target.value })}
                                     />
-                                    <Button onClick={addActionItem} disabled={!newActionItem.description.trim()}>
+                                    <Select value={newActionItem.priority} onValueChange={(v: 'Low'|'Medium'|'High'|'Critical') => setNewActionItem({ ...newActionItem, priority: v })}>
+                                        <SelectTrigger className="w-[130px]"><SelectValue placeholder="Priority" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Low">Low</SelectItem>
+                                            <SelectItem value="Medium">Medium</SelectItem>
+                                            <SelectItem value="High">High</SelectItem>
+                                            <SelectItem value="Critical">Critical</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <Button onClick={addActionItem} disabled={!newActionItem.item.trim() || !newActionItem.owner.trim() || !newActionItem.dueDate.trim()}>
                                         <Plus className="h-4 w-4" />
                                     </Button>
                                 </div>
@@ -765,6 +925,7 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
                                         <div className="space-y-1 text-sm text-muted-foreground">
                                             <p><span className="font-medium">Mitigation:</span> {risk.mitigation}</p>
                                             <p><span className="font-medium">Owner:</span> {risk.owner}</p>
+                                            <p><span className="font-medium">Likelihood:</span> {risk.likelihood}</p>
                                         </div>
                                     </div>
                                     {editing && (
