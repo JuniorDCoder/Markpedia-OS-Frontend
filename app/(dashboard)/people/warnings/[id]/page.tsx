@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { notFound } from "next/navigation";
-import { warningsService } from "@/lib/api/warnings";
+import { warningsService } from "@/services/warningsService";
 import { Warning } from "@/types/warnings";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,7 @@ interface PageProps {
 export default function ViewWarningPage({ params }: PageProps) {
     const [data, setData] = useState<Warning | null>(null);
     const [loading, setLoading] = useState(true);
+    const [levelInfo, setLevelInfo] = useState<any>(null);
 
     useEffect(() => {
         loadWarning();
@@ -30,6 +31,13 @@ export default function ViewWarningPage({ params }: PageProps) {
                 notFound();
             }
             setData(warning);
+            // fetch level info
+            try {
+                const li = await warningsService.getLevelInfo(warning.level);
+                setLevelInfo(li || { name: warning.level, points: warning.pointsDeducted || 0, validity: 30 });
+            } catch (err) {
+                setLevelInfo({ name: warning.level, points: warning.pointsDeducted || 0, validity: 30 });
+            }
         } catch (error) {
             console.error('Error loading warning:', error);
             notFound();
@@ -50,7 +58,8 @@ export default function ViewWarningPage({ params }: PageProps) {
         notFound();
     }
 
-    const levelInfo = warningsService.getLevelInfo(data.level);
+    // levelInfo is populated after loadWarning
+    const li = levelInfo || { name: data.level, points: data.pointsDeducted || 0, validity: 30 };
 
     return (
         <div className="space-y-6">
@@ -66,7 +75,7 @@ export default function ViewWarningPage({ params }: PageProps) {
                     <div className="min-w-0 flex-1">
                         <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-3">
                             <AlertTriangle className="h-6 w-6 md:h-8 md:w-8" />
-                            <span className="truncate">{levelInfo.name}</span>
+                            <span className="truncate">{li.name}</span>
                         </h1>
                         <p className="text-muted-foreground mt-1 text-sm">
                             Issued to {data.employeeName} by {data.issuedBy}
@@ -127,7 +136,7 @@ export default function ViewWarningPage({ params }: PageProps) {
                                                 data.level === 'L3' ? 'bg-red-50 text-red-700' :
                                                     'bg-purple-50 text-purple-700'
                                     }>
-                                        {levelInfo.name}
+                                        {li.name}
                                     </Badge>
                                 </div>
 
@@ -213,11 +222,11 @@ export default function ViewWarningPage({ params }: PageProps) {
                         <CardContent className="space-y-3">
                             <div className="flex justify-between text-sm">
                                 <span>Validity Period:</span>
-                                <span className="font-medium">{levelInfo.validity} days</span>
+                                <span className="font-medium">{li.validity} days</span>
                             </div>
                             <div className="flex justify-between text-sm">
                                 <span>Performance Impact:</span>
-                                <span className="font-medium text-red-600">-{levelInfo.points} points</span>
+                                <span className="font-medium text-red-600">-{li.points} points</span>
                             </div>
                             <div className="flex justify-between text-sm">
                                 <span>Days Remaining:</span>

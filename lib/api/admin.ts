@@ -37,7 +37,7 @@ export function mapBackendUser(u: BackendUser): User {
 export const adminApi = {
   async getUsers(): Promise<User[]> {
     const data = await apiRequest<{ users: BackendUser[]; total: number; page: number; pages: number }>(
-      '/api/v1/admin/users/'
+      '/admin/users/'
     );
     return (data.users || []).map(mapBackendUser);
   },

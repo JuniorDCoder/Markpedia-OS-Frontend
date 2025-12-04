@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { warningsService } from "@/lib/api/warnings";
+import { warningsService } from "@/services/warningsService";
 import PIPFormClient from "@/components/sections/PIPFormClient";
 
 interface PageProps {
@@ -8,8 +8,8 @@ interface PageProps {
 
 export async function generateStaticParams() {
     try {
-        const pips = await warningsService.getAllPIPs();
-        return pips.map((pip) => ({ id: pip.id }));
+        const pips = await warningsService.getPIPs();
+        return (pips || []).map((pip: any) => ({ id: pip.id }));
     } catch (error) {
         console.error('Error generating static params:', error);
         return [];

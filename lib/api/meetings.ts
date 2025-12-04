@@ -376,7 +376,7 @@ export const meetingsApi = {
     async list(params: ListMeetingsParams = {}) {
         const { skip = 0, limit = 100, ...filters } = params;
         const query = buildQuery({ skip, limit, ...filters });
-        const data = await apiRequest<{ meetings: BackendMeeting[]; total: number }>(`/api/v1/work/meetings/${query}`);
+        const data = await apiRequest<{ meetings: BackendMeeting[]; total: number }>(`/work/meetings/${query}`);
         return {
             meetings: data.meetings.map(mapBackendMeeting),
             total: data.total
@@ -384,13 +384,13 @@ export const meetingsApi = {
     },
 
     async getById(id: string) {
-        const data = await apiRequest<BackendMeeting>(`/api/v1/work/meetings/${id}`);
+        const data = await apiRequest<BackendMeeting>(`work/meetings/${id}`);
         return mapBackendMeeting(data);
     },
 
     async create(meeting: Partial<Meeting>) {
         const payload = mapFrontendToBackendMeetingCreate(meeting);
-        const data = await apiRequest<BackendMeeting>(`/api/v1/work/meetings/`, {
+        const data = await apiRequest<BackendMeeting>(`/work/meetings/`, {
             method: 'POST',
             body: JSON.stringify(payload),
         });
@@ -399,7 +399,7 @@ export const meetingsApi = {
 
     async update(id: string, updates: Partial<Meeting>) {
         const payload = mapFrontendToBackendMeetingUpdate(updates);
-        const data = await apiRequest<BackendMeeting>(`/api/v1/work/meetings/${id}`, {
+        const data = await apiRequest<BackendMeeting>(`/work/meetings/${id}`, {
             method: 'PUT',
             body: JSON.stringify(payload),
         });
@@ -407,14 +407,14 @@ export const meetingsApi = {
     },
 
     async remove(id: string) {
-        await apiRequest<void>(`/api/v1/work/meetings/${id}`, {
+        await apiRequest<void>(`/work/meetings/${id}`, {
             method: 'DELETE'
         });
     },
 
     async addDecision(meetingId: string, decision: Decision) {
         const payload = mapFrontendToBackendDecision(decision);
-        const data = await apiRequest<BackendMeeting>(`/api/v1/work/meetings/${meetingId}/decisions`, {
+        const data = await apiRequest<BackendMeeting>(`/work/meetings/${meetingId}/decisions`, {
             method: 'POST',
             body: JSON.stringify(payload),
         });
@@ -423,7 +423,7 @@ export const meetingsApi = {
 
     async addActionItem(meetingId: string, actionItem: ActionItem) {
         const payload = mapFrontendToBackendActionItem(actionItem);
-        const data = await apiRequest<BackendMeeting>(`/api/v1/work/meetings/${meetingId}/action-items`, {
+        const data = await apiRequest<BackendMeeting>(`/work/meetings/${meetingId}/action-items`, {
             method: 'POST',
             body: JSON.stringify(payload),
         });
@@ -431,7 +431,7 @@ export const meetingsApi = {
     },
 
     async updateActionItemStatus(meetingId: string, itemId: string, status: string) {
-        const data = await apiRequest<BackendMeeting>(`/api/v1/work/meetings/${meetingId}/action-items/${itemId}`, {
+        const data = await apiRequest<BackendMeeting>(`/work/meetings/${meetingId}/action-items/${itemId}`, {
             method: 'PATCH',
             body: JSON.stringify({ status }),
         });
@@ -439,19 +439,19 @@ export const meetingsApi = {
     },
 
     async getConfig() {
-        const data = await apiRequest<BackendMeetingConfig>(`/api/v1/work/meetings/config/default`);
+        const data = await apiRequest<BackendMeetingConfig>(`/work/meetings/config/default`);
         return mapBackendMeetingConfig(data);
     },
 
     async saveConfig(config: MeetingConfig) {
         const payload = mapFrontendToBackendMeetingConfig(config);
-        await apiRequest<void>(`/api/v1/work/meetings/config/default`, {
+        await apiRequest<void>(`/work/meetings/config/default`, {
             method: 'PUT',
             body: JSON.stringify(payload),
         });
     },
 
     async getStats() {
-        return apiRequest<any>(`/api/v1/work/meetings/stats/overview`);
+        return apiRequest<any>(`/work/meetings/stats/overview`);
     },
 };

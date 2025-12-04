@@ -8,8 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TableSkeleton } from '@/components/ui/loading';
-import { jobDescriptionService } from '@/services/api';
-import { JobDescription, Department } from '@/types';
+import { JobDescription } from '@/types';
+import { jobDescriptionService } from '@/services/jobDescriptionService';
 import {
     Plus,
     Search,
@@ -23,9 +23,12 @@ import {
     Calendar,
     Target,
     BarChart3,
-    Clock
+    Clock,
+    AlertCircle,
+    Trash2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 
 export default function JobDescriptionsPage() {
     const [jobDescriptions, setJobDescriptions] = useState<JobDescription[]>([]);
@@ -34,6 +37,10 @@ export default function JobDescriptionsPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [departmentFilter, setDepartmentFilter] = useState('all');
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [jobToDelete, setJobToDelete] = useState<JobDescription | null>(null);
+    const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
+    const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         loadJobDescriptions();
@@ -63,10 +70,39 @@ export default function JobDescriptionsPage() {
 
     const exportToPDF = async (id: string) => {
         try {
-            await jobDescriptionService.exportToPDF(id);
-            toast.success('PDF exported successfully');
-        } catch (error) {
+            const res = await jobDescriptionService.exportToPDF(id, { format: 'pdf', includeAllVersions: false });
+
+            if (typeof res === 'string' && res.startsWith('http')) {
+                const win = window.open(res, '_blank');
+                if (!win) {
+                    toast.success('Export ready — copy the link from your downloads');
+                } else {
+                    toast.success('Export opened in new tab');
+                }
+                return;
+            }
+
+            if (res && typeof res === 'object') {
+                const url = (res as any).url;
+                if (url && typeof url === 'string') {
+                    window.open(url, '_blank');
+                    toast.success('Export opened in new tab');
+                    return;
+                }
+            }
+
+            toast.success('Export completed');
+        } catch (err: any) {
+            const status = err?.status || err?.response?.status;
+            if (status === 422) {
+                const details = err?.data?.detail;
+                if (Array.isArray(details)) {
+                    toast.error(details.map((d: any) => d.msg || JSON.stringify(d)).join('\n'));
+                    return;
+                }
+            }
             toast.error('Failed to export PDF');
+            console.error('Export error', err);
         }
     };
 
@@ -77,6 +113,34 @@ export default function JobDescriptionsPage() {
             loadJobDescriptions(); // Reload to show new version
         } catch (error) {
             toast.error('Failed to create new version');
+        }
+    };
+
+    const openDeleteDialog = (job: JobDescription) => {
+        setJobToDelete(job);
+        setDeleteConfirmationText('');
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteJob = async () => {
+        if (!jobToDelete) return;
+        const expectedConfirmation = `DELETE ${jobToDelete.id}`;
+        if (deleteConfirmationText !== expectedConfirmation) {
+            toast.error(`Please type "${expectedConfirmation}" to confirm deletion`);
+            return;
+        }
+        try {
+            setIsDeleting(true);
+            await jobDescriptionService.deleteJobDescription(jobToDelete.id);
+            setJobDescriptions(prev => prev.filter(jd => jd.id !== jobToDelete.id));
+            setDeleteDialogOpen(false);
+            setJobToDelete(null);
+            setDeleteConfirmationText('');
+            toast.success('Job description deleted successfully');
+        } catch (error) {
+            toast.error('Failed to delete job description');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -399,6 +463,14 @@ export default function JobDescriptionsPage() {
                                         >
                                             <Download className="h-4 w-4" />
                                         </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-xs sm:text-sm"
+                                            onClick={() => openDeleteDialog(jd)}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
                                     </div>
                                 </div>
                             </div>
@@ -406,6 +478,49 @@ export default function JobDescriptionsPage() {
                     ))}
                 </div>
             )}
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-600">
+                            <AlertCircle className="h-5 w-5" />
+                            Delete Job Description
+                        </DialogTitle>
+                        <DialogDescription>
+                            This action cannot be undone. This will permanently delete the job description and all associated data.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {jobToDelete && (
+                        <div className="space-y-4">
+                            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                                <p className="text-sm font-medium text-red-900">Job Description to delete:</p>
+                                <p className="text-sm text-red-700 mt-1">{jobToDelete.title}</p>
+                                <p className="text-xs text-red-600 mt-1">ID: {jobToDelete.id}</p>
+                            </div>
+                            <div className="space-y-2">
+                                <p className="text-sm font-medium">
+                                    Type <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">DELETE {jobToDelete.id}</code> to confirm:
+                                </p>
+                                <Input
+                                    placeholder={`DELETE ${jobToDelete.id}`}
+                                    value={deleteConfirmationText}
+                                    onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                                    disabled={isDeleting}
+                                />
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={handleDeleteJob} disabled={isDeleting || !jobToDelete || deleteConfirmationText !== `DELETE ${jobToDelete?.id}`}>
+                            {isDeleting ? 'Deleting...' : 'Delete Job Description'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

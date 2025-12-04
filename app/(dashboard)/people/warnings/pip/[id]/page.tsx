@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { notFound } from "next/navigation";
-import { warningsService } from "@/lib/api/warnings";
+import { warningsService } from "@/services/warningsService";
 import { PIP } from "@/types/warnings";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

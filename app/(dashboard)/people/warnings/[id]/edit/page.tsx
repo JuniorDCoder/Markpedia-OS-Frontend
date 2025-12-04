@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { warningsService } from "@/lib/api/warnings";
+import { warningsService } from "@/services/warningsService";
 import WarningFormClient from "@/components/sections/WarningFormClient";
 
 interface PageProps {
@@ -8,8 +8,8 @@ interface PageProps {
 
 export async function generateStaticParams() {
     try {
-        const warnings = await warningsService.getAllWarnings();
-        return warnings.map((warning) => ({
+        const warnings = await warningsService.getWarnings();
+        return (warnings || []).map((warning: any) => ({
             id: warning.id.toString(),
         }));
     } catch (error) {

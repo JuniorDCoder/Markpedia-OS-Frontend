@@ -97,7 +97,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
 }
 
 export async function loginApi(email: string, password: string) {
-  return apiRequest<LoginResponse>('/api/v1/auth/login', {
+  return apiRequest<LoginResponse>('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   });

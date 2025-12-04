@@ -54,13 +54,13 @@ export default function LoginPage() {
     };
 
     // Optional: Show loading state while checking authentication
-    if (!isInitialized) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-                <LoadingSpinner size="lg" />
-            </div>
-        );
-    }
+    // if (!isInitialized) {
+    //     return (
+    //         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+    //             <LoadingSpinner size="lg" />
+    //         </div>
+    //     );
+    // }
 
     // Don't render the login form if already authenticated
     // The useEffect will handle the redirect, but this prevents flash of login page

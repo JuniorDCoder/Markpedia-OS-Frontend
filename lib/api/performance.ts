@@ -1,4 +1,4 @@
-import { PerformanceRecord, PerformanceSummary, PerformanceStats, WarningRecord, TaskCompletionData, AttendanceData } from '@/types/performance';
+import { PerformanceRecord, PerformanceSummary, PerformanceStats } from '@/types/performance';
 
 // Mock data based on the new performance management system
 const mockPerformanceRecords: PerformanceRecord[] = [

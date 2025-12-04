@@ -1,16 +1,18 @@
 "use client"
 
-import { performanceService } from '@/lib/api/performance';
+import { performanceService } from '@/services/performanceService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TrendingUp, Calendar, User, Plus, Search, Filter, Eye, Edit, Star, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { TrendingUp, Plus, Search, Filter, Eye, Edit, Star, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { TableSkeleton } from "@/components/ui/loading";
 import { useEffect, useState } from "react";
 import { useAppStore } from "@/store/app";
+import toast from 'react-hot-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 export default function PerformanceListPage() {
     const [performanceRecords, setPerformanceRecords] = useState<any[]>([]);
@@ -22,11 +24,67 @@ export default function PerformanceListPage() {
     const [ratingFilter, setRatingFilter] = useState('all');
     const { setCurrentModule } = useAppStore();
 
-    useEffect(() => {
-        setCurrentModule('people');
-        loadPerformanceStats();
-    }, [setCurrentModule])
+    // Delete dialog state
+    const [deleteRecord, setDeleteRecord] = useState<any | null>(null);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
+    const [isDeleting, setIsDeleting] = useState(false);
 
+    // Helpers to safely read string fields (avoid undefined runtime errors)
+    const safeStr = (v: any) => (v === undefined || v === null) ? '' : String(v);
+    const getField = (record: any, ...keys: string[]) => {
+        for (const k of keys) {
+            if (record && record[k] !== undefined && record[k] !== null) return record[k];
+        }
+        return '';
+    };
+
+    const normalizeList = (res: any) => {
+        if (!res) return [];
+        if (Array.isArray(res)) return res;
+        if (Array.isArray(res.records)) return res.records;
+        if (Array.isArray(res.performance_records)) return res.performance_records;
+        if (Array.isArray(res.items)) return res.items;
+        if (Array.isArray(res.data)) return res.data;
+        return [];
+    };
+
+    const normalizeStats = (res: any) => {
+        if (!res) return null;
+        if (
+            typeof res === "object" &&
+            (res.averageScore ||
+                res.outstandingPerformers ||
+                res.employeesOnPIP ||
+                res.completionRate)
+        )
+            return res;
+        if (res.data && typeof res.data === "object") return res.data;
+        return res;
+    };
+
+    useEffect(() => {
+        const applyFilters = async () => {
+            setLoading(true);
+            try {
+                const payload: any = {};
+                if (searchTerm && searchTerm.trim()) payload.search = searchTerm.trim();
+                if (departmentFilter && departmentFilter !== "all") payload.department = departmentFilter;
+                if (ratingFilter && ratingFilter !== "all") payload.rating = ratingFilter;
+
+                const res = await performanceService.filterPerformanceRecords(payload);
+                setPerformanceRecords(normalizeList(res));
+            } catch (err) {
+                console.error("Failed to apply performance filters", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        applyFilters();
+    }, [searchTerm, departmentFilter, ratingFilter]);
+
+    // Load initial stats & records function (hoisted above mount useEffect)
     const loadPerformanceStats = async () => {
         setLoading(true);
         try {
@@ -35,15 +93,49 @@ export default function PerformanceListPage() {
                 performanceService.getPerformanceSummaries(),
                 performanceService.getPerformanceStats()
             ]);
-            setPerformanceRecords(records);
-            setPerformanceSummaries(summaries);
-            setPerformanceStats(stats);
+            setPerformanceRecords(normalizeList(records));
+            setPerformanceSummaries(normalizeList(summaries));
+            setPerformanceStats(normalizeStats(stats));
         } catch (error) {
-            console.error('Error loading performance data:', error);
+            console.error("Error loading performance data:", error);
         } finally {
             setLoading(false);
         }
-    }
+    };
+
+     // Load initial stats & records on mount
+     useEffect(() => {
+         setCurrentModule?.('people');
+         loadPerformanceStats();
+         // eslint-disable-next-line react-hooks/exhaustive-deps
+     }, []);
+
+    const recordsArray = Array.isArray(performanceRecords) ? performanceRecords : [];
+    const filteredRecords = recordsArray.filter(record => {
+        const emp = safeStr(getField(record, 'employeeName', 'employee_name', 'employee'));
+        const dept = safeStr(getField(record, 'department', 'department_name'));
+        const rating = safeStr(getField(record, 'rating', 'performance_rating'));
+
+        const q = safeStr(searchTerm).toLowerCase();
+        const matchesSearch = emp.toLowerCase().includes(q) || dept.toLowerCase().includes(q);
+        const matchesDepartment = departmentFilter === "all" || dept === departmentFilter;
+        const matchesRating = ratingFilter === "all" || rating === ratingFilter;
+        return matchesSearch && matchesDepartment && matchesRating;
+    });
+
+    const summariesArray = Array.isArray(performanceSummaries) ? performanceSummaries : [];
+    const filteredSummaries = summariesArray.filter(summary => {
+        const emp = safeStr(getField(summary, 'employeeName', 'employee_name', 'employee'));
+        const dept = safeStr(getField(summary, 'department', 'department_name'));
+        const perfRating = safeStr(getField(summary, 'performanceRating', 'performance_rating', 'rating'));
+
+        const q = safeStr(searchTerm).toLowerCase();
+        const matchesSearch = emp.toLowerCase().includes(q) || dept.toLowerCase().includes(q);
+        const matchesDepartment = departmentFilter === "all" || dept === departmentFilter;
+        const matchesRating = ratingFilter === "all" || perfRating === ratingFilter;
+        return matchesSearch && matchesDepartment && matchesRating;
+    });
+
 
     const getRatingColor = (rating: string) => {
         switch (rating) {
@@ -97,21 +189,119 @@ export default function PerformanceListPage() {
         return colors[department as keyof typeof colors] || 'bg-gray-50 text-gray-700 border-gray-200';
     };
 
-    const filteredRecords = performanceRecords.filter(record => {
-        const matchesSearch = record.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            record.department.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesDepartment = departmentFilter === 'all' || record.department === departmentFilter;
-        const matchesRating = ratingFilter === 'all' || record.rating === ratingFilter;
-        return matchesSearch && matchesDepartment && matchesRating;
-    });
+    // --- action handlers (inside component to access state) ---
+    const handleExport = async () => {
+        try {
+            toast.loading('Preparing export...');
+            const filter = {
+                search: searchTerm || undefined,
+                department: departmentFilter !== 'all' ? departmentFilter : undefined,
+                rating: ratingFilter !== 'all' ? ratingFilter : undefined
+            };
+            const blob = await performanceService.exportPerformanceFiltered(filter, 'csv');
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `performance-export-${new Date().toISOString().slice(0,10)}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+            toast.dismiss();
+            toast.success('Export ready');
+        } catch (err: any) {
+            toast.dismiss();
+            console.error('Export failed', err);
+            toast.error('Export failed');
+        }
+    };
 
-    const filteredSummaries = performanceSummaries.filter(summary => {
-        const matchesSearch = summary.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            summary.department.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesDepartment = departmentFilter === 'all' || summary.department === departmentFilter;
-        const matchesRating = ratingFilter === 'all' || summary.performanceRating === ratingFilter;
-        return matchesSearch && matchesDepartment && matchesRating;
-    });
+    const handleGenerate = async () => {
+        try {
+            toast.loading('Generating performance records...');
+            await performanceService.generate({});
+            // reload
+            await loadPerformanceStats();
+            toast.dismiss();
+            toast.success('Generation completed');
+        } catch (err) {
+            toast.dismiss();
+            console.error('Generate failed', err);
+            toast.error('Failed to generate');
+        }
+    };
+
+    const handleCalculate = async () => {
+        try {
+            toast.loading('Calculating performance...');
+            const payload = { /* could include filters or date range */ };
+            await performanceService.calculatePerformance(payload);
+            await loadPerformanceStats();
+            toast.dismiss();
+            toast.success('Calculation finished');
+        } catch (err) {
+            toast.dismiss();
+            console.error('Calculation failed', err);
+            toast.error('Calculation failed');
+        }
+    };
+
+    const handleValidateManager = async (id: string) => {
+        try {
+            toast.loading('Validating by manager...');
+            await performanceService.validateByManager(id);
+            await loadPerformanceStats();
+            toast.dismiss();
+            toast.success('Validated by manager');
+        } catch (err) {
+            toast.dismiss();
+            console.error(err);
+            toast.error('Manager validation failed');
+        }
+    };
+
+    const handleValidateHR = async (id: string) => {
+        try {
+            toast.loading('Validating by HR...');
+            await performanceService.validateByHR(id);
+            await loadPerformanceStats();
+            toast.dismiss();
+            toast.success('Validated by HR');
+        } catch (err) {
+            toast.dismiss();
+            console.error(err);
+            toast.error('HR validation failed');
+        }
+    };
+
+    const openDeleteDialog = (record: any) => {
+        setDeleteRecord(record);
+        setDeleteConfirmationText('');
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteConfirmed = async () => {
+        if (!deleteRecord) return;
+        const expected = `DELETE ${getField(deleteRecord, 'id', 'record_id')}`;
+        if (deleteConfirmationText !== expected) {
+            toast.error(`Please type "${expected}" to confirm deletion`);
+            return;
+        }
+        try {
+            setIsDeleting(true);
+            await performanceService.deletePerformanceRecord(getField(deleteRecord, 'id', 'record_id'));
+            setPerformanceRecords(prev => prev.filter(r => getField(r, 'id', 'record_id') !== getField(deleteRecord, 'id', 'record_id')));
+            setDeleteDialogOpen(false);
+            setDeleteRecord(null);
+            setDeleteConfirmationText('');
+            toast.success('Record deleted');
+        } catch (err) {
+            console.error('Delete failed', err);
+            toast.error('Failed to delete record');
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     if (loading) {
         return <TableSkeleton />;
@@ -176,6 +366,15 @@ export default function PerformanceListPage() {
                         <Link href={`/people/performance/${record.id}/edit`}>
                             <Edit className="h-4 w-4" />
                         </Link>
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleValidateManager(record.id)} className="h-8">
+                        Manager Validate
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleValidateHR(record.id)} className="h-8">
+                        HR Validate
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={() => openDeleteDialog(record)} className="h-8">
+                        Delete
                     </Button>
                 </div>
             </div>
@@ -331,7 +530,7 @@ export default function PerformanceListPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-                            {performanceStats.departmentBreakdown.map((dept: any) => (
+                            {performanceStats?.departmentBreakdown?.map((dept: any) => (
                                 <div key={dept.department} className="text-center p-3 border rounded-lg">
                                     <div className="font-medium text-sm mb-1">{dept.department}</div>
                                     <div className="text-2xl font-bold text-primary">{dept.averageScore}</div>
@@ -390,6 +589,15 @@ export default function PerformanceListPage() {
                             <Button variant="outline" onClick={loadPerformanceStats}>
                                 <Filter className="h-4 w-4 mr-2" />
                                 Refresh
+                            </Button>
+                            <Button variant="secondary" onClick={handleExport}>
+                                Export CSV
+                            </Button>
+                            <Button variant="ghost" onClick={handleGenerate}>
+                                Generate
+                            </Button>
+                            <Button variant="outline" onClick={handleCalculate}>
+                                Calculate
                             </Button>
                         </div>
                     </div>
@@ -450,6 +658,43 @@ export default function PerformanceListPage() {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Delete Confirmation Dialog */}
+            {deleteDialogOpen && (
+                <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                            <DialogTitle>Confirm Deletion</DialogTitle>
+                        </DialogHeader>
+                        <div className="mt-4">
+                            <p className="text-sm text-muted-foreground">
+                                Are you sure you want to delete this performance record? This action cannot be undone.
+                            </p>
+                            <div className="mt-4">
+                                <span className="font-medium">Type <span className="text-red-500">{`DELETE ${getField(deleteRecord, 'id', 'record_id')}`}</span> to confirm:</span>
+                                <Input
+                                    value={deleteConfirmationText}
+                                    onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                                    className="mt-2"
+                                />
+                            </div>
+                        </div>
+                        <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
+                            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} className="w-full sm:w-auto">
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={handleDeleteConfirmed}
+                                className="w-full sm:w-auto"
+                                disabled={isDeleting}
+                            >
+                                {isDeleting ? 'Deleting...' : 'Delete Record'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            )}
         </div>
     );
 }

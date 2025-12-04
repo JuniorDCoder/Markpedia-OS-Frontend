@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TableSkeleton } from '@/components/ui/loading';
-import { frameworkService } from '@/services/api';
+import { departmentalFrameworkService } from '@/services/departmentalFrameworkService';
 import { Framework, Department } from '@/types';
 import {
     Plus,
@@ -41,7 +41,7 @@ export default function DepartmentalFrameworksPage() {
     const loadFrameworks = async () => {
         try {
             setLoading(true);
-            const data = await frameworkService.getFrameworks();
+            const data = await departmentalFrameworkService.getFrameworks();
             setFrameworks(data);
         } catch (error) {
             toast.error('Failed to load frameworks');
@@ -52,7 +52,7 @@ export default function DepartmentalFrameworksPage() {
 
     const loadDepartments = async () => {
         try {
-            const data = await frameworkService.getDepartments();
+            const data = await departmentalFrameworkService.getDepartments();
             setDepartments(data);
         } catch (error) {
             console.error('Failed to load departments');
@@ -61,7 +61,8 @@ export default function DepartmentalFrameworksPage() {
 
     const exportToPDF = async (id: string) => {
         try {
-            await frameworkService.exportToPDF(id);
+            const res = await departmentalFrameworkService.exportToPDF(id, { format: 'pdf', includeAllVersions: false });
+            if (typeof res === 'string' && res.startsWith('http')) window.open(res, '_blank');
             toast.success('PDF exported successfully');
         } catch (error) {
             toast.error('Failed to export PDF');

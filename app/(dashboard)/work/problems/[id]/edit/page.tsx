@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import ProblemEditClient from '../../../../../../components/sections/ProblemEditClient';
-import { problemService } from '@/services/api';
+import { problemsApi } from '@/lib/api/problems';
 
 interface PageProps {
     params: { id: string };
@@ -9,8 +9,8 @@ interface PageProps {
 // Generate static params for build time
 export async function generateStaticParams() {
     try {
-        const problems = await problemService.getProblems();
-        return problems.map((problem) => ({
+        const response = await problemsApi.list({ limit: 1000 });
+        return response.problems.map((problem) => ({
             id: problem.id,
         }));
     } catch (error) {
@@ -21,7 +21,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
     try {
-        const problem = await problemService.getProblem(params.id);
+        const problem = await problemsApi.getById(params.id);
         return {
             title: `Edit ${problem.title} | Problem Management`,
             description: `Edit ${problem.title} problem details`,
@@ -38,7 +38,7 @@ export default async function ProblemEditPage({ params }: PageProps) {
     // Pre-fetch problem data on the server
     let problem;
     try {
-        problem = await problemService.getProblem(params.id);
+        problem = await problemsApi.getById(params.id);
     } catch (error) {
         console.error('Failed to fetch problem:', error);
     }

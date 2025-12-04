@@ -9,10 +9,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { frameworkService } from '@/services/api';
 import { Department, FrameworkSection } from '@/types';
 import { ArrowLeft, Save, Plus, Minus, RefreshCw, Badge } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { departmentalFrameworkService as frameworkService } from '@/services/departmentalFrameworkService';
 
 const defaultSections: FrameworkSection[] = [
     { id: '1', title: 'Strategic Objectives', content: '', order: 1 },

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
-import { performanceService } from '@/lib/api/performance';
+import { performanceService } from '@/services/performanceService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,9 +12,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, Calendar, User, ArrowLeft, Plus, Loader2, Star, Target, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { TrendingUp, User, ArrowLeft, Plus, Loader2, Star, Target, AlertTriangle, Clock } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { apiRequest } from '@/lib/api/client';
+import { userService } from "@/services/api";
 
 interface FormData {
     employee_id: string;
@@ -47,6 +49,9 @@ export default function CreatePerformancePage() {
     const router = useRouter();
     const { user } = useAuthStore();
     const [saving, setSaving] = useState(false);
+    const [employees, setEmployees] = useState<Employee[]>([]);
+    const [employeesLoading, setEmployeesLoading] = useState(true);
+
     const [formData, setFormData] = useState<FormData>({
         employee_id: '',
         employeeName: '',
@@ -75,13 +80,86 @@ export default function CreatePerformancePage() {
         rating: 'Fair' as 'Outstanding' | 'Good' | 'Fair' | 'Poor'
     });
 
-    // Mock employee data
-    const [employees] = useState<Employee[]>([
-        { id: '101', name: 'Enow Divine Eyong', department: 'Engineering', position: 'Senior Developer' },
-        { id: '102', name: 'Sarah Johnson', department: 'Marketing', position: 'Marketing Manager' },
-        { id: '103', name: 'Michael Chen', department: 'Sales', position: 'Sales Executive' },
-        { id: '104', name: 'Emily Davis', department: 'HR', position: 'HR Specialist' },
-    ]);
+    useEffect(() => {
+        let cancelled = false;
+        const loadEmployees = async () => {
+            setEmployeesLoading(true);
+            try {
+                // 1. Try userService first
+                try {
+                    const users = await userService.getUsers();
+                    if (!cancelled && Array.isArray(users)) {
+                        const list = users.map((u: any) => ({
+                            id: u.id ?? u._id ?? String(u.id),
+                            name: u.name ?? `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim(),
+                            department: u.department ?? u.dept ?? u.team ?? '',
+                            position: u.position ?? u.title ?? '',
+                        }));
+                        setEmployees(list);
+                        return; // Done
+                    }
+                } catch (err) {
+                    console.warn('userService.getUsers failed, falling back...', err);
+                }
+
+                // 2. Fallback: backend endpoint /admin/users
+                try {
+                    const resAny = await apiRequest('/admin/users', { method: 'GET' }) as any;
+                    if (cancelled) return;
+
+                    const dataArray =
+                        Array.isArray(resAny)
+                            ? resAny
+                            : Array.isArray(resAny?.data)
+                                ? resAny.data
+                                : null;
+
+                    if (dataArray) {
+                        const list = dataArray.map((u: any) => ({
+                            id: u.id ?? u._id ?? String(u.id),
+                            name: u.name ?? `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim(),
+                            department: u.department ?? u.dept ?? u.team ?? '',
+                            position: u.position ?? u.title ?? '',
+                        }));
+                        setEmployees(list);
+                        return; // Done
+                    }
+                } catch (err) {
+                    console.warn('/admin/users fallback failed', err);
+                }
+
+                // 3. Final fallback: performanceService
+                try {
+                    const summaries = await performanceService.getPerformanceSummaries();
+                    if (cancelled) return;
+
+                    const data =
+                        Array.isArray(summaries)
+                            ? summaries
+                            : summaries?.data ?? summaries?.items ?? [];
+
+                    const list = data.map((s: any) => ({
+                        id: s.employeeId ?? s.employee_id ?? String(s.id),
+                        name: s.employeeName ?? s.name ?? `${s.firstName ?? ''} ${s.lastName ?? ''}`.trim(),
+                        department: s.department ?? '',
+                        position: s.position ?? '',
+                    }));
+                    setEmployees(list);
+                } catch (err) {
+                    console.warn('Failed to load employees fallback', err);
+                    setEmployees([]);
+                }
+            } catch (err) {
+                console.warn('Failed to load employees', err);
+                setEmployees([]);
+            } finally {
+                setEmployeesLoading(false);
+            }
+        };
+
+        loadEmployees();
+        return () => { cancelled = true; };
+    }, []);
 
     // Calculate scores whenever relevant fields change
     const calculateScores = () => {
@@ -123,6 +201,13 @@ export default function CreatePerformancePage() {
         });
     };
 
+    useEffect(() => {
+        // debounce recalculation slightly
+        const t = setTimeout(calculateScores, 80);
+        return () => clearTimeout(t);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [formData.tasks_assigned, formData.tasks_completed, formData.lateness_minutes, formData.warning_level, formData.okr_score, formData.behavior_score, formData.innovation_score]);
+
     const getWarningPoints = (warning_level: string): number => {
         switch (warning_level) {
             case 'Verbal': return 5;
@@ -133,30 +218,71 @@ export default function CreatePerformancePage() {
         }
     };
 
+    const validatePayload = (payload: any) => {
+        // basic client-side validation matching backend expectations to avoid 422
+        const errors: string[] = [];
+        if (!payload.employee_id) errors.push('employee_id is required');
+        if (!payload.month) errors.push('month is required');
+        if (!Number.isInteger(payload.tasks_assigned) || payload.tasks_assigned < 0) errors.push('tasks_assigned must be >= 0');
+        if (!Number.isInteger(payload.tasks_completed) || payload.tasks_completed < 0) errors.push('tasks_completed must be >= 0');
+        if (payload.tasks_assigned >= 0 && payload.tasks_completed > payload.tasks_assigned) errors.push('tasks_completed cannot exceed tasks_assigned');
+        if (!Number.isInteger(payload.lateness_minutes) || payload.lateness_minutes < 0) errors.push('lateness_minutes must be >= 0');
+        if (!Number.isInteger(payload.lateness_count) || payload.lateness_count < 0) errors.push('lateness_count must be >= 0');
+        ['okr_score','behavior_score','innovation_score','task_score','attendance_score','warning_score','weighted_total'].forEach((k) => {
+            if (payload[k] == null || isNaN(Number(payload[k]))) errors.push(`${k} must be a number`);
+        });
+        return errors;
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!formData.employee_id) {
-            toast.error('Please select an employee');
+        const payload: any = {
+            employee_id: formData.employee_id,
+            employee_name: formData.employeeName,
+            department: formData.department,
+            position: formData.position,
+            month: formData.month,
+            tasks_assigned: Number(formData.tasks_assigned),
+            tasks_completed: Number(formData.tasks_completed),
+            lateness_minutes: Number(formData.lateness_minutes),
+            lateness_count: Number(formData.lateness_count),
+            warning_level: formData.warning_level,
+            warning_points: getWarningPoints(formData.warning_level),
+            task_score: Number(calculatedScores.task_score),
+            attendance_score: Number(calculatedScores.attendance_score),
+            warning_score: Number(calculatedScores.warning_score),
+            okr_score: Number(formData.okr_score),
+            behavior_score: Number(formData.behavior_score),
+            innovation_score: Number(formData.innovation_score),
+            weighted_total: Number(calculatedScores.weighted_total),
+            rating: calculatedScores.rating,
+            manager_comment: formData.manager_comment,
+            hr_comment: formData.hr_comment,
+            validated_by_manager: !!formData.validated_by_manager,
+            validated_by_hr: !!formData.validated_by_hr,
+            completed_projects: 0,
+            failed_projects: 0,
+            client_satisfaction: 0,
+            peer_feedback: 0,
+            created_by: user?.id ?? (user as any)?.userId ?? user?.email ?? 'unknown',
+        };
+
+        const errors = validatePayload(payload);
+        if (errors.length) {
+            toast.error('Validation failed: ' + errors.join('; '));
             return;
         }
 
         try {
             setSaving(true);
-
-            const performanceRecord = {
-                ...formData,
-                ...calculatedScores,
-                warning_points: getWarningPoints(formData.warning_level),
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            };
-
-            await performanceService.createPerformanceRecord(performanceRecord);
+            await performanceService.createPerformanceRecord(payload);
             toast.success('Performance record created successfully');
             router.push('/people/performance');
-        } catch (error) {
-            toast.error('Failed to create performance record');
+        } catch (err: any) {
+            console.error('Create performance failed', err);
+            const msg = err?.message || 'Failed to create performance record';
+            toast.error(msg);
         } finally {
             setSaving(false);
         }
@@ -169,15 +295,14 @@ export default function CreatePerformancePage() {
                 ...prev,
                 employee_id: employee.id,
                 employeeName: employee.name,
-                department: employee.department,
-                position: employee.position,
+                department: employee.department || prev.department,
+                position: employee.position || prev.position,
             }));
         }
     };
 
     const handleInputChange = (field: string, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
-        setTimeout(calculateScores, 100); // Debounce calculation
     };
 
     const getRatingColor = (rating: string) => {
@@ -200,6 +325,14 @@ export default function CreatePerformancePage() {
             default: return 'bg-gray-100 text-gray-800';
         }
     };
+
+    if (employeesLoading) {
+        return (
+            <div className="flex items-center justify-center h-screen">
+                <Loader2 className="h-8 w-8 animate-spin text-muted" />
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">

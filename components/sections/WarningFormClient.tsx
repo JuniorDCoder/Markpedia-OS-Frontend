@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { warningsService } from "@/lib/api/warnings";
+import { warningsService } from "@/services/warningsService";
 import { Warning, WarningLevel, WarningStatus } from "@/types/warnings";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,7 @@ export default function WarningFormClient({ mode, initialData }: Props) {
     );
     const [saving, setSaving] = useState(false);
     const [loading, setLoading] = useState(mode === "edit");
+    const [levelsMap, setLevelsMap] = useState<Record<string, any>>({});
 
     const router = useRouter();
 
@@ -50,29 +51,43 @@ export default function WarningFormClient({ mode, initialData }: Props) {
         }
     }, [mode, initialData]);
 
+    useEffect(() => {
+        // load levels info for auto-calculation
+        let mounted = true;
+        warningsService.getAllLevels().then((levels: any[]) => {
+            if (!mounted) return;
+            const map: Record<string, any> = {};
+            if (Array.isArray(levels)) levels.forEach(l => { if (l.level) map[l.level] = l; });
+            setLevelsMap(map);
+        }).catch(() => {
+            setLevelsMap({});
+        });
+        return () => { mounted = false; };
+    }, []);
+
     const handleChange = (key: keyof Warning, value: any) => {
         setForm((prev) => {
             const updated = { ...prev, [key]: value };
 
             // Auto-calculate expiry date and points based on level
             if (key === "level") {
-                const levelInfo = warningsService.getLevelInfo(value as WarningLevel);
+                const levelInfo = levelsMap[value as string] || { points: 5, validity: 30 };
                 updated.pointsDeducted = levelInfo.points;
 
                 if (updated.dateIssued) {
                     const issueDate = new Date(updated.dateIssued);
                     const expiryDate = new Date(issueDate);
-                    expiryDate.setDate(expiryDate.getDate() + levelInfo.validity);
+                    expiryDate.setDate(expiryDate.getDate() + (levelInfo.validity || 30));
                     updated.expiryDate = expiryDate.toISOString().split('T')[0];
                 }
             }
 
             // Auto-calculate expiry date when issue date changes
             if (key === "dateIssued" && updated.level) {
-                const levelInfo = warningsService.getLevelInfo(updated.level);
+                const levelInfo = levelsMap[updated.level] || { validity: 30 };
                 const issueDate = new Date(value);
                 const expiryDate = new Date(issueDate);
-                expiryDate.setDate(expiryDate.getDate() + levelInfo.validity);
+                expiryDate.setDate(expiryDate.getDate() + (levelInfo.validity || 30));
                 updated.expiryDate = expiryDate.toISOString().split('T')[0];
             }
 
@@ -123,7 +138,7 @@ export default function WarningFormClient({ mode, initialData }: Props) {
         );
     }
 
-    const levelInfo = form.level ? warningsService.getLevelInfo(form.level) : null;
+    const levelInfo = form.level ? (levelsMap[form.level] || { name: form.level, points: form.pointsDeducted || 0, validity: 30 }) : null;
 
     return (
         <div className="space-y-6">

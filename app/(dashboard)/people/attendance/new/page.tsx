@@ -4,59 +4,49 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AttendanceForm } from '@/components/sections/AttendanceForm';
 import { useAppStore } from '@/store/app';
+import { useAuthStore } from '@/store/auth';
 import { User } from '@/types';
-import { attendanceService } from '@/services/api';
+import { userService } from '@/services/api';
 import toast from 'react-hot-toast';
+import { Loader } from 'lucide-react';
 
 export default function NewAttendancePage() {
   const router = useRouter();
   const { setCurrentModule } = useAppStore();
+  const { user: authUser } = useAuthStore();
   const [employees, setEmployees] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const userRole = authUser?.role || 'Employee';
+  const isPrivilegedUser = ['HR Officer', 'Department Head', 'CEO', 'Manager'].includes(userRole);
 
   useEffect(() => {
     setCurrentModule('people');
-    // Load employees (mocked as in list page)
-    const mockEmployees: User[] = [
-      {
-        id: '1',
-        name: 'John Doe',
-        email: 'john@markpedia.com',
-        role: 'Employee',
-        department: 'Engineering',
-      },
-      {
-        id: '2',
-        name: 'Jane Smith',
-        email: 'jane@markpedia.com',
-        role: 'Manager',
-        department: 'Marketing',
-      },
-      {
-        id: '3',
-        name: 'Mike Johnson',
-        email: 'mike@markpedia.com',
-        role: 'Employee',
-        department: 'Sales',
-      },
-      {
-        id: '4',
-        name: 'Sarah Wilson',
-        email: 'sarah@markpedia.com',
-        role: 'HR Officer',
-        department: 'HR',
-      },
-    ];
-    setEmployees(mockEmployees);
+    loadEmployees();
   }, [setCurrentModule]);
 
-  const handleCreateRecord = async (data: any) => {
+  const loadEmployees = async () => {
     try {
-      await attendanceService.createAttendanceRecord(data);
-      toast.success('Attendance recorded');
-      router.push('/people/attendance');
-    } catch (error: any) {
-      // Re-throw so the form can display any inline errors if it expects
-      throw error;
+      setLoading(true);
+      if (isPrivilegedUser) {
+        // Privileged users can see all employees
+        const allUsers = await userService.getUsers();
+        setEmployees(allUsers);
+      } else {
+        // Regular employees only see themselves
+        if (authUser) {
+          setEmployees([authUser]);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load employees:', error);
+      toast.error('Failed to load employees list');
+      // Fallback: if auth user exists, at least show them
+      if (authUser) {
+        setEmployees([authUser]);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -64,12 +54,23 @@ export default function NewAttendancePage() {
     router.push('/people/attendance');
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-3" />
+          <p className="text-muted-foreground">Loading employees...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-6 pb-10 px-4 sm:px-6 lg:px-8">
       <AttendanceForm
         employees={employees}
-        onSave={handleCreateRecord}
         onCancel={handleCancel}
+        isEditing={false}
       />
     </div>
   );

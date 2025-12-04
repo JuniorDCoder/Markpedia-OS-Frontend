@@ -1,57 +1,91 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { AttendanceForm } from '@/components/sections/AttendanceForm';
-import { attendanceService } from '@/services/api';
-import { AttendanceRecord } from '@/types';
+import { attendanceService, FrontendAttendanceRecord } from '@/services/attendanceService';
+import { useAppStore } from '@/store/app';
+import { useAuthStore } from '@/store/auth';
+import { userService } from '@/services/api';
+import { User } from '@/types';
+import toast from 'react-hot-toast';
+import { Loader } from 'lucide-react';
 
 interface PageProps {
     params: { id: string };
 }
 
-// Generate static params for pre-rendering (optional - remove if you don't need it)
-export async function generateStaticParams() {
-    try {
-        const attendanceRecords = await attendanceService.getAttendanceRecords();
-        // Only pre-render recent records or limit the number
-        return attendanceRecords.slice(0, 10).map((record) => ({ id: record.id }));
-    } catch (error) {
-        console.error('Error generating static params:', error);
-        return [];
-    }
-}
+export default function EditAttendancePage({ params }: PageProps) {
+    const router = useRouter();
+    const { setCurrentModule } = useAppStore();
+    const { user: authUser } = useAuthStore();
+    const [attendance, setAttendance] = useState<FrontendAttendanceRecord | null>(null);
+    const [employees, setEmployees] = useState<User[]>([]);
+    const [loading, setLoading] = useState(true);
 
-export async function generateMetadata({ params }: PageProps){
-    try {
-        const attendance = await attendanceService.getAttendanceRecord(params.id);
-        return {
-            title: `Edit ${attendance.userName} - ${attendance.date} | Attendance`,
-            description: `Edit attendance record for ${attendance.userName} on ${attendance.date}`,
-        };
-    } catch (error) {
-        return {
-            title: 'Edit Attendance Record | People Management',
-            description: 'Edit attendance details and records',
-        };
-    }
-}
+    const userRole = authUser?.role || 'Employee';
+    const isPrivilegedUser = ['HR Officer', 'Department Head', 'CEO', 'Manager'].includes(userRole);
 
-export default async function EditAttendancePage({ params }: PageProps) {
-    let attendance: AttendanceRecord | null = null;
+    useEffect(() => {
+        setCurrentModule('people');
+        loadData();
+    }, [params.id, setCurrentModule]);
 
-    try {
-        attendance = await attendanceService.getAttendanceRecord(params.id);
-    } catch (error) {
-        console.error('Failed to fetch attendance record:', error);
-    }
+    const loadData = async () => {
+        try {
+            setLoading(true);
+            const [record, users] = await Promise.all([
+                attendanceService.getAttendance(params.id),
+                isPrivilegedUser ? userService.getUsers() : Promise.resolve(authUser ? [authUser] : [])
+            ]);
+            setAttendance(record);
+            setEmployees(users);
+        } catch (error) {
+            console.error('Failed to load data:', error);
+            toast.error('Failed to load attendance record');
+            router.push('/people/attendance');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    if (!attendance) {
+    const handleCancel = () => {
+        router.push(`/people/attendance/${params.id}`);
+    };
+
+    if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-96">
+            <div className="flex items-center justify-center min-h-screen">
                 <div className="text-center">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Attendance Record Not Found</h2>
-                    <p className="text-gray-600">The requested attendance record could not be found for editing.</p>
+                    <Loader className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-3" />
+                    <p className="text-muted-foreground">Loading attendance record...</p>
                 </div>
             </div>
         );
     }
 
-    return <AttendanceForm initialData={attendance} isEdit={true} />;
+    if (!attendance) {
+        return (
+            <div className="text-center py-12">
+                <h1 className="text-2xl font-bold mb-4">Attendance Record Not Found</h1>
+                <button
+                    onClick={() => router.push('/people/attendance')}
+                    className="text-blue-600 hover:underline"
+                >
+                    Back to Attendance
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6 pb-10 px-4 sm:px-6 lg:px-8">
+            <AttendanceForm
+                record={attendance}
+                employees={employees}
+                onCancel={handleCancel}
+                isEditing={true}
+            />
+        </div>
+    );
 }

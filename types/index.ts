@@ -565,29 +565,39 @@ export interface Department {
     memberCount: number;
 }
 
+// Add/replace JobDescription frontend interface to match the client-side shape (camelCase)
 export interface JobDescription {
     id: string;
     title: string;
     department: string;
     summary: string;
-    purpose: string;
-    vision: string;
-    mission: string;
-    reportsTo: string;
+    purpose?: string;
+    vision?: string;
+    mission?: string;
+    // frontend uses camelCase; service will map from reports_to -> reportsTo
+    reportsTo?: string;
     responsibilities: string[];
     kpis: string[];
     okrs: string[];
     skills: string[];
     tools: string[];
-    careerPath: string;
-    probationPeriod: string;
-    reviewCadence: string;
-    status: 'Draft' | 'Under Review' | 'Approved' | 'Archived';
-    version: string;
-    createdBy: string;
-    createdAt: string;
-    lastReviewed?: string;
-    nextReview?: string;
+    // careerPath maps to career_path
+    careerPath?: string;
+    // probationPeriod maps to probation_period (string like "3")
+    probationPeriod?: string;
+    // reviewCadence maps to review_cadence
+    reviewCadence?: string;
+    status?: 'Draft' | 'Under Review' | 'Approved' | 'Archived' | string;
+    version?: string;
+    // lastReviewed / nextReview map to snake_case in backend
+    lastReviewed?: string | null;
+    nextReview?: string | null;
+    // createdBy/createdAt map from created_by/created_at
+    createdBy?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    // optional free-form metadata from backend
+    [key: string]: any;
 }
 
 export interface Framework {

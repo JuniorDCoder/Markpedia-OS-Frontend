@@ -1,56 +1,87 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { AttendanceDetails } from '@/components/sections/AttendanceDetails';
-import { attendanceService } from '@/services/api'; // You'll need to create this service
-import { AttendanceRecord } from '@/types';
+import { attendanceService, FrontendAttendanceRecord } from '@/services/attendanceService';
+import { useAppStore } from '@/store/app';
+import { Loader } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface PageProps {
     params: { id: string };
 }
 
-// Generate static params for pre-rendering (optional - remove if you don't need it)
-export async function generateStaticParams() {
-    try {
-        const attendanceRecords = await attendanceService.getAttendanceRecords();
-        return attendanceRecords.map((record) => ({ id: record.id }));
-    } catch (error) {
-        console.error('Error generating static params:', error);
-        return [];
-    }
-}
+export default function AttendanceDetailPage({ params }: PageProps) {
+    const router = useRouter();
+    const { setCurrentModule } = useAppStore();
+    const [attendance, setAttendance] = useState<FrontendAttendanceRecord | null>(null);
+    const [loading, setLoading] = useState(true);
 
-export async function generateMetadata({ params }: PageProps) {
-    try {
-        const attendance = await attendanceService.getAttendanceRecord(params.id);
-        return {
-            title: `${attendance.userName} - ${attendance.date} | Attendance`,
-            description: `Attendance record for ${attendance.userName} on ${attendance.date}`,
-        };
-    } catch (error) {
-        return {
-            title: 'Attendance Record | People Management',
-            description: 'View attendance details and records',
-        };
-    }
-}
+    useEffect(() => {
+        setCurrentModule('people');
+        loadAttendance();
+    }, [params.id, setCurrentModule]);
 
-export default async function AttendanceDetailPage({ params }: PageProps) {
-    let attendance: AttendanceRecord | null = null;
+    const loadAttendance = async () => {
+        try {
+            setLoading(true);
+            const record = await attendanceService.getAttendance(params.id);
+            setAttendance(record);
+        } catch (error) {
+            console.error('Failed to load attendance:', error);
+            toast.error('Failed to load attendance record');
+            router.push('/people/attendance');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    try {
-        attendance = await attendanceService.getAttendanceRecord(params.id);
-    } catch (error) {
-        console.error('Failed to fetch attendance record:', error);
-    }
+    const handleEdit = (record: FrontendAttendanceRecord) => {
+        router.push(`/people/attendance/${record.id}/edit`);
+    };
 
-    if (!attendance) {
+    const handleDelete = (recordId: string) => {
+        router.push('/people/attendance');
+    };
+
+    const handleBack = () => {
+        router.push('/people/attendance');
+    };
+
+    if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-96">
+            <div className="flex items-center justify-center min-h-screen">
                 <div className="text-center">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Attendance Record Not Found</h2>
-                    <p className="text-gray-600">The requested attendance record could not be found.</p>
+                    <Loader className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-3" />
+                    <p className="text-muted-foreground">Loading attendance details...</p>
                 </div>
             </div>
         );
     }
 
-    return <AttendanceDetails attendance={attendance} />;
+    if (!attendance) {
+        return (
+            <div className="text-center py-12">
+                <h1 className="text-2xl font-bold mb-4">Attendance Record Not Found</h1>
+                <button
+                    onClick={handleBack}
+                    className="text-blue-600 hover:underline"
+                >
+                    Back to Attendance
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6 pb-10 px-4 sm:px-6 lg:px-8 pt-6">
+            <AttendanceDetails
+                attendance={attendance}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onBack={handleBack}
+            />
+        </div>
+    );
 }

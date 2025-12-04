@@ -11,9 +11,10 @@ import { TableSkeleton } from '@/components/ui/loading';
 import { useAppStore } from '@/store/app';
 import { useAuthStore } from '@/store/auth';
 import { LeaveRequest, LeaveStats } from '@/types';
-import { leaveRequestService } from '@/lib/api/leaveRequests';
-import { Plus, Search, Filter, Calendar, Clock, User, Check, X, Eye, Edit, Users, AlertCircle, DollarSign, TrendingUp } from 'lucide-react';
+import { leaveRequestService } from '@/services/leaveRequestService';
+import { Plus, Search, Filter, Calendar, Clock, User, Check, X, Eye, Edit, Users, AlertCircle, DollarSign, TrendingUp, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export default function LeavePage() {
     const { setCurrentModule } = useAppStore();
@@ -25,10 +26,66 @@ export default function LeavePage() {
     const [statusFilter, setStatusFilter] = useState('all');
     const [typeFilter, setTypeFilter] = useState('all');
 
-    useEffect(() => {
-        setCurrentModule('people');
-        loadData();
-    }, [setCurrentModule]);
+    // Delete dialog state (new)
+    const [leaveToDelete, setLeaveToDelete] = useState<any | null>(null);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    // Helper: convert snake_case keys to camelCase for shallow objects
+    const toCamel = (s: string) => s.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+
+    const camelizeObject = (obj: any) => {
+        if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
+        const out: any = {};
+        Object.keys(obj).forEach(k => {
+            const v = obj[k];
+            const newKey = toCamel(k);
+            out[newKey] = v;
+        });
+        return out;
+    };
+
+    const normalizeList = (res: any) => {
+        if (!res) return [];
+        if (Array.isArray(res)) return res.map(item => (typeof item === 'object' ? camelizeObject(item) : item));
+        // common shapes
+        if (Array.isArray(res.requests)) return res.requests.map((r: any) => camelizeObject(r));
+        if (Array.isArray(res.leave_requests)) return res.leave_requests.map((r: any) => camelizeObject(r));
+        if (Array.isArray(res.data)) return res.data.map((r: any) => camelizeObject(r));
+        if (Array.isArray(res.items)) return res.items.map((r: any) => camelizeObject(r));
+        if (Array.isArray(res.records)) return res.records.map((r: any) => camelizeObject(r));
+        return [];
+    };
+
+    const normalizeStats = (res: any) => {
+        if (!res) return null;
+        // if already camelCase-ish, return as-is
+        if (typeof res === 'object' && (res.employeesOnLeave || res.upcomingLeaves || res.pendingRequests)) {
+            return res;
+        }
+        // if nested under data
+        const src = res?.data ?? res;
+        if (typeof src !== 'object') return null;
+
+        // map known snake_case keys to camelCase equivalents
+        const mapped: any = {};
+        Object.keys(src).forEach(k => {
+            const camel = toCamel(k);
+            mapped[camel] = src[k];
+        });
+
+        // Normalize some specific expected keys (fallback defaults)
+        mapped.employeesOnLeave = mapped.employeesOnLeave ?? mapped.employees_on_leave ?? 0;
+        mapped.upcomingLeaves = mapped.upcomingLeaves ?? mapped.upcoming_leaves ?? 0;
+        mapped.pendingRequests = mapped.pendingRequests ?? mapped.pending_requests ?? 0;
+        mapped.leaveCostImpact = mapped.leaveCostImpact ?? mapped.leave_cost_impact ?? 0;
+        mapped.utilizationRate = mapped.utilizationRate ?? mapped.utilization_rate ?? 0;
+        mapped.avgApprovalTime = mapped.avgApprovalTime ?? mapped.avg_approval_time ?? null;
+        mapped.rejectionRate = mapped.rejectionRate ?? mapped.rejection_rate ?? null;
+
+        return mapped;
+    };
 
     const loadData = async () => {
         try {
@@ -37,14 +94,21 @@ export default function LeavePage() {
                 leaveRequestService.getLeaveRequests(),
                 leaveRequestService.getLeaveStats()
             ]);
-            setLeaveRequests(requests);
-            setStats(statsData);
+            setLeaveRequests(normalizeList(requests));
+            setStats(normalizeStats(statsData));
         } catch (error) {
             toast.error('Failed to load leave data');
         } finally {
             setLoading(false);
         }
     };
+
+    // Ensure we load data on mount and set module
+    useEffect(() => {
+        setCurrentModule?.('people');
+        loadData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleManagerApproval = async (requestId: string, action: 'approve' | 'reject') => {
         try {
@@ -103,15 +167,6 @@ export default function LeavePage() {
             toast.error(`Failed to ${action} leave request`);
         }
     };
-
-    const filteredRequests = leaveRequests.filter(request => {
-        const matchesSearch = request.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            request.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            request.departmentName?.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
-        const matchesType = typeFilter === 'all' || request.leave_type === typeFilter;
-        return matchesSearch && matchesStatus && matchesType;
-    });
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -174,9 +229,77 @@ export default function LeavePage() {
         return request.employee_id === user?.id || isManager;
     };
 
+    const canDelete = (request: any) => {
+        if (!user) return false;
+        const role = String(user.role || '').toLowerCase();
+        const isAdminOrCeo = role === 'admin' || role === 'ceo';
+        const ownerId = String(get(request, 'employee_id', 'employeeId') || '');
+        return isAdminOrCeo || (user.id && ownerId && user.id === ownerId);
+    };
+
+    // small helper to read either snake_case or camelCase
+    const get = (obj: any, ...keys: string[]) => {
+        for (const k of keys) {
+            if (obj && (obj[k] !== undefined && obj[k] !== null)) return obj[k];
+        }
+        return undefined;
+    };
+
+    const openDeleteDialog = (request: any) => {
+        setLeaveToDelete(request);
+        setDeleteConfirmationText('');
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteConfirmed = async () => {
+        if (!leaveToDelete) return;
+        const expected = `DELETE ${leaveToDelete.id || get(leaveToDelete,'id','id')}`;
+        if (deleteConfirmationText !== expected) {
+            toast.error(`Please type "${expected}" to confirm deletion`);
+            return;
+        }
+        try {
+            setIsDeleting(true);
+            await leaveRequestService.deleteLeaveRequest(leaveToDelete.id || get(leaveToDelete,'id','id'));
+            setLeaveRequests(prev => prev.filter(r => (r.id || get(r,'id','id')) !== (leaveToDelete.id || get(leaveToDelete,'id','id'))));
+            setDeleteDialogOpen(false);
+            setLeaveToDelete(null);
+            setDeleteConfirmationText('');
+            toast.success('Leave request deleted successfully');
+        } catch (err) {
+            console.error('Failed to delete leave request', err);
+            toast.error('Failed to delete leave request');
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     if (loading) {
         return <TableSkeleton />;
     }
+
+    const requestsArray = Array.isArray(leaveRequests) ? leaveRequests : [];
+    const filteredRequests = requestsArray.filter(request => {
+        const reason = String(get(request, 'reason', 'reason') || '');
+        const userName = String(get(request, 'userName', 'user_name') || '');
+        const departmentName = String(get(request, 'departmentName', 'department_name') || '');
+
+        const matchesSearch =
+            reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            departmentName.toLowerCase().includes(searchTerm.toLowerCase());
+
+        const statusVal = get(request, 'status', 'currentStatus', 'current_status') ?? '';
+        const matchesStatus =
+            statusFilter === 'all' || statusVal === statusFilter;
+
+        const typeVal = get(request, 'leave_type', 'leaveType') ?? '';
+        const matchesType =
+            typeFilter === 'all' || typeVal === typeFilter;
+
+        return matchesSearch && matchesStatus && matchesType;
+    });
+
 
     return (
         <div className="space-y-6 px-4 sm:px-6 lg:px-8 py-4">
@@ -328,30 +451,32 @@ export default function LeavePage() {
             ) : (
                 <div className="space-y-4">
                     {filteredRequests.map(request => (
-                        <Card key={request.id} className="hover:shadow-md transition-shadow">
+                        <Card key={get(request,'id','id')} className="hover:shadow-md transition-shadow">
                             <CardHeader className="pb-3 sm:pb-6">
                                 <div className="flex flex-col gap-3 sm:gap-0 sm:flex-row sm:items-start sm:justify-between">
                                     <div className="space-y-2 flex-1 min-w-0">
                                         <div className="flex flex-wrap items-center gap-2">
-                                            <Badge variant="outline" className={`${getTypeColor(request.leave_type)} text-xs`}>
-                                                {request.leave_type}
+                                            {/* use fallbacks for leave type & status */}
+                                            <Badge variant="outline" className={`${getTypeColor(String(get(request,'leave_type','leaveType') || ''))} text-xs`}>
+                                                {get(request,'leave_type','leaveType') || '—'}
                                             </Badge>
-                                            <Badge variant="secondary" className={`${getStatusColor(request.status)} text-xs`}>
-                                                {request.status}
+                                            <Badge variant="secondary" className={`${getStatusColor(String(get(request,'status','currentStatus','current_status') || ''))} text-xs`}>
+                                                {get(request,'status','currentStatus','current_status') || '—'}
                                             </Badge>
-                                            {request.departmentName && (
+                                            {get(request,'departmentName','department_name') && (
                                                 <Badge variant="outline" className="text-xs bg-gray-50">
-                                                    {request.departmentName}
+                                                    {get(request,'departmentName','department_name')}
                                                 </Badge>
                                             )}
                                         </div>
                                         <CardTitle className="text-base sm:text-lg">
-                                            {request.total_days} day{request.total_days !== 1 ? 's' : ''} {request.leave_type.toLowerCase()} leave
+                                            {get(request,'total_days','totalDays') ?? 0} day{(get(request,'total_days','totalDays') ?? 0) !== 1 ? 's' : ''}{' '}
+                                            {(String(get(request,'leave_type','leaveType') || '')).toLowerCase()} leave
                                         </CardTitle>
                                         <CardDescription className="flex items-start gap-2 text-xs sm:text-sm">
                                             <User className="h-4 w-4 flex-shrink-0 mt-0.5" />
                                             <span className="break-words">
-                                                {request.userName || 'Unknown User'} - {request.reason}
+                                                {get(request,'userName','user_name') || 'Unknown User'} - {get(request,'reason','reason') || ''}
                                             </span>
                                         </CardDescription>
                                     </div>
@@ -453,6 +578,19 @@ export default function LeavePage() {
                                                 </Button>
                                             </>
                                         )}
+
+                                        {/* Delete button (protected) */}
+                                        {canDelete(request) && (
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => openDeleteDialog(request)}
+                                                className="text-red-600 hover:text-red-700 text-xs"
+                                            >
+                                                <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                                <span className="hidden sm:inline">Delete</span>
+                                            </Button>
+                                        )}
                                     </div>
                                 </div>
                             </CardHeader>
@@ -464,7 +602,7 @@ export default function LeavePage() {
                                         </div>
                                         <div className="flex items-center">
                                             <User className="h-3 w-3 mr-1 flex-shrink-0" />
-                                            <span className="truncate">{request.userName || 'Unknown User'}</span>
+                                            <span className="truncate">{get(request,'userName','user_name') || 'Unknown User'}</span>
                                         </div>
                                     </div>
                                     <div className="flex items-center sm:block">
@@ -473,7 +611,7 @@ export default function LeavePage() {
                                         </div>
                                         <div className="flex items-center">
                                             <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
-                                            {new Date(request.start_date).toLocaleDateString()} - {new Date(request.end_date).toLocaleDateString()}
+                                            {new Date(get(request,'start_date','startDate') || '').toLocaleDateString()} - {new Date(get(request,'end_date','endDate') || '').toLocaleDateString()}
                                         </div>
                                     </div>
                                     <div className="flex items-center sm:block">
@@ -482,7 +620,7 @@ export default function LeavePage() {
                                         </div>
                                         <div className="flex items-center">
                                             <Clock className="h-3 w-3 mr-1 flex-shrink-0" />
-                                            {new Date(request.applied_on).toLocaleDateString()}
+                                            {new Date(get(request,'applied_on','appliedOn') || get(request,'created_at','createdAt') || '').toLocaleDateString()}
                                         </div>
                                     </div>
                                     <div className="flex items-center sm:block">
@@ -490,9 +628,9 @@ export default function LeavePage() {
                                             Balance
                                         </div>
                                         <div className="flex items-center">
-                                            {request.balance_before && request.balance_after ? (
+                                            { (get(request,'balance_before','balanceBefore') !== undefined) && (get(request,'balance_after','balanceAfter') !== undefined) ? (
                                                 <span>
-                                                    {request.balance_before} → {request.balance_after}
+                                                    {get(request,'balance_before','balanceBefore')} → {get(request,'balance_after','balanceAfter')}
                                                 </span>
                                             ) : (
                                                 <span className="text-muted-foreground">Not calculated</span>
@@ -502,30 +640,30 @@ export default function LeavePage() {
                                 </div>
 
                                 {/* Approval Chain */}
-                                {(request.approved_by_manager || request.approved_by_hr || request.approved_by_ceo) && (
+                                { (get(request,'approved_by_manager','approvedByManager') || get(request,'approved_by_hr','approvedByHr') || get(request,'approved_by_ceo','approvedByCeo')) && (
                                     <div className="mt-4 p-3 bg-muted rounded-lg">
                                         <div className="text-xs sm:text-sm space-y-1">
-                                            {request.approved_by_manager && (
+                                            {get(request,'approved_by_manager','approvedByManager') && (
                                                 <div>
                                                     <span className="font-medium">Manager Approved</span>
                                                     <span className="text-muted-foreground ml-2">
-                                                        on {new Date(request.updated_at).toLocaleDateString()}
+                                                        on {new Date(get(request,'updated_at','updatedAt') || '').toLocaleDateString()}
                                                     </span>
                                                 </div>
                                             )}
-                                            {request.approved_by_hr && (
+                                            {get(request,'approved_by_hr','approvedByHr') && (
                                                 <div>
                                                     <span className="font-medium">HR Validated</span>
                                                     <span className="text-muted-foreground ml-2">
-                                                        on {new Date(request.updated_at).toLocaleDateString()}
+                                                        on {new Date(get(request,'updated_at','updatedAt') || '').toLocaleDateString()}
                                                     </span>
                                                 </div>
                                             )}
-                                            {request.approved_by_ceo && (
+                                            {get(request,'approved_by_ceo','approvedByCeo') && (
                                                 <div>
                                                     <span className="font-medium">CEO Approved</span>
                                                     <span className="text-muted-foreground ml-2">
-                                                        on {new Date(request.updated_at).toLocaleDateString()}
+                                                        on {new Date(get(request,'updated_at','updatedAt') || '').toLocaleDateString()}
                                                     </span>
                                                 </div>
                                             )}
@@ -535,8 +673,64 @@ export default function LeavePage() {
                             </CardContent>
                         </Card>
                     ))}
+
+                    {/* ...existing pagination ... */}
                 </div>
             )}
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-600">
+                            <AlertCircle className="h-5 w-5" />
+                            Delete Leave Request
+                        </DialogTitle>
+                        <DialogDescription>
+                            This action cannot be undone. This will permanently delete the leave request.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {leaveToDelete && (
+                        <div className="space-y-4">
+                            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                                <p className="text-sm font-medium text-red-900">Leave request to delete:</p>
+                                <p className="text-sm text-red-700 mt-1">ID: {leaveToDelete.id || get(leaveToDelete,'id','id')}</p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <p className="text-sm font-medium">
+                                    Type <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">DELETE {leaveToDelete.id || get(leaveToDelete,'id','id')}</code> to confirm:
+                                </p>
+                                <Input
+                                    placeholder={`DELETE ${leaveToDelete.id || get(leaveToDelete,'id','id')}`}
+                                    value={deleteConfirmationText}
+                                    onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                                    disabled={isDeleting}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setDeleteDialogOpen(false)}
+                            disabled={isDeleting}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleDeleteConfirmed}
+                            disabled={isDeleting || !leaveToDelete || deleteConfirmationText !== `DELETE ${leaveToDelete?.id || get(leaveToDelete,'id','id')}`}
+                        >
+                            {isDeleting ? 'Deleting...' : 'Delete Leave Request'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
+

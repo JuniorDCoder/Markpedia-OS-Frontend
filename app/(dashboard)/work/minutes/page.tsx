@@ -153,7 +153,7 @@ export default function MinutesPage() {
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
                             This action cannot be undone. This will permanently delete the meeting
-                            "{meetingToDelete?.title}" and all its associated data including decisions,
+                            &quot;{meetingToDelete?.title}&quot; and all its associated data including decisions,
                             action items, and risks.
                         </AlertDialogDescription>
                     </AlertDialogHeader>

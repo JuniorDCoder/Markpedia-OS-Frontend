@@ -91,7 +91,7 @@ export function mapFrontendToBackendUpdate(p: Partial<Project>): BackendProjectU
 export const projectsApi = {
   async create(project: Partial<Project>) {
     const payload = mapFrontendToBackendCreate(project);
-    const data = await apiRequest<BackendProject>('/api/v1/work/projects/', {
+    const data = await apiRequest<BackendProject>('/work/projects/', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
@@ -99,13 +99,13 @@ export const projectsApi = {
   },
 
   async getById(id: string) {
-    const data = await apiRequest<BackendProject>(`/api/v1/work/projects/${id}`);
+    const data = await apiRequest<BackendProject>(`/work/projects/${id}`);
     return mapBackendProject(data);
   },
 
   async update(id: string, updates: Partial<Project>) {
     const payload = mapFrontendToBackendUpdate(updates);
-    const data = await apiRequest<BackendProject>(`/api/v1/work/projects/${id}`, {
+    const data = await apiRequest<BackendProject>(`/work/projects/${id}`, {
       method: 'PUT',
       body: JSON.stringify(payload),
     });
@@ -113,7 +113,7 @@ export const projectsApi = {
   },
 
   async remove(id: string) {
-    await apiRequest<void>(`/api/v1/work/projects/${id}`, { method: 'DELETE' });
+    await apiRequest<void>(`/work/projects/${id}`, { method: 'DELETE' });
   },
 
   async list(params?: {
@@ -132,7 +132,7 @@ export const projectsApi = {
     if (params?.owner) query.set('owner', params.owner);
     if (params?.department) query.set('department', params.department);
     const data = await apiRequest<{ projects: BackendProject[]; total: number }>(
-      `/api/v1/work/projects/${query.toString() ? `?${query.toString()}` : ''}`
+      `/work/projects/${query.toString() ? `?${query.toString()}` : ''}`
     );
     return {
       projects: (data.projects || []).map(mapBackendProject),
@@ -141,41 +141,41 @@ export const projectsApi = {
   },
 
   async listAll(): Promise<Project[]> {
-    const data = await apiRequest<{ projects: BackendProject[]; total: number }>(`/api/v1/work/projects/`);
+    const data = await apiRequest<{ projects: BackendProject[]; total: number }>(`/work/projects/`);
     return data.projects.map(mapBackendProject);
   },
 
   async byDepartment(department: string) {
     const data = await apiRequest<{ projects: BackendProject[], total: number }>(
-      `/api/v1/work/projects/department/${encodeURIComponent(department)}`
+      `/work/projects/department/${encodeURIComponent(department)}`
     );
     return data.projects.map(mapBackendProject);
   },
 
   async byOwner(owner: string) {
     const data = await apiRequest<{ projects: BackendProject[], total: number }>(
-      `/api/v1/work/projects/owner/${encodeURIComponent(owner)}`
+      `/work/projects/owner/${encodeURIComponent(owner)}`
     );
     return data.projects.map(mapBackendProject);
   },
 
   async byStatus(status: string) {
     const data = await apiRequest<{ projects: BackendProject[], total: number }>(
-      `/api/v1/work/projects/status/${encodeURIComponent(status)}`
+      `/work/projects/status/${encodeURIComponent(status)}`
     );
     return data.projects.map(mapBackendProject);
   },
 
   async byPriority(priority: string) {
     const data = await apiRequest<{ projects: BackendProject[], total: number }>(
-      `/api/v1/work/projects/priority/${encodeURIComponent(priority)}`
+      `/work/projects/priority/${encodeURIComponent(priority)}`
     );
     return data.projects.map(mapBackendProject);
   },
 
   async search(searchTerm: string) {
     const data = await apiRequest<{ projects: BackendProject[], total: number }>(
-      `/api/v1/work/projects/search/${encodeURIComponent(searchTerm)}`
+      `/work/projects/search/${encodeURIComponent(searchTerm)}`
     );
     return data.projects.map(mapBackendProject);
   },

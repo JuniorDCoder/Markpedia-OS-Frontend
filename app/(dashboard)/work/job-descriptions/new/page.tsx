@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { jobDescriptionService } from '@/services/api';
+import { jobDescriptionService } from '@/services/jobDescriptionService';
 import { Department } from '@/types';
 import {
     ArrowLeft,
@@ -84,7 +84,6 @@ export default function NewJobDescriptionPage() {
             const data = await jobDescriptionService.getDepartments();
             setDepartments(data);
         } catch (error) {
-            console.error('Failed to load departments');
             toast.error('Failed to load departments');
         }
     };
@@ -107,7 +106,6 @@ export default function NewJobDescriptionPage() {
             router.push('/work/job-descriptions');
         } catch (error) {
             toast.error('Failed to create job description');
-            console.error(error);
         } finally {
             setLoading(false);
         }

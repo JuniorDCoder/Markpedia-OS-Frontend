@@ -27,7 +27,7 @@ export const departmentsApi = {
     if (params?.parent_department != null) query.set('parent_department', String(params.parent_department));
 
     const data = await apiRequest<{ departments: BackendDepartment[]; total: number }>(
-      `/api/v1/work/departments/${query.toString() ? `?${query.toString()}` : ''}`
+      `/work/departments/${query.toString() ? `?${query.toString()}` : ''}`
     );
     return data.departments || [];
   },

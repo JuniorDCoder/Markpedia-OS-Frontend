@@ -9,8 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { problemService } from '@/services/api';
-import { Problem } from '@/types';
+import { problemsApi, Problem, ProblemUpdate } from '@/lib/api/problems';
 import {
     ArrowLeft,
     Save,
@@ -23,7 +22,8 @@ import {
     Building,
     User,
     Shield,
-    Target
+    Target,
+    Loader
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -32,22 +32,163 @@ interface ProblemEditClientProps {
     initialProblem?: Problem;
 }
 
+interface Action {
+    id?: string;
+    description: string;
+    assigned_to: string;
+    due_date: string;
+    status: string;
+    proof?: string[];
+}
+
+interface RootCause {
+    problem_statement: string;
+    whys: string[];
+    root_cause: string;
+}
+
+interface Department {
+    id: string;
+    name: string;
+}
+
+interface Project {
+    id: string;
+    title: string;
+}
+
+interface Task {
+    id: string;
+    title: string;
+}
+
+interface BackendUser {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+}
+
 export default function ProblemEditClient({ problemId, initialProblem }: ProblemEditClientProps) {
     const router = useRouter();
     const [problem, setProblem] = useState<Problem | null>(initialProblem || null);
     const [loading, setLoading] = useState(!initialProblem);
     const [saving, setSaving] = useState(false);
+    const [dataLoading, setDataLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('basic');
 
+    // Dropdown data
+    const [departments, setDepartments] = useState<Department[]>([]);
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [tasks, setTasks] = useState<Task[]>([]);
+    const [users, setUsers] = useState<BackendUser[]>([]);
+
+    // Form state
+    const [title, setTitle] = useState('');
+    const [impactDescription, setImpactDescription] = useState('');
+    const [department, setDepartment] = useState('');
+    const [category, setCategory] = useState('');
+    const [severity, setSeverity] = useState('');
+    const [status, setStatus] = useState('');
+    const [owner, setOwner] = useState('');
+    const [ownerUserId, setOwnerUserId] = useState('');
+    const [reportedBy, setReportedBy] = useState('');
+    const [reportedByUserId, setReportedByUserId] = useState('');
+    const [dateDetected, setDateDetected] = useState('');
+    const [closureDate, setClosureDate] = useState('');
+    const [linkedProject, setLinkedProject] = useState('');
+    const [linkedTask, setLinkedTask] = useState('');
+    const [verifiedBy, setVerifiedBy] = useState('');
+    const [lessonLearned, setLessonLearned] = useState('');
+    const [rootCause, setRootCause] = useState<RootCause>({
+        problem_statement: '',
+        whys: ['', '', '', '', ''],
+        root_cause: ''
+    });
+    const [correctiveActions, setCorrectiveActions] = useState<Action[]>([]);
+    const [preventiveActions, setPreventiveActions] = useState<Action[]>([]);
+
+    const categoryOptions = ['Technical', 'Operational', 'HR', 'Financial', 'Compliance'];
+
+    // Fetch dropdown data
     useEffect(() => {
-        if (!initialProblem) loadProblem();
+        const fetchData = async () => {
+            try {
+                setDataLoading(true);
+
+                // Fetch departments
+                const { departmentsApi } = await import('@/lib/api/departments');
+                const deptList = await departmentsApi.getAll({});
+                setDepartments(deptList);
+
+                // Fetch projects
+                const { projectsApi } = await import('@/lib/api/projects');
+                const projectList = await projectsApi.listAll();
+                setProjects(projectList);
+
+                // Fetch tasks
+                const { tasksApi } = await import('@/lib/api/tasks');
+                const { tasks: taskList } = await tasksApi.list({ skip: 0, limit: 1000 });
+                setTasks(taskList);
+
+                // Fetch users
+                const { adminApi } = await import('@/lib/api/admin');
+                const userList = await adminApi.getUsers();
+                setUsers(userList);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                toast.error('Failed to load form data');
+            } finally {
+                setDataLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
+
+    // Load problem and populate form
+    useEffect(() => {
+        if (!initialProblem) {
+            loadProblem();
+        } else {
+            populateForm(initialProblem);
+        }
     }, [problemId, initialProblem]);
+
+    const populateForm = (prob: Problem) => {
+        setTitle(prob.title);
+        setImpactDescription(prob.impact_description);
+        setDepartment(prob.department);
+        setCategory(prob.category);
+        setSeverity(prob.severity);
+        setStatus(prob.status);
+        setOwner(prob.owner);
+        setReportedBy(prob.reported_by);
+        setDateDetected(prob.date_detected);
+        setClosureDate(prob.closure_date || '');
+        setLinkedProject(prob.linked_project || '');
+        setLinkedTask(prob.linked_task || '');
+        setVerifiedBy(prob.verified_by || '');
+        setLessonLearned(prob.lesson_learned || '');
+
+        if (prob.root_cause) {
+            setRootCause({
+                problem_statement: prob.root_cause.problem_statement || '',
+                whys: prob.root_cause.whys || ['', '', '', '', ''],
+                root_cause: prob.root_cause.root_cause || ''
+            });
+        }
+
+        setCorrectiveActions(prob.corrective_actions || []);
+        setPreventiveActions(prob.preventive_actions || []);
+    };
 
     const loadProblem = async () => {
         try {
             setLoading(true);
-            const data = await problemService.getProblem(problemId);
+            const data = await problemsApi.getById(problemId);
             setProblem(data);
+            populateForm(data);
         } catch (error) {
             toast.error('Failed to load problem details');
         } finally {
@@ -55,119 +196,142 @@ export default function ProblemEditClient({ problemId, initialProblem }: Problem
         }
     };
 
+    const handleReportedByChange = (value: string) => {
+        if (value === 'custom') {
+            setReportedBy('');
+            setReportedByUserId('');
+        } else {
+            const user = users.find(u => u.id === value);
+            if (user) {
+                setReportedByUserId(value);
+                setReportedBy(`${user.firstName} ${user.lastName}`);
+            }
+        }
+    };
+
+    const handleOwnerChange = (value: string) => {
+        if (value === 'custom') {
+            setOwner('');
+            setOwnerUserId('');
+        } else {
+            const user = users.find(u => u.id === value);
+            if (user) {
+                setOwnerUserId(value);
+                setOwner(`${user.firstName} ${user.lastName}`);
+            }
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!problem) return;
 
         try {
             setSaving(true);
-            await problemService.updateProblem(problemId, {
-                ...problem,
-                updatedAt: new Date().toISOString()
-            });
+
+            // Format corrective actions with all required fields, preserving id
+            const formattedCorrectiveActions = correctiveActions.map(action => ({
+                id: action.id || `corrective-${Date.now()}-${Math.random()}`,
+                description: action.description || '',
+                assigned_to: action.assigned_to || '',
+                due_date: action.due_date || '',
+                status: action.status || 'Planned',
+                proof: [] as string[]
+            }));
+
+            // Format preventive actions with all required fields, preserving id
+            const formattedPreventiveActions = preventiveActions.map(action => ({
+                id: action.id || `preventive-${Date.now()}-${Math.random()}`,
+                description: action.description || '',
+                assigned_to: action.assigned_to || '',
+                due_date: action.due_date || '',
+                status: action.status || 'Planned',
+                proof: [] as string[]
+            }));
+
+            const updateData: ProblemUpdate = {
+                title,
+                impact_description: impactDescription,
+                department,
+                category,
+                severity,
+                status,
+                owner,
+                reported_by: reportedBy,
+                date_detected: dateDetected,
+                root_cause: rootCause,
+                corrective_actions: formattedCorrectiveActions,
+                preventive_actions: formattedPreventiveActions,
+                linked_project: linkedProject || undefined,
+                linked_task: linkedTask || undefined,
+                verified_by: verifiedBy || undefined,
+                lesson_learned: lessonLearned || undefined,
+                closure_date: closureDate || undefined
+            };
+
+            await problemsApi.update(problemId, updateData);
             toast.success('Problem updated successfully');
             router.push(`/work/problems/${problemId}`);
-        } catch (error) {
-            toast.error('Failed to update problem');
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to update problem');
+            console.error(error);
         } finally {
             setSaving(false);
         }
     };
 
-    const updateFiveWhys = (field: keyof typeof problem.rootCause, value: string | string[]) => {
-        if (!problem) return;
-        setProblem({
-            ...problem,
-            rootCause: {
-                ...problem.rootCause,
-                [field]: value,
-            },
-        });
-    };
-
     const updateWhy = (index: number, value: string) => {
-        if (!problem?.rootCause) return;
-        const newWhys = [...problem.rootCause.whys];
+        const newWhys = [...rootCause.whys];
         newWhys[index] = value;
-        updateFiveWhys('whys', newWhys);
+        setRootCause({ ...rootCause, whys: newWhys });
     };
 
     const addCorrectiveAction = () => {
-        if (!problem) return;
-        setProblem({
-            ...problem,
-            correctiveActions: [
-                ...problem.correctiveActions,
-                {
-                    id: Date.now().toString(),
-                    description: '',
-                    assignedTo: '',
-                    dueDate: '',
-                    status: 'Planned' as 'Planned' | 'In Progress' | 'Done'
-                },
-            ],
-        });
+        setCorrectiveActions([
+            ...correctiveActions,
+            {
+                description: '',
+                assigned_to: '',
+                due_date: '',
+                status: 'Planned'
+            }
+        ]);
     };
 
-    const removeCorrectiveAction = (id: string) => {
-        if (!problem?.correctiveActions || problem.correctiveActions.length <= 1) return;
-        setProblem({
-            ...problem,
-            correctiveActions: problem.correctiveActions.filter((action) => action.id !== id),
-        });
+    const removeCorrectiveAction = (index: number) => {
+        if (correctiveActions.length <= 1) return;
+        setCorrectiveActions(correctiveActions.filter((_, i) => i !== index));
     };
 
-    const updateCorrectiveAction = (id: string, field: string, value: string) => {
-        if (!problem?.correctiveActions) return;
-        setProblem({
-            ...problem,
-            correctiveActions: problem.correctiveActions.map((action) =>
-                action.id === id ? { ...action, [field]: value } : action
-            ),
-        });
+    const updateCorrectiveAction = (index: number, field: keyof Action, value: string) => {
+        const updated = [...correctiveActions];
+        updated[index] = { ...updated[index], [field]: value };
+        setCorrectiveActions(updated);
     };
 
     const addPreventiveAction = () => {
-        if (!problem) return;
-        setProblem({
-            ...problem,
-            preventiveActions: [
-                ...problem.preventiveActions,
-                {
-                    id: Date.now().toString(),
-                    description: '',
-                    assignedTo: '',
-                    dueDate: '',
-                    status: 'Planned' as 'Planned' | 'In Progress' | 'Done'
-                },
-            ],
-        });
+        setPreventiveActions([
+            ...preventiveActions,
+            {
+                description: '',
+                assigned_to: '',
+                due_date: '',
+                status: 'Planned'
+            }
+        ]);
     };
 
-    const removePreventiveAction = (id: string) => {
-        if (!problem?.preventiveActions || problem.preventiveActions.length <= 1) return;
-        setProblem({
-            ...problem,
-            preventiveActions: problem.preventiveActions.filter((action) => action.id !== id),
-        });
+    const removePreventiveAction = (index: number) => {
+        if (preventiveActions.length <= 1) return;
+        setPreventiveActions(preventiveActions.filter((_, i) => i !== index));
     };
 
-    const updatePreventiveAction = (id: string, field: string, value: string) => {
-        if (!problem?.preventiveActions) return;
-        setProblem({
-            ...problem,
-            preventiveActions: problem.preventiveActions.map((action) =>
-                action.id === id ? { ...action, [field]: value } : action
-            ),
-        });
+    const updatePreventiveAction = (index: number, field: keyof Action, value: string) => {
+        const updated = [...preventiveActions];
+        updated[index] = { ...updated[index], [field]: value };
+        setPreventiveActions(updated);
     };
 
-    const departmentOptions = [
-        'Engineering', 'Operations', 'Finance', 'HR', 'Marketing',
-        'Sales', 'Trust & Safety', 'Legal', 'Compliance', 'Strategy'
-    ];
-
-    if (loading) {
+    if (loading && !initialProblem) {
         return (
             <div className="flex items-center justify-center h-64">
                 <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -175,15 +339,23 @@ export default function ProblemEditClient({ problemId, initialProblem }: Problem
         );
     }
 
-    if (!problem) {
+    if (!problem && !initialProblem) {
         return (
             <div className="p-6 text-center">
                 <h1 className="text-2xl font-bold mb-4">Problem Not Found</h1>
-                <p className="text-muted-foreground mb-6">The problem you're looking for doesn't exist.</p>
+                <p className="text-muted-foreground mb-6">The problem you&apos;re looking for doesn't exist.</p>
                 <Button onClick={() => router.push('/work/problems')}>
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to Problems
                 </Button>
+            </div>
+        );
+    }
+
+    if (dataLoading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <Loader className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
         );
     }
@@ -244,8 +416,8 @@ export default function ProblemEditClient({ problemId, initialProblem }: Problem
                                     <Label htmlFor="title">Problem Title *</Label>
                                     <Input
                                         id="title"
-                                        value={problem.title}
-                                        onChange={(e) => setProblem({ ...problem, title: e.target.value })}
+                                        value={title}
+                                        onChange={(e) => setTitle(e.target.value)}
                                         required
                                     />
                                 </div>
@@ -254,8 +426,8 @@ export default function ProblemEditClient({ problemId, initialProblem }: Problem
                                     <Label htmlFor="impactDescription">Impact Description *</Label>
                                     <Textarea
                                         id="impactDescription"
-                                        value={problem.impactDescription}
-                                        onChange={(e) => setProblem({ ...problem, impactDescription: e.target.value })}
+                                        value={impactDescription}
+                                        onChange={(e) => setImpactDescription(e.target.value)}
                                         rows={4}
                                         required
                                     />
@@ -265,8 +437,8 @@ export default function ProblemEditClient({ problemId, initialProblem }: Problem
                                     <div className="space-y-2">
                                         <Label htmlFor="department">Department *</Label>
                                         <Select
-                                            value={problem.department}
-                                            onValueChange={(value) => setProblem({ ...problem, department: value })}
+                                            value={department}
+                                            onValueChange={setDepartment}
                                             required
                                         >
                                             <SelectTrigger id="department">
@@ -274,8 +446,8 @@ export default function ProblemEditClient({ problemId, initialProblem }: Problem
                                                 <SelectValue placeholder="Select department" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {departmentOptions.map(dept => (
-                                                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                                                {departments.map(dept => (
+                                                    <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
@@ -284,19 +456,17 @@ export default function ProblemEditClient({ problemId, initialProblem }: Problem
                                     <div className="space-y-2">
                                         <Label htmlFor="category">Category *</Label>
                                         <Select
-                                            value={problem.category}
-                                            onValueChange={(value: any) => setProblem({ ...problem, category: value })}
+                                            value={category}
+                                            onValueChange={setCategory}
                                             required
                                         >
                                             <SelectTrigger id="category">
                                                 <SelectValue placeholder="Select category" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="Technical">Technical</SelectItem>
-                                                <SelectItem value="Operational">Operational</SelectItem>
-                                                <SelectItem value="HR">HR</SelectItem>
-                                                <SelectItem value="Financial">Financial</SelectItem>
-                                                <SelectItem value="Compliance">Compliance</SelectItem>
+                                                {categoryOptions.map(cat => (
+                                                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -306,8 +476,8 @@ export default function ProblemEditClient({ problemId, initialProblem }: Problem
                                     <div className="space-y-2">
                                         <Label htmlFor="severity">Severity *</Label>
                                         <Select
-                                            value={problem.severity}
-                                            onValueChange={(value: any) => setProblem({ ...problem, severity: value })}
+                                            value={severity}
+                                            onValueChange={setSeverity}
                                             required
                                         >
                                             <SelectTrigger id="severity">
@@ -326,8 +496,8 @@ export default function ProblemEditClient({ problemId, initialProblem }: Problem
                                     <div className="space-y-2">
                                         <Label htmlFor="status">Status *</Label>
                                         <Select
-                                            value={problem.status}
-                                            onValueChange={(value: any) => setProblem({ ...problem, status: value })}
+                                            value={status}
+                                            onValueChange={setStatus}
                                             required
                                         >
                                             <SelectTrigger id="status">
@@ -345,45 +515,24 @@ export default function ProblemEditClient({ problemId, initialProblem }: Problem
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="owner">Owner *</Label>
-                                        <Input
-                                            id="owner"
-                                            value={problem.owner}
-                                            onChange={(e) => setProblem({ ...problem, owner: e.target.value })}
-                                            required
-                                        />
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="reportedBy">Reported By</Label>
-                                        <Input
-                                            id="reportedBy"
-                                            value={problem.reportedBy}
-                                            onChange={(e) => setProblem({ ...problem, reportedBy: e.target.value })}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
                                         <Label htmlFor="dateDetected">Date Detected *</Label>
                                         <Input
                                             id="dateDetected"
                                             type="date"
-                                            value={problem.dateDetected}
-                                            onChange={(e) => setProblem({ ...problem, dateDetected: e.target.value })}
+                                            value={dateDetected}
+                                            onChange={(e) => setDateDetected(e.target.value)}
                                             required
                                         />
                                     </div>
 
-                                    {problem.status === 'Closed' && (
+                                    {status === 'Closed' && (
                                         <div className="space-y-2">
                                             <Label htmlFor="closureDate">Closure Date</Label>
                                             <Input
                                                 id="closureDate"
                                                 type="date"
-                                                value={problem.closureDate || ''}
-                                                onChange={(e) => setProblem({ ...problem, closureDate: e.target.value })}
+                                                value={closureDate}
+                                                onChange={(e) => setClosureDate(e.target.value)}
                                             />
                                         </div>
                                     )}
@@ -391,39 +540,136 @@ export default function ProblemEditClient({ problemId, initialProblem }: Problem
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="linkedProject">Linked Project</Label>
-                                        <Input
-                                            id="linkedProject"
-                                            value={problem.linkedProject || ''}
-                                            onChange={(e) => setProblem({ ...problem, linkedProject: e.target.value })}
-                                        />
+                                        <Label htmlFor="reportedBy">Reported By *</Label>
+                                        <Select
+                                            value={reportedByUserId || 'custom'}
+                                            onValueChange={handleReportedByChange}
+                                        >
+                                            <SelectTrigger id="reportedBy">
+                                                <User className="h-4 w-4 mr-2" />
+                                                <SelectValue placeholder="Select reporter or enter custom name" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {users.map(user => (
+                                                    <SelectItem key={user.id} value={user.id}>
+                                                        {user.firstName} {user.lastName} ({user.email})
+                                                    </SelectItem>
+                                                ))}
+                                                <SelectItem value="custom">Enter Custom Name</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {!reportedByUserId && (
+                                            <Input
+                                                placeholder="Enter reporter name"
+                                                value={reportedBy}
+                                                onChange={(e) => setReportedBy(e.target.value)}
+                                                className="mt-2"
+                                            />
+                                        )}
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="verifiedBy">Verified By</Label>
-                                        <Input
-                                            id="verifiedBy"
-                                            value={problem.verifiedBy || ''}
-                                            onChange={(e) => setProblem({ ...problem, verifiedBy: e.target.value })}
-                                        />
+                                        <Label htmlFor="owner">Owner *</Label>
+                                        <Select
+                                            value={ownerUserId || 'custom'}
+                                            onValueChange={handleOwnerChange}
+                                        >
+                                            <SelectTrigger id="owner">
+                                                <User className="h-4 w-4 mr-2" />
+                                                <SelectValue placeholder="Select owner or enter custom name" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {users.map(user => (
+                                                    <SelectItem key={user.id} value={user.id}>
+                                                        {user.firstName} {user.lastName} ({user.email})
+                                                    </SelectItem>
+                                                ))}
+                                                <SelectItem value="custom">Enter Custom Name</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {!ownerUserId && (
+                                            <Input
+                                                placeholder="Enter owner name"
+                                                value={owner}
+                                                onChange={(e) => setOwner(e.target.value)}
+                                                className="mt-2"
+                                                required
+                                            />
+                                        )}
                                     </div>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="lessonLearned">Lesson Learned</Label>
-                                    <Textarea
-                                        id="lessonLearned"
-                                        value={problem.lessonLearned || ''}
-                                        onChange={(e) => setProblem({ ...problem, lessonLearned: e.target.value })}
-                                        placeholder="Key takeaways and improvements identified"
-                                        rows={3}
-                                    />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="linkedProject">Linked Project</Label>
+                                        <Select
+                                            value={linkedProject}
+                                            onValueChange={setLinkedProject}
+                                        >
+                                            <SelectTrigger id="linkedProject">
+                                                <SelectValue placeholder="Select project (optional)" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="None">None</SelectItem>
+                                                {projects.map(project => (
+                                                    <SelectItem key={project.id} value={project.id}>
+                                                        {project.title}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="linkedTask">Linked Task</Label>
+                                        <Select
+                                            value={linkedTask}
+                                            onValueChange={setLinkedTask}
+                                        >
+                                            <SelectTrigger id="linkedTask">
+                                                <SelectValue placeholder="Select task (optional)" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="None">None</SelectItem>
+                                                {tasks.map(task => (
+                                                    <SelectItem key={task.id} value={task.id}>
+                                                        {task.title}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 </div>
+
+                                {status === 'Closed' && (
+                                    <>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="verifiedBy">Verified By</Label>
+                                            <Input
+                                                id="verifiedBy"
+                                                value={verifiedBy}
+                                                onChange={(e) => setVerifiedBy(e.target.value)}
+                                                placeholder="Person who verified the closure"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="lessonLearned">Lesson Learned</Label>
+                                            <Textarea
+                                                id="lessonLearned"
+                                                value={lessonLearned}
+                                                onChange={(e) => setLessonLearned(e.target.value)}
+                                                placeholder="Key takeaways and improvements identified"
+                                                rows={3}
+                                            />
+                                        </div>
+                                    </>
+                                )}
                             </CardContent>
                         </Card>
 
                         <div className="flex flex-col sm:flex-row justify-between gap-3">
-                            <Button variant="outline" onClick={() => router.push(`/work/problems/${problemId}`)} className="w-full sm:w-auto">
+                            <Button variant="outline" onClick={() => router.push(`/work/problems/${problemId}`)} type="button" className="w-full sm:w-auto">
                                 Cancel
                             </Button>
                             <Button type="button" onClick={() => setActiveTab('analysis')} className="w-full sm:w-auto">
@@ -449,8 +695,8 @@ export default function ProblemEditClient({ problemId, initialProblem }: Problem
                                     <Label htmlFor="problemStatement">Problem Statement *</Label>
                                     <Textarea
                                         id="problemStatement"
-                                        value={problem.rootCause.problemStatement}
-                                        onChange={(e) => updateFiveWhys('problemStatement', e.target.value)}
+                                        value={rootCause.problem_statement}
+                                        onChange={(e) => setRootCause({ ...rootCause, problem_statement: e.target.value })}
                                         rows={3}
                                         required
                                     />
@@ -463,7 +709,7 @@ export default function ProblemEditClient({ problemId, initialProblem }: Problem
                                             <Label htmlFor={`why-${index}`}>Why #{num} *</Label>
                                             <Textarea
                                                 id={`why-${index}`}
-                                                value={problem.rootCause.whys[index] || ''}
+                                                value={rootCause.whys[index] || ''}
                                                 onChange={(e) => updateWhy(index, e.target.value)}
                                                 placeholder={index === 0 ? 'Why is this problem occurring?' : 'Why is that?'}
                                                 rows={2}
@@ -474,11 +720,11 @@ export default function ProblemEditClient({ problemId, initialProblem }: Problem
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="rootCause">Root Cause *</Label>
+                                    <Label htmlFor="rootCauseField">Root Cause *</Label>
                                     <Textarea
-                                        id="rootCause"
-                                        value={problem.rootCause.rootCause}
-                                        onChange={(e) => updateFiveWhys('rootCause', e.target.value)}
+                                        id="rootCauseField"
+                                        value={rootCause.root_cause}
+                                        onChange={(e) => setRootCause({ ...rootCause, root_cause: e.target.value })}
                                         rows={3}
                                         required
                                     />
@@ -487,7 +733,7 @@ export default function ProblemEditClient({ problemId, initialProblem }: Problem
                         </Card>
 
                         <div className="flex flex-col sm:flex-row justify-between gap-3">
-                            <Button variant="outline" onClick={() => setActiveTab('basic')} className="w-full sm:w-auto">
+                            <Button variant="outline" type="button" onClick={() => setActiveTab('basic')} className="w-full sm:w-auto">
                                 Back: Basic Info
                             </Button>
                             <Button type="button" onClick={() => setActiveTab('corrective')} className="w-full sm:w-auto">
@@ -502,21 +748,21 @@ export default function ProblemEditClient({ problemId, initialProblem }: Problem
                             <CardHeader>
                                 <CardTitle className="flex items-center">
                                     <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
-                                    Corrective Actions ({problem.correctiveActions.length})
+                                    Corrective Actions ({correctiveActions.length})
                                 </CardTitle>
                                 <CardDescription>Update immediate actions to eliminate the current issue</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                {problem.correctiveActions.map((action, index) => (
-                                    <div key={action.id} className="p-4 border rounded-lg space-y-4 bg-green-50 border-green-100">
+                                {correctiveActions.map((action, index) => (
+                                    <div key={index} className="p-4 border rounded-lg space-y-4 bg-green-50 border-green-100">
                                         <div className="flex items-center justify-between">
                                             <h4 className="font-medium">Corrective Action #{index + 1}</h4>
-                                            {problem.correctiveActions.length > 1 && (
+                                            {correctiveActions.length > 1 && (
                                                 <Button
                                                     type="button"
                                                     variant="ghost"
                                                     size="icon"
-                                                    onClick={() => removeCorrectiveAction(action.id)}
+                                                    onClick={() => removeCorrectiveAction(index)}
                                                     className="h-8 w-8"
                                                 >
                                                     <Minus className="h-4 w-4" />
@@ -525,42 +771,42 @@ export default function ProblemEditClient({ problemId, initialProblem }: Problem
                                         </div>
 
                                         <div className="space-y-2">
-                                            <Label htmlFor={`ca-desc-${action.id}`}>Action Description *</Label>
+                                            <Label htmlFor={`ca-desc-${index}`}>Action Description *</Label>
                                             <Textarea
-                                                id={`ca-desc-${action.id}`}
+                                                id={`ca-desc-${index}`}
                                                 value={action.description}
-                                                onChange={(e) => updateCorrectiveAction(action.id, 'description', e.target.value)}
+                                                onChange={(e) => updateCorrectiveAction(index, 'description', e.target.value)}
                                                 rows={2}
                                             />
                                         </div>
 
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div className="space-y-2">
-                                                <Label htmlFor={`ca-assigned-${action.id}`}>Assigned To *</Label>
+                                                <Label htmlFor={`ca-assigned-${index}`}>Assigned To *</Label>
                                                 <Input
-                                                    id={`ca-assigned-${action.id}`}
-                                                    value={action.assignedTo}
-                                                    onChange={(e) => updateCorrectiveAction(action.id, 'assignedTo', e.target.value)}
+                                                    id={`ca-assigned-${index}`}
+                                                    value={action.assigned_to}
+                                                    onChange={(e) => updateCorrectiveAction(index, 'assigned_to', e.target.value)}
                                                 />
                                             </div>
 
                                             <div className="space-y-2">
-                                                <Label htmlFor={`ca-due-${action.id}`}>Due Date *</Label>
+                                                <Label htmlFor={`ca-due-${index}`}>Due Date *</Label>
                                                 <Input
-                                                    id={`ca-due-${action.id}`}
+                                                    id={`ca-due-${index}`}
                                                     type="date"
-                                                    value={action.dueDate}
-                                                    onChange={(e) => updateCorrectiveAction(action.id, 'dueDate', e.target.value)}
+                                                    value={action.due_date}
+                                                    onChange={(e) => updateCorrectiveAction(index, 'due_date', e.target.value)}
                                                 />
                                             </div>
 
                                             <div className="space-y-2">
-                                                <Label htmlFor={`ca-status-${action.id}`}>Status</Label>
+                                                <Label htmlFor={`ca-status-${index}`}>Status</Label>
                                                 <Select
                                                     value={action.status}
-                                                    onValueChange={(value: any) => updateCorrectiveAction(action.id, 'status', value)}
+                                                    onValueChange={(value) => updateCorrectiveAction(index, 'status', value)}
                                                 >
-                                                    <SelectTrigger id={`ca-status-${action.id}`}>
+                                                    <SelectTrigger id={`ca-status-${index}`}>
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -582,7 +828,7 @@ export default function ProblemEditClient({ problemId, initialProblem }: Problem
                         </Card>
 
                         <div className="flex flex-col sm:flex-row justify-between gap-3">
-                            <Button variant="outline" onClick={() => setActiveTab('analysis')} className="w-full sm:w-auto">
+                            <Button variant="outline" type="button" onClick={() => setActiveTab('analysis')} className="w-full sm:w-auto">
                                 Back: 5-Whys Analysis
                             </Button>
                             <Button type="button" onClick={() => setActiveTab('preventive')} className="w-full sm:w-auto">
@@ -597,21 +843,21 @@ export default function ProblemEditClient({ problemId, initialProblem }: Problem
                             <CardHeader>
                                 <CardTitle className="flex items-center">
                                     <AlertCircle className="h-5 w-5 mr-2 text-amber-600" />
-                                    Preventive Actions ({problem.preventiveActions.length})
+                                    Preventive Actions ({preventiveActions.length})
                                 </CardTitle>
                                 <CardDescription>Update long-term measures to prevent recurrence</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                {problem.preventiveActions.map((action, index) => (
-                                    <div key={action.id} className="p-4 border rounded-lg space-y-4 bg-amber-50 border-amber-100">
+                                {preventiveActions.map((action, index) => (
+                                    <div key={index} className="p-4 border rounded-lg space-y-4 bg-amber-50 border-amber-100">
                                         <div className="flex items-center justify-between">
                                             <h4 className="font-medium">Preventive Action #{index + 1}</h4>
-                                            {problem.preventiveActions.length > 1 && (
+                                            {preventiveActions.length > 1 && (
                                                 <Button
                                                     type="button"
                                                     variant="ghost"
                                                     size="icon"
-                                                    onClick={() => removePreventiveAction(action.id)}
+                                                    onClick={() => removePreventiveAction(index)}
                                                     className="h-8 w-8"
                                                 >
                                                     <Minus className="h-4 w-4" />
@@ -620,42 +866,42 @@ export default function ProblemEditClient({ problemId, initialProblem }: Problem
                                         </div>
 
                                         <div className="space-y-2">
-                                            <Label htmlFor={`pa-desc-${action.id}`}>Action Description *</Label>
+                                            <Label htmlFor={`pa-desc-${index}`}>Action Description *</Label>
                                             <Textarea
-                                                id={`pa-desc-${action.id}`}
+                                                id={`pa-desc-${index}`}
                                                 value={action.description}
-                                                onChange={(e) => updatePreventiveAction(action.id, 'description', e.target.value)}
+                                                onChange={(e) => updatePreventiveAction(index, 'description', e.target.value)}
                                                 rows={2}
                                             />
                                         </div>
 
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div className="space-y-2">
-                                                <Label htmlFor={`pa-assigned-${action.id}`}>Assigned To *</Label>
+                                                <Label htmlFor={`pa-assigned-${index}`}>Assigned To *</Label>
                                                 <Input
-                                                    id={`pa-assigned-${action.id}`}
-                                                    value={action.assignedTo}
-                                                    onChange={(e) => updatePreventiveAction(action.id, 'assignedTo', e.target.value)}
+                                                    id={`pa-assigned-${index}`}
+                                                    value={action.assigned_to}
+                                                    onChange={(e) => updatePreventiveAction(index, 'assigned_to', e.target.value)}
                                                 />
                                             </div>
 
                                             <div className="space-y-2">
-                                                <Label htmlFor={`pa-due-${action.id}`}>Due Date *</Label>
+                                                <Label htmlFor={`pa-due-${index}`}>Due Date *</Label>
                                                 <Input
-                                                    id={`pa-due-${action.id}`}
+                                                    id={`pa-due-${index}`}
                                                     type="date"
-                                                    value={action.dueDate}
-                                                    onChange={(e) => updatePreventiveAction(action.id, 'dueDate', e.target.value)}
+                                                    value={action.due_date}
+                                                    onChange={(e) => updatePreventiveAction(index, 'due_date', e.target.value)}
                                                 />
                                             </div>
 
                                             <div className="space-y-2">
-                                                <Label htmlFor={`pa-status-${action.id}`}>Status</Label>
+                                                <Label htmlFor={`pa-status-${index}`}>Status</Label>
                                                 <Select
                                                     value={action.status}
-                                                    onValueChange={(value: any) => updatePreventiveAction(action.id, 'status', value)}
+                                                    onValueChange={(value) => updatePreventiveAction(index, 'status', value)}
                                                 >
-                                                    <SelectTrigger id={`pa-status-${action.id}`}>
+                                                    <SelectTrigger id={`pa-status-${index}`}>
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -675,12 +921,12 @@ export default function ProblemEditClient({ problemId, initialProblem }: Problem
                                 </Button>
                             </CardContent>
                         </Card>
-
                         <div className="flex flex-col sm:flex-row justify-between gap-3">
-                            <Button variant="outline" onClick={() => setActiveTab('corrective')} className="w-full sm:w-auto">
+                            <Button variant="outline" type="button" onClick={() => setActiveTab('corrective')} className="w-full sm:w-auto">
                                 Back: Corrective Actions
                             </Button>
                             <Button type="submit" disabled={saving} className="w-full sm:w-auto">
+                                <Save className="h-4 w-4 mr-2" />
                                 {saving ? 'Saving Changes...' : 'Save Changes'}
                             </Button>
                         </div>

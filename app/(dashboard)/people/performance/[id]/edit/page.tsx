@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { performanceService } from "@/lib/api/performance";
+import { performanceService } from "@/services/performanceService";
 import PerformaceEditClient from "@/components/sections/PerformaceEditClient";
 
 interface PageProps {

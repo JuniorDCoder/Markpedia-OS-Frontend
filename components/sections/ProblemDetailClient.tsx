@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { problemService } from '@/services/api';
-import { Problem } from '@/types';
+import { problemsApi, Problem } from '@/lib/api/problems';
 import {
     ArrowLeft,
     Edit,
@@ -36,6 +35,7 @@ export default function ProblemDetailClient({ problemId, initialProblem }: Probl
     const [problem, setProblem] = useState<Problem | null>(initialProblem || null);
     const [loading, setLoading] = useState(!initialProblem);
     const [updating, setUpdating] = useState(false);
+    const [updatingActionId, setUpdatingActionId] = useState<string | null>(null);
 
     useEffect(() => {
         if (!initialProblem) {
@@ -46,7 +46,7 @@ export default function ProblemDetailClient({ problemId, initialProblem }: Probl
     const loadProblem = async () => {
         try {
             setLoading(true);
-            const data = await problemService.getProblem(problemId);
+            const data = await problemsApi.getById(problemId);
             setProblem(data);
         } catch (error) {
             toast.error('Failed to load problem details');
@@ -61,14 +61,17 @@ export default function ProblemDetailClient({ problemId, initialProblem }: Probl
 
         try {
             setUpdating(true);
-            const updatedProblem = await problemService.updateActionStatus(problemId, actionId, type, newStatus);
+            setUpdatingActionId(actionId);
+            
+            const updatedProblem = await problemsApi.updateActionStatus(problemId, actionId, type, newStatus);
             setProblem(updatedProblem);
-            toast.success('Action status updated');
+            toast.success('Action status updated successfully');
         } catch (error) {
+            console.error('Failed to update action status:', error);
             toast.error('Failed to update action status');
-            console.error(error);
         } finally {
             setUpdating(false);
+            setUpdatingActionId(null);
         }
     };
 
@@ -77,7 +80,8 @@ export default function ProblemDetailClient({ problemId, initialProblem }: Probl
 
         try {
             setUpdating(true);
-            const updatedProblem = await problemService.closeProblem(problemId, 'Current User', 'Problem resolved successfully');
+            const lessonLearned = 'Problem resolved successfully';
+            const updatedProblem = await problemsApi.closeProblem(problemId, lessonLearned);
             setProblem(updatedProblem);
             toast.success('Problem closed successfully');
         } catch (error) {
@@ -93,7 +97,11 @@ export default function ProblemDetailClient({ problemId, initialProblem }: Probl
 
         try {
             setUpdating(true);
-            const updatedProblem = await problemService.reopenProblem(problemId);
+            const updatedProblem = await problemsApi.update(problemId, {
+                status: 'Under Analysis',
+                closure_date: undefined,
+                verified_by: undefined,
+            });
             setProblem(updatedProblem);
             toast.success('Problem reopened for analysis');
         } catch (error) {
@@ -176,7 +184,7 @@ export default function ProblemDetailClient({ problemId, initialProblem }: Probl
         return (
             <div className="p-6 text-center">
                 <h1 className="text-2xl font-bold mb-4">Problem Not Found</h1>
-                <p className="text-muted-foreground mb-6">The problem you're looking for doesn't exist.</p>
+                <p className="text-muted-foreground mb-6">The problem you&apos;re looking for doesn&apos;t exist.</p>
                 <Button onClick={() => router.push('/work/problems')}>
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to Problems
@@ -200,7 +208,7 @@ export default function ProblemDetailClient({ problemId, initialProblem }: Probl
                             </Badge>
                             <h1 className="text-2xl sm:text-3xl font-bold leading-tight">{problem.title}</h1>
                         </div>
-                        <p className="text-muted-foreground text-sm sm:text-base">{problem.impactDescription}</p>
+                        <p className="text-muted-foreground text-sm sm:text-base">{problem.impact_description}</p>
                     </div>
                 </div>
 
@@ -283,58 +291,64 @@ export default function ProblemDetailClient({ problemId, initialProblem }: Probl
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
                     {/* 5-Whys Analysis */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center">
-                                <FileText className="h-5 w-5 mr-2 text-blue-600" />
-                                5-Whys Root Cause Analysis
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div>
-                                <h4 className="font-medium mb-2">Problem Statement</h4>
-                                <p className="text-sm text-muted-foreground">{problem.rootCause.problemStatement}</p>
-                            </div>
+                    {problem.root_cause && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center">
+                                    <FileText className="h-5 w-5 mr-2 text-blue-600" />
+                                    5-Whys Root Cause Analysis
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div>
+                                    <h4 className="font-medium mb-2">Problem Statement</h4>
+                                    <p className="text-sm text-muted-foreground">{problem.root_cause.problem_statement || problem.title}</p>
+                                </div>
 
-                            <div>
-                                <h4 className="font-medium mb-2">5-Whys Process</h4>
-                                <ol className="list-decimal pl-5 space-y-2 text-sm text-muted-foreground">
-                                    {problem.rootCause.whys.map((why, index) => (
-                                        <li key={index}>{why}</li>
-                                    ))}
-                                </ol>
-                            </div>
+                                {problem.root_cause.whys && problem.root_cause.whys.length > 0 && (
+                                    <div>
+                                        <h4 className="font-medium mb-2">5-Whys Process</h4>
+                                        <ol className="list-decimal pl-5 space-y-2 text-sm text-muted-foreground">
+                                            {problem.root_cause.whys.map((why: string, index: number) => (
+                                                <li key={index}>{why}</li>
+                                            ))}
+                                        </ol>
+                                    </div>
+                                )}
 
-                            <div className="p-3 bg-blue-50 rounded border border-blue-100">
-                                <h4 className="font-medium text-blue-800 mb-2">Root Cause Identified</h4>
-                                <p className="text-blue-700 text-sm">{problem.rootCause.rootCause}</p>
-                            </div>
-                        </CardContent>
-                    </Card>
+                                {problem.root_cause.root_cause && (
+                                    <div className="p-3 bg-blue-50 rounded border border-blue-100">
+                                        <h4 className="font-medium text-blue-800 mb-2">Root Cause Identified</h4>
+                                        <p className="text-blue-700 text-sm">{problem.root_cause.root_cause}</p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
 
                     {/* Actions */}
                     <div className="grid grid-cols-1 gap-6">
                         {/* Corrective Actions */}
-                        {problem.correctiveActions.length > 0 && (
+                        {problem.corrective_actions && problem.corrective_actions.length > 0 && (
                             <Card>
                                 <CardHeader>
                                     <CardTitle className="flex items-center">
                                         <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
-                                        Corrective Actions ({problem.correctiveActions.length})
+                                        Corrective Actions ({problem.corrective_actions.length})
                                     </CardTitle>
                                     <CardDescription>Immediate actions to eliminate the current issue</CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-4">
-                                        {problem.correctiveActions.map((action) => (
+                                        {problem.corrective_actions.map((action: any) => (
                                             <div key={action.id} className="p-3 border rounded-lg bg-green-50 border-green-100">
                                                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                                                     <div className="flex-1">
                                                         <p className="font-medium text-sm">{action.description}</p>
                                                         <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-muted-foreground">
-                                                            <span>Assigned to: {action.assignedTo}</span>
+                                                            <span>Assigned to: {action.assigned_to}</span>
                                                             <span>•</span>
-                                                            <span>Due: {new Date(action.dueDate).toLocaleDateString()}</span>
+                                                            <span>Due: {new Date(action.due_date).toLocaleDateString()}</span>
                                                         </div>
                                                     </div>
 
@@ -342,7 +356,7 @@ export default function ProblemDetailClient({ problemId, initialProblem }: Probl
                                                         <Select
                                                             value={action.status}
                                                             onValueChange={(value) => updateActionStatus(action.id, 'corrective', value)}
-                                                            disabled={updating}
+                                                            disabled={updating && updatingActionId === action.id}
                                                         >
                                                             <SelectTrigger className="w-[130px] text-xs">
                                                                 <SelectValue />
@@ -366,26 +380,26 @@ export default function ProblemDetailClient({ problemId, initialProblem }: Probl
                         )}
 
                         {/* Preventive Actions */}
-                        {problem.preventiveActions.length > 0 && (
+                        {problem.preventive_actions && problem.preventive_actions.length > 0 && (
                             <Card>
                                 <CardHeader>
                                     <CardTitle className="flex items-center">
                                         <AlertTriangle className="h-5 w-5 mr-2 text-amber-600" />
-                                        Preventive Actions ({problem.preventiveActions.length})
+                                        Preventive Actions ({problem.preventive_actions.length})
                                     </CardTitle>
                                     <CardDescription>Long-term measures to prevent recurrence</CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-4">
-                                        {problem.preventiveActions.map((action) => (
+                                        {problem.preventive_actions.map((action: any) => (
                                             <div key={action.id} className="p-3 border rounded-lg bg-amber-50 border-amber-100">
                                                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                                                     <div className="flex-1">
                                                         <p className="font-medium text-sm">{action.description}</p>
                                                         <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-muted-foreground">
-                                                            <span>Assigned to: {action.assignedTo}</span>
+                                                            <span>Assigned to: {action.assigned_to}</span>
                                                             <span>•</span>
-                                                            <span>Due: {new Date(action.dueDate).toLocaleDateString()}</span>
+                                                            <span>Due: {new Date(action.due_date).toLocaleDateString()}</span>
                                                         </div>
                                                     </div>
 
@@ -393,7 +407,7 @@ export default function ProblemDetailClient({ problemId, initialProblem }: Probl
                                                         <Select
                                                             value={action.status}
                                                             onValueChange={(value) => updateActionStatus(action.id, 'preventive', value)}
-                                                            disabled={updating}
+                                                            disabled={updating && updatingActionId === action.id}
                                                         >
                                                             <SelectTrigger className="w-[130px] text-xs">
                                                                 <SelectValue />
@@ -430,7 +444,7 @@ export default function ProblemDetailClient({ problemId, initialProblem }: Probl
                                 <User className="h-4 w-4 text-muted-foreground mt-1" />
                                 <div>
                                     <p className="text-sm font-medium">Reported By</p>
-                                    <p className="text-sm text-muted-foreground">{problem.reportedBy}</p>
+                                    <p className="text-sm text-muted-foreground">{problem.reported_by}</p>
                                 </div>
                             </div>
 
@@ -447,39 +461,39 @@ export default function ProblemDetailClient({ problemId, initialProblem }: Probl
                                 <div>
                                     <p className="text-sm font-medium">Date Detected</p>
                                     <p className="text-sm text-muted-foreground">
-                                        {new Date(problem.dateDetected).toLocaleDateString()}
+                                        {new Date(problem.date_detected).toLocaleDateString()}
                                     </p>
                                 </div>
                             </div>
 
-                            {problem.closureDate && (
+                            {problem.closure_date && (
                                 <div className="flex items-start gap-3">
                                     <Calendar className="h-4 w-4 text-muted-foreground mt-1" />
                                     <div>
                                         <p className="text-sm font-medium">Closure Date</p>
                                         <p className="text-sm text-muted-foreground">
-                                            {new Date(problem.closureDate).toLocaleDateString()}
+                                            {new Date(problem.closure_date).toLocaleDateString()}
                                         </p>
                                     </div>
                                 </div>
                             )}
 
-                            {problem.verifiedBy && (
+                            {problem.verified_by && (
                                 <div className="flex items-start gap-3">
                                     <User className="h-4 w-4 text-muted-foreground mt-1" />
                                     <div>
                                         <p className="text-sm font-medium">Verified By</p>
-                                        <p className="text-sm text-muted-foreground">{problem.verifiedBy}</p>
+                                        <p className="text-sm text-muted-foreground">{problem.verified_by}</p>
                                     </div>
                                 </div>
                             )}
 
-                            {problem.linkedProject && (
+                            {problem.linked_project && (
                                 <div className="flex items-start gap-3">
                                     <FileText className="h-4 w-4 text-muted-foreground mt-1" />
                                     <div>
                                         <p className="text-sm font-medium">Linked Project</p>
-                                        <p className="text-sm text-muted-foreground">{problem.linkedProject}</p>
+                                        <p className="text-sm text-muted-foreground">{problem.linked_project}</p>
                                     </div>
                                 </div>
                             )}
@@ -487,7 +501,7 @@ export default function ProblemDetailClient({ problemId, initialProblem }: Probl
                     </Card>
 
                     {/* Lesson Learned */}
-                    {problem.lessonLearned && (
+                    {problem.lesson_learned && (
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center">
@@ -496,7 +510,7 @@ export default function ProblemDetailClient({ problemId, initialProblem }: Probl
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="text-sm text-muted-foreground">{problem.lessonLearned}</p>
+                                <p className="text-sm text-muted-foreground">{problem.lesson_learned}</p>
                             </CardContent>
                         </Card>
                     )}

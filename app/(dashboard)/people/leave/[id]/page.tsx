@@ -1,11 +1,19 @@
-import { notFound } from 'next/navigation';
-import { leaveRequestService } from '@/lib/api/leaveRequests';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { leaveRequestService } from '@/services/leaveRequestService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, User, ArrowLeft, Check, X, FileText, Mail, Phone } from 'lucide-react';
-import Link from 'next/link';
+import { Input } from '@/components/ui/input';
+import { Calendar, Clock, User, ArrowLeft, FileText, Mail, Loader, AlertCircle, Trash2 } from 'lucide-react';
 import { ApprovalActions } from './approval-actions';
+import { useAppStore } from '@/store/app';
+import { useAuthStore } from '@/store/auth';
+import toast from 'react-hot-toast';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface PageProps {
     params: {
@@ -13,24 +21,55 @@ interface PageProps {
     };
 }
 
-export async function generateStaticParams() {
-    try {
-        const leaveRequests = await leaveRequestService.getLeaveRequests();
-        return leaveRequests.map((request) => ({
-            id: request.id.toString(),
-        }));
-    } catch (error) {
-        console.error('Error generating static params:', error);
-        return [];
-    }
-}
+export default function LeaveRequestDetailPage({ params }: PageProps) {
+    const router = useRouter();
+    const { setCurrentModule } = useAppStore();
+    const { user } = useAuthStore();
+    const [leaveRequest, setLeaveRequest] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-export default async function LeaveRequestDetailPage({ params }: PageProps) {
-    const leaveRequest = await leaveRequestService.getLeaveRequest(params.id);
+    // Delete dialog state
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
+    const [isDeleting, setIsDeleting] = useState(false);
 
-    if (!leaveRequest) {
-        notFound();
-    }
+    // Small getter to handle snake_case / camelCase responses
+    const get = (obj: any, ...keys: string[]) => {
+        for (const k of keys) {
+            if (obj && obj[k] !== undefined && obj[k] !== null) return obj[k];
+        }
+        return undefined;
+    };
+
+    useEffect(() => {
+        setCurrentModule('people');
+        loadLeaveRequest();
+    }, [params.id, setCurrentModule]);
+
+    const loadLeaveRequest = async () => {
+        try {
+            setLoading(true);
+            const data = await leaveRequestService.getLeaveRequest(params.id);
+            setLeaveRequest(data);
+            setError(null);
+        } catch (err: any) {
+            console.error('Error fetching leave request:', err);
+            
+            if (err?.status === 401 || err?.status === 403) {
+                setError('You don\'t have permission to view this leave request.');
+                toast.error('Access denied');
+            } else if (err?.status === 404) {
+                setError('Leave request not found.');
+                router.push('/people/leave');
+            } else {
+                setError('Failed to load leave request details.');
+                toast.error('Failed to load leave request');
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -85,11 +124,93 @@ export default async function LeaveRequestDetailPage({ params }: PageProps) {
             case 'CEO Approved':
                 return { stage: 4, total: 3, description: 'Fully Approved' };
             default:
-                return { stage: 0, total: 3, description: status };
+                return { stage: 0, total: 3, description: status || '' };
         }
     };
 
-    const approvalStage = getApprovalStage(leaveRequest.status);
+    // canDelete check (owner or admin/ceo)
+    const canDelete = (leave: any) => {
+        if (!user || !leave) return false;
+        const role = String(user.role || '').toLowerCase();
+        const isAdminOrCeo = role === 'admin' || role === 'ceo';
+        const ownerId = String(get(leave, 'employee_id', 'employeeId') || '');
+        return isAdminOrCeo || (user.id && ownerId && user.id === ownerId);
+    };
+
+    const openDelete = () => setDeleteDialogOpen(true);
+
+    const handleDelete = async () => {
+        if (!leaveRequest) return;
+        if (!canDelete(leaveRequest)) {
+            toast.error('You are not allowed to delete this leave request');
+            return;
+        }
+        const expected = `DELETE ${get(leaveRequest, 'id', 'id')}`;
+        if (deleteConfirmationText !== expected) {
+            toast.error(`Type "${expected}" to confirm`);
+            return;
+        }
+        try {
+            setIsDeleting(true);
+            await leaveRequestService.deleteLeaveRequest(get(leaveRequest, 'id', 'id'));
+            toast.success('Leave request deleted');
+            router.push('/people/leave');
+        } catch (err) {
+            console.error('Failed to delete leave request', err);
+            toast.error('Failed to delete leave request');
+        } finally {
+            setIsDeleting(false);
+            setDeleteDialogOpen(false);
+            setDeleteConfirmationText('');
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="text-center">
+                    <Loader className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-3" />
+                    <p className="text-muted-foreground">Loading leave request details...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="p-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Error</CardTitle>
+                        <CardDescription>{error}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex gap-2">
+                            <Button asChild variant="outline">
+                                <Link href="/people/leave">Back to list</Link>
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
+    if (!leaveRequest) {
+        return (
+            <div className="text-center py-12">
+                <h1 className="text-2xl font-bold mb-4">Leave Request Not Found</h1>
+                <button
+                    onClick={() => router.push('/people/leave')}
+                    className="text-blue-600 hover:underline"
+                >
+                    Back to Leave Requests
+                </button>
+            </div>
+        );
+    }
+
+    const approvalStage = getApprovalStage(String(get(leaveRequest, 'status', 'currentStatus', 'current_status') || ''));
 
     return (
         <div className="space-y-6 px-4 sm:px-6 md:px-8">
@@ -108,13 +229,13 @@ export default async function LeaveRequestDetailPage({ params }: PageProps) {
                         Leave Request Details
                     </h1>
                     <p className="text-sm sm:text-base text-muted-foreground mt-2">
-                        View details of leave request #{leaveRequest.id}
+                        View details of leave request #{get(leaveRequest, 'id', 'id')}
                     </p>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-2">
                     <Button asChild variant="outline" className="w-full sm:w-auto">
-                        <Link href={`/people/leave/${leaveRequest.id}/edit`}>
+                        <Link href={`/people/leave/${get(leaveRequest, 'id', 'id')}/edit`}>
                             Edit Request
                         </Link>
                     </Button>
@@ -123,6 +244,14 @@ export default async function LeaveRequestDetailPage({ params }: PageProps) {
                             Back to List
                         </Link>
                     </Button>
+
+                    {/* Delete button (protected) */}
+                    {canDelete(leaveRequest) && (
+                        <Button variant="destructive" onClick={openDelete} className="w-full sm:w-auto">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -140,21 +269,21 @@ export default async function LeaveRequestDetailPage({ params }: PageProps) {
                         <CardContent className="space-y-6">
                             {/* Badges and Status */}
                             <div className="flex flex-wrap items-center gap-3">
-                                <Badge variant="outline" className={getTypeColor(leaveRequest.leave_type)}>
-                                    {leaveRequest.leave_type}
+                                <Badge variant="outline" className={getTypeColor(String(get(leaveRequest, 'leave_type', 'leaveType') || ''))}>
+                                    {get(leaveRequest, 'leave_type', 'leaveType') || '—'}
                                 </Badge>
-                                <Badge variant="secondary" className={getStatusColor(leaveRequest.status)}>
-                                    {leaveRequest.status}
+                                <Badge variant="secondary" className={getStatusColor(String(get(leaveRequest, 'status', 'currentStatus', 'current_status') || ''))}>
+                                    {get(leaveRequest, 'status', 'currentStatus', 'current_status') || '—'}
                                 </Badge>
-                                {leaveRequest.departmentName && (
+                                {get(leaveRequest, 'departmentName', 'department_name') && (
                                     <Badge variant="outline" className="bg-gray-50">
-                                        {leaveRequest.departmentName}
+                                        {get(leaveRequest, 'departmentName', 'department_name')}
                                     </Badge>
                                 )}
                             </div>
 
                             {/* Approval Progress */}
-                            {['Pending', 'Manager Approved', 'HR Approved'].includes(leaveRequest.status) && (
+                            {['Pending', 'Manager Approved', 'HR Approved'].includes(String(get(leaveRequest, 'status', 'currentStatus', 'current_status') || '')) && (
                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                                     <div className="flex items-center justify-between mb-2">
                                         <span className="text-sm font-medium text-blue-800">
@@ -184,7 +313,7 @@ export default async function LeaveRequestDetailPage({ params }: PageProps) {
                                     </h3>
                                     <p className="flex items-center text-sm">
                                         <User className="h-4 w-4 mr-2" />
-                                        {leaveRequest.userName || 'Unknown User'}
+                                        {get(leaveRequest, 'userName', 'user_name') || 'Unknown User'}
                                     </p>
                                 </div>
 
@@ -193,7 +322,7 @@ export default async function LeaveRequestDetailPage({ params }: PageProps) {
                                         Duration
                                     </h3>
                                     <p className="text-sm">
-                                        {leaveRequest.total_days} working day{leaveRequest.total_days !== 1 ? 's' : ''}
+                                        {get(leaveRequest, 'total_days', 'totalDays') ?? 0} working day{(get(leaveRequest, 'total_days', 'totalDays') ?? 0) !== 1 ? 's' : ''}
                                     </p>
                                 </div>
 
@@ -203,7 +332,7 @@ export default async function LeaveRequestDetailPage({ params }: PageProps) {
                                     </h3>
                                     <p className="flex items-center text-sm">
                                         <Calendar className="h-4 w-4 mr-2" />
-                                        {new Date(leaveRequest.start_date).toLocaleDateString()}
+                                        {new Date(String(get(leaveRequest, 'start_date', 'startDate') || '')).toLocaleDateString()}
                                     </p>
                                 </div>
 
@@ -213,26 +342,26 @@ export default async function LeaveRequestDetailPage({ params }: PageProps) {
                                     </h3>
                                     <p className="flex items-center text-sm">
                                         <Calendar className="h-4 w-4 mr-2" />
-                                        {new Date(leaveRequest.end_date).toLocaleDateString()}
+                                        {new Date(String(get(leaveRequest, 'end_date', 'endDate') || '')).toLocaleDateString()}
                                     </p>
                                 </div>
 
                                 {/* Leave Balance */}
-                                {leaveRequest.balance_before !== undefined && leaveRequest.balance_after !== undefined && (
+                                {(get(leaveRequest, 'balance_before', 'balanceBefore') !== undefined) && (get(leaveRequest, 'balance_after', 'balanceAfter') !== undefined) && (
                                     <div className="sm:col-span-2">
                                         <h3 className="font-medium text-muted-foreground mb-2 text-sm">
                                             Leave Balance Impact
                                         </h3>
                                         <div className="flex items-center gap-2 text-sm">
                                             <span className="px-2 py-1 bg-gray-100 rounded">
-                                                {leaveRequest.balance_before} days
+                                                {get(leaveRequest, 'balance_before', 'balanceBefore')} days
                                             </span>
                                             <span className="text-muted-foreground">→</span>
                                             <span className="px-2 py-1 bg-gray-100 rounded">
-                                                {leaveRequest.balance_after} days
+                                                {get(leaveRequest, 'balance_after', 'balanceAfter')} days
                                             </span>
                                             <span className="text-muted-foreground text-xs">
-                                                (-{leaveRequest.total_days} days)
+                                                (-{get(leaveRequest, 'total_days', 'totalDays')} days)
                                             </span>
                                         </div>
                                     </div>
@@ -240,27 +369,27 @@ export default async function LeaveRequestDetailPage({ params }: PageProps) {
                             </div>
 
                             {/* Additional Information */}
-                            {(leaveRequest.backup_person || leaveRequest.contact_during_leave) && (
+                            {(get(leaveRequest, 'backup_person', 'backupPerson') || get(leaveRequest, 'contact_during_leave', 'contactDuringLeave')) && (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t">
-                                    {leaveRequest.backup_person && (
+                                    {get(leaveRequest, 'backup_person', 'backupPerson') && (
                                         <div>
                                             <h3 className="font-medium text-muted-foreground mb-2 text-sm">
                                                 Backup Person
                                             </h3>
                                             <p className="flex items-center text-sm">
                                                 <User className="h-4 w-4 mr-2" />
-                                                {leaveRequest.backup_person}
+                                                {get(leaveRequest, 'backup_person', 'backupPerson')}
                                             </p>
                                         </div>
                                     )}
-                                    {leaveRequest.contact_during_leave && (
+                                    {get(leaveRequest, 'contact_during_leave', 'contactDuringLeave') && (
                                         <div>
                                             <h3 className="font-medium text-muted-foreground mb-2 text-sm">
                                                 Contact During Leave
                                             </h3>
                                             <p className="flex items-center text-sm">
                                                 <Mail className="h-4 w-4 mr-2" />
-                                                {leaveRequest.contact_during_leave}
+                                                {get(leaveRequest, 'contact_during_leave', 'contactDuringLeave')}
                                             </p>
                                         </div>
                                     )}
@@ -273,12 +402,12 @@ export default async function LeaveRequestDetailPage({ params }: PageProps) {
                                     Reason for Leave
                                 </h3>
                                 <p className="text-sm bg-muted p-4 rounded-lg leading-relaxed">
-                                    {leaveRequest.reason}
+                                    {get(leaveRequest, 'reason', 'reason') || ''}
                                 </p>
                             </div>
 
                             {/* Supporting Document */}
-                            {leaveRequest.proof && (
+                            {get(leaveRequest, 'proof', 'proof') && (
                                 <div>
                                     <h3 className="font-medium text-muted-foreground mb-2 text-sm">
                                         Supporting Document
@@ -286,7 +415,7 @@ export default async function LeaveRequestDetailPage({ params }: PageProps) {
                                     <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
                                         <FileText className="h-4 w-4" />
                                         <span className="text-sm">
-                                            {leaveRequest.proof.filename || 'Attached document'}
+                                            {String(get(leaveRequest, 'proof', 'proof')?.filename || 'Attached document')}
                                         </span>
                                     </div>
                                 </div>
@@ -307,43 +436,43 @@ export default async function LeaveRequestDetailPage({ params }: PageProps) {
                                 <p className="font-medium text-sm">Request Submitted</p>
                                 <p className="text-sm text-muted-foreground flex items-center">
                                     <Clock className="h-3 w-3 mr-1" />
-                                    {new Date(leaveRequest.applied_on).toLocaleDateString()} at{' '}
-                                    {new Date(leaveRequest.applied_on).toLocaleTimeString()}
+                                    {new Date(String(get(leaveRequest, 'applied_on', 'appliedOn', 'created_at', 'createdAt') || '')).toLocaleDateString()} at{' '}
+                                    {new Date(String(get(leaveRequest, 'applied_on', 'appliedOn', 'created_at', 'createdAt') || '')).toLocaleTimeString()}
                                 </p>
                             </div>
 
-                            {leaveRequest.approved_by_manager && (
+                            {get(leaveRequest, 'approved_by_manager', 'approvedByManager') && (
                                 <div>
                                     <p className="font-medium text-sm">Manager Approved</p>
                                     <p className="text-sm text-muted-foreground">
-                                        {new Date(leaveRequest.updated_at).toLocaleDateString()}
+                                        {new Date(String(get(leaveRequest, 'updated_at', 'updatedAt') || '')).toLocaleDateString()}
                                     </p>
                                 </div>
                             )}
 
-                            {leaveRequest.approved_by_hr && (
+                            {get(leaveRequest, 'approved_by_hr', 'approvedByHr') && (
                                 <div>
                                     <p className="font-medium text-sm">HR Validated</p>
                                     <p className="text-sm text-muted-foreground">
-                                        {new Date(leaveRequest.updated_at).toLocaleDateString()}
+                                        {new Date(String(get(leaveRequest, 'updated_at', 'updatedAt') || '')).toLocaleDateString()}
                                     </p>
                                 </div>
                             )}
 
-                            {leaveRequest.approved_by_ceo && (
+                            {get(leaveRequest, 'approved_by_ceo', 'approvedByCeo') && (
                                 <div>
                                     <p className="font-medium text-sm">CEO Approved</p>
                                     <p className="text-sm text-muted-foreground">
-                                        {new Date(leaveRequest.updated_at).toLocaleDateString()}
+                                        {new Date(String(get(leaveRequest, 'updated_at', 'updatedAt') || '')).toLocaleDateString()}
                                     </p>
                                 </div>
                             )}
 
-                            {leaveRequest.remarks && (
+                            {get(leaveRequest, 'remarks', 'remarks') && (
                                 <div>
                                     <p className="font-medium text-sm">Remarks</p>
                                     <p className="text-sm text-muted-foreground">
-                                        {leaveRequest.remarks}
+                                        {get(leaveRequest, 'remarks', 'remarks')}
                                     </p>
                                 </div>
                             )}
@@ -354,6 +483,32 @@ export default async function LeaveRequestDetailPage({ params }: PageProps) {
                     <ApprovalActions leaveRequest={leaveRequest} />
                 </div>
             </div>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-600">
+                            <AlertCircle className="h-5 w-5" />
+                            Delete Leave Request
+                        </DialogTitle>
+                    </DialogHeader>
+                    <DialogDescription>
+                        This action cannot be undone. To confirm deletion type: <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">DELETE {get(leaveRequest, 'id', 'id')}</code>
+                    </DialogDescription>
+
+                    <div className="mt-4">
+                        <Input placeholder={`DELETE ${get(leaveRequest, 'id', 'id')}`} value={deleteConfirmationText} onChange={(e) => setDeleteConfirmationText(e.target.value)} disabled={isDeleting}/>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>Cancel</Button>
+                        <Button variant="destructive" onClick={handleDelete} disabled={isDeleting || deleteConfirmationText !== `DELETE ${get(leaveRequest, 'id', 'id')}`}>
+                            {isDeleting ? 'Deleting...' : 'Delete Leave Request'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

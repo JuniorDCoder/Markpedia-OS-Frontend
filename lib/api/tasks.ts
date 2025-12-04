@@ -155,18 +155,18 @@ export const tasksApi = {
   async list(params: ListTasksParams = {}) {
     const { skip = 0, limit = 100, ...filters } = params;
     const query = buildQuery({ skip, limit, ...filters });
-    const data = await apiRequest<{ tasks: BackendTask[]; total: number }>(`/api/v1/work/tasks/${query}`);
+    const data = await apiRequest<{ tasks: BackendTask[]; total: number }>(`/work/tasks/${query}`);
     return { tasks: data.tasks.map(mapBackendTask), total: data.total };
   },
 
   async getById(id: string) {
-    const data = await apiRequest<BackendTask>(`/api/v1/work/tasks/${id}`);
+    const data = await apiRequest<BackendTask>(`/work/tasks/${id}`);
     return mapBackendTask(data);
   },
 
   async create(task: Partial<Task>) {
     const payload = mapFrontendToBackendCreate(task);
-    const data = await apiRequest<BackendTask>(`/api/v1/work/tasks/`, {
+    const data = await apiRequest<BackendTask>(`/work/tasks/`, {
       method: 'POST',
       body: JSON.stringify(payload),
     });
@@ -175,7 +175,7 @@ export const tasksApi = {
 
   async update(id: string, updates: Partial<Task>) {
     const payload = mapFrontendToBackendUpdate(updates);
-    const data = await apiRequest<BackendTask>(`/api/v1/work/tasks/${id}`, {
+    const data = await apiRequest<BackendTask>(`/work/tasks/${id}`, {
       method: 'PUT',
       body: JSON.stringify(payload),
     });
@@ -183,11 +183,11 @@ export const tasksApi = {
   },
 
   async remove(id: string) {
-    await apiRequest<void>(`/api/v1/work/tasks/${id}`, { method: 'DELETE' });
+    await apiRequest<void>(`/work/tasks/${id}`, { method: 'DELETE' });
   },
 
   async validate(id: string, manager_id: string) {
-    const data = await apiRequest<BackendTask>(`/api/v1/work/tasks/${id}/validate`, {
+    const data = await apiRequest<BackendTask>(`/work/tasks/${id}/validate`, {
       method: 'POST',
       body: JSON.stringify({ manager_id }),
     });
@@ -195,7 +195,7 @@ export const tasksApi = {
   },
 
   async submitReport(taskId: string, report: { content: string; attachments?: string[]; proof_of_completion?: { attachments: string[]; links: string[]; notes: string } | null }) {
-    const data = await apiRequest<BackendTask>(`/api/v1/work/tasks/${taskId}/submit-report`, {
+    const data = await apiRequest<BackendTask>(`/work/tasks/${taskId}/submit-report`, {
       method: 'POST',
       body: JSON.stringify(report),
     });
@@ -203,7 +203,7 @@ export const tasksApi = {
   },
 
   async weeklyReport(employee_id: string, week_start: string) {
-    return apiRequest<TaskReport>(`/api/v1/work/tasks/weekly-report`, {
+    return apiRequest<TaskReport>(`/work/tasks/weekly-report`, {
       method: 'POST',
       body: JSON.stringify({ employee_id, week_start }),
     });
@@ -212,19 +212,19 @@ export const tasksApi = {
   async byOwner(owner_id: string, params: { skip?: number; limit?: number } = {}) {
     const { skip = 0, limit = 100 } = params;
     const query = buildQuery({ skip, limit });
-    const data = await apiRequest<{ tasks: BackendTask[]; total: number }>(`/api/v1/work/tasks/owner/${encodeURIComponent(owner_id)}${query}`);
+    const data = await apiRequest<{ tasks: BackendTask[]; total: number }>(`/work/tasks/owner/${encodeURIComponent(owner_id)}${query}`);
     return { tasks: data.tasks.map(mapBackendTask), total: data.total };
   },
 
   async byManager(manager_id: string, params: { skip?: number; limit?: number } = {}) {
     const { skip = 0, limit = 100 } = params;
     const query = buildQuery({ skip, limit });
-    const data = await apiRequest<{ tasks: BackendTask[]; total: number }>(`/api/v1/work/tasks/manager/${encodeURIComponent(manager_id)}${query}`);
+    const data = await apiRequest<{ tasks: BackendTask[]; total: number }>(`/work/tasks/manager/${encodeURIComponent(manager_id)}${query}`);
     return { tasks: data.tasks.map(mapBackendTask), total: data.total };
   },
 
   async activeCount(owner_id: string) {
-    const data = await apiRequest<number | { count: number }>(`/api/v1/work/tasks/owner/${encodeURIComponent(owner_id)}/active-count`);
+    const data = await apiRequest<number | { count: number }>(`/work/tasks/owner/${encodeURIComponent(owner_id)}/active-count`);
     if (typeof data === 'number') return data;
     return (data as any).count ?? 0;
   },

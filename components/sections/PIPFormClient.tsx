@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { warningsService } from "@/lib/api/warnings";
+import { warningsService } from "@/services/warningsService";
 import { PIP, PIPStatus, PIPOutcome } from "@/types/warnings";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
