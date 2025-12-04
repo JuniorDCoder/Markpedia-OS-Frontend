@@ -18,6 +18,10 @@ const api = axios.create({
         ? `${process.env.NEXT_PUBLIC_BACKEND_URL}`
         : '/api',
     timeout: 10000,
+    headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    },
 });
 
 
