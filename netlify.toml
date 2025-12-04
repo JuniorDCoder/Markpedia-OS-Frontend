@@ -1,0 +1,5 @@
+[[redirects]]
+from = "/api/*"
+to = "https://eerier-needlessly-mireille.ngrok-free.dev/:splat"
+status = 200
+force = true
