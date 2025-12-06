@@ -48,7 +48,10 @@ export const PHASE_ROUTES: Record<Phase, string[]> = {
         '/resources',
 
         // Settings
-        '/settings'
+        '/settings',
+
+        // Profile
+        '/profile'
     ],
     2: [
         // Phase 1 routes plus Phase 2

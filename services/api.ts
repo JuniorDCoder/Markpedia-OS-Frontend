@@ -1307,46 +1307,99 @@ export const userService = {
 };
 
 export const projectService = {
-  getProjects: async (): Promise<Project[]> => {
-    const { projectsApi } = await import('@/lib/api/projects');
-    return projectsApi.listAll();
-  },
+    getProjects: async (): Promise<Project[]> => {
+        try {
+            const { projectsApi } = await import('@/lib/api/projects');
+            const result = await projectsApi.listAll();
+            // Ensure we return an array even if the structure is different
+            return Array.isArray(result) ? result :
+                result?.projects || [];
+        } catch (error) {
+            console.error('Error in getProjects:', error);
+            return [];
+        }
+    },
 
-  listProjects: async (params?: {
-    skip?: number;
-    limit?: number;
-    status?: string | null;
-    priority?: string | null;
-    owner?: string | null;
-    department?: string | null;
-  }): Promise<{ projects: Project[]; total: number }> => {
-    const { projectsApi } = await import('@/lib/api/projects');
-    return projectsApi.list(params || {});
-  },
+    listProjects: async (params?: {
+        skip?: number;
+        limit?: number;
+        status?: string | null;
+        priority?: string | null;
+        owner?: string | null;
+        department?: string | null;
+    }): Promise<{ projects: Project[]; total: number }> => {
+        try {
+            const { projectsApi } = await import('@/lib/api/projects');
+            const result = await projectsApi.list(params || {});
 
-  getProject: async (id: string): Promise<Project> => {
-    const { projectsApi } = await import('@/lib/api/projects');
-    return projectsApi.getById(id);
-  },
+            // Handle different response structures
+            if (result && typeof result === 'object') {
+                return {
+                    projects: Array.isArray(result.projects) ? result.projects : [],
+                    total: typeof result.total === 'number' ? result.total :
+                        Array.isArray(result.projects) ? result.projects.length : 0
+                };
+            }
 
-  createProject: async (projectData: Omit<Project, 'id'>): Promise<Project> => {
-    const { projectsApi } = await import('@/lib/api/projects');
-    return projectsApi.create(projectData);
-  },
+            return { projects: [], total: 0 };
+        } catch (error) {
+            console.error('Error in listProjects:', error);
+            return { projects: [], total: 0 };
+        }
+    },
 
-  updateProject: async (id: string, projectData: Partial<Project>): Promise<Project> => {
-    const { projectsApi } = await import('@/lib/api/projects');
-    return projectsApi.update(id, projectData);
-  },
+    getProject: async (id: string): Promise<Project | null> => {
+        try {
+            const { projectsApi } = await import('@/lib/api/projects');
+            return await projectsApi.getById(id);
+        } catch (error) {
+            console.error(`Error getting project ${id}:`, error);
+            return null;
+        }
+    },
 
-  deleteProject: async (id: string): Promise<void> => {
-    const { projectsApi } = await import('@/lib/api/projects');
-    return projectsApi.remove(id);
-  },
-  searchProjects: async (term: string): Promise<Project[]> => {
-    const { projectsApi } = await import('@/lib/api/projects');
-    return projectsApi.search(term);
-  },
+    createProject: async (projectData: Omit<Project, 'id'>): Promise<Project | null> => {
+        try {
+            const { projectsApi } = await import('@/lib/api/projects');
+            return await projectsApi.create(projectData);
+        } catch (error) {
+            console.error('Error creating project:', error);
+            return null;
+        }
+    },
+
+    updateProject: async (id: string, projectData: Partial<Project>): Promise<Project | null> => {
+        try {
+            const { projectsApi } = await import('@/lib/api/projects');
+            return await projectsApi.update(id, projectData);
+        } catch (error) {
+            console.error(`Error updating project ${id}:`, error);
+            return null;
+        }
+    },
+
+    deleteProject: async (id: string): Promise<boolean> => {
+        try {
+            const { projectsApi } = await import('@/lib/api/projects');
+            await projectsApi.remove(id);
+            return true;
+        } catch (error) {
+            console.error(`Error deleting project ${id}:`, error);
+            return false;
+        }
+    },
+
+    searchProjects: async (term: string): Promise<Project[]> => {
+        try {
+            const { projectsApi } = await import('@/lib/api/projects');
+            const result = await projectsApi.search(term);
+            return Array.isArray(result) ? result :
+                result?.projects || [];
+        } catch (error) {
+            console.error('Error searching projects:', error);
+            return [];
+        }
+    },
 };
 
 export const departmentService = {

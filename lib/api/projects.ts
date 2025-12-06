@@ -1,5 +1,6 @@
 // lib/api/projects.ts
 import { apiRequest } from './client';
+import { normalizeListResponse } from './normalize';
 import { Project } from '@/types';
 
 // Backend types (snake_case)
@@ -131,52 +132,47 @@ export const projectsApi = {
     if (params?.priority) query.set('priority', params.priority);
     if (params?.owner) query.set('owner', params.owner);
     if (params?.department) query.set('department', params.department);
-    const data = await apiRequest<{ projects: BackendProject[]; total: number }>(
-      `/work/projects/${query.toString() ? `?${query.toString()}` : ''}`
-    );
+    const data = await apiRequest(`/work/projects/${query.toString() ? `?${query.toString()}` : ''}`);
+    const normalized = normalizeListResponse<BackendProject>(data);
     return {
-      projects: (data.projects || []).map(mapBackendProject),
-      total: data.total || (data.projects || []).length,
+      projects: (normalized.items || []).map(mapBackendProject),
+      total: normalized.total || (normalized.items || []).length,
     };
   },
 
   async listAll(): Promise<Project[]> {
-    const data = await apiRequest<{ projects: BackendProject[]; total: number }>(`/work/projects/`);
-    return data.projects.map(mapBackendProject);
+    const data = await apiRequest(`/work/projects/`);
+    const normalized = normalizeListResponse<BackendProject>(data);
+    return normalized.items.map(mapBackendProject);
   },
 
   async byDepartment(department: string) {
-    const data = await apiRequest<{ projects: BackendProject[], total: number }>(
-      `/work/projects/department/${encodeURIComponent(department)}`
-    );
-    return data.projects.map(mapBackendProject);
+    const data = await apiRequest(`/work/projects/department/${encodeURIComponent(department)}`);
+    const normalized = normalizeListResponse<BackendProject>(data);
+    return normalized.items.map(mapBackendProject);
   },
 
   async byOwner(owner: string) {
-    const data = await apiRequest<{ projects: BackendProject[], total: number }>(
-      `/work/projects/owner/${encodeURIComponent(owner)}`
-    );
-    return data.projects.map(mapBackendProject);
+    const data = await apiRequest(`/work/projects/owner/${encodeURIComponent(owner)}`);
+    const normalized = normalizeListResponse<BackendProject>(data);
+    return normalized.items.map(mapBackendProject);
   },
 
   async byStatus(status: string) {
-    const data = await apiRequest<{ projects: BackendProject[], total: number }>(
-      `/work/projects/status/${encodeURIComponent(status)}`
-    );
-    return data.projects.map(mapBackendProject);
+    const data = await apiRequest(`/work/projects/status/${encodeURIComponent(status)}`);
+    const normalized = normalizeListResponse<BackendProject>(data);
+    return normalized.items.map(mapBackendProject);
   },
 
   async byPriority(priority: string) {
-    const data = await apiRequest<{ projects: BackendProject[], total: number }>(
-      `/work/projects/priority/${encodeURIComponent(priority)}`
-    );
-    return data.projects.map(mapBackendProject);
+    const data = await apiRequest(`/work/projects/priority/${encodeURIComponent(priority)}`);
+    const normalized = normalizeListResponse<BackendProject>(data);
+    return normalized.items.map(mapBackendProject);
   },
 
   async search(searchTerm: string) {
-    const data = await apiRequest<{ projects: BackendProject[], total: number }>(
-      `/work/projects/search/${encodeURIComponent(searchTerm)}`
-    );
-    return data.projects.map(mapBackendProject);
+    const data = await apiRequest(`/work/projects/search/${encodeURIComponent(searchTerm)}`);
+    const normalized = normalizeListResponse<BackendProject>(data);
+    return normalized.items.map(mapBackendProject);
   },
 };

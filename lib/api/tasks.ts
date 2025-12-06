@@ -1,6 +1,7 @@
 // lib/api/tasks.ts
 import { apiRequest } from './client';
 import { Task, TaskReport } from '@/types';
+import { normalizeListResponse } from './normalize';
 
 // Backend types (snake_case)
 export type BackendTask = {
@@ -155,8 +156,55 @@ export const tasksApi = {
   async list(params: ListTasksParams = {}) {
     const { skip = 0, limit = 100, ...filters } = params;
     const query = buildQuery({ skip, limit, ...filters });
-    const data = await apiRequest<{ tasks: BackendTask[]; total: number }>(`/work/tasks/${query}`);
-    return { tasks: data.tasks.map(mapBackendTask), total: data.total };
+    const data: any = await apiRequest(`/work/tasks/${query}`);
+    // normalize several possible backend shapes
+    // 1) { tasks: [...], total }
+    // 2) { data: [...] } or { items: [...] } or { records: [...] }
+    // 3) an array directly
+    // 4) { tasks: null } -> fallback to []
+    let list: BackendTask[] = [];
+    let total = 0;
+
+    if (!data) {
+      list = [];
+      total = 0;
+    } else if (Array.isArray(data)) {
+      list = data as BackendTask[];
+      total = list.length;
+    } else if (Array.isArray(data.tasks)) {
+      list = data.tasks;
+      total = typeof data.total === 'number' ? data.total : list.length;
+    } else if (Array.isArray(data.data)) {
+      list = data.data;
+      total = typeof data.total === 'number' ? data.total : list.length;
+    } else if (Array.isArray(data.items)) {
+      list = data.items;
+      total = typeof data.total === 'number' ? data.total : list.length;
+    } else if (Array.isArray(data.records)) {
+      list = data.records;
+      total = typeof data.total === 'number' ? data.total : list.length;
+    } else if (Array.isArray(data.result)) {
+      list = data.result;
+      total = typeof data.count === 'number' ? data.count : list.length;
+    } else {
+      // attempt to find any array value on the object
+      const arr = Object.values(data).find(v => Array.isArray(v)) as BackendTask[] | undefined;
+      if (arr) {
+        list = arr;
+        total = typeof (data as any).total === 'number' ? (data as any).total : list.length;
+      } else {
+        // no array found - maybe backend returned single object
+        if ((data as any).id) {
+          list = [data as BackendTask];
+          total = 1;
+        } else {
+          list = [];
+          total = 0;
+        }
+      }
+    }
+
+    return { tasks: list.map(mapBackendTask), total };
   },
 
   async getById(id: string) {
@@ -212,15 +260,17 @@ export const tasksApi = {
   async byOwner(owner_id: string, params: { skip?: number; limit?: number } = {}) {
     const { skip = 0, limit = 100 } = params;
     const query = buildQuery({ skip, limit });
-    const data = await apiRequest<{ tasks: BackendTask[]; total: number }>(`/work/tasks/owner/${encodeURIComponent(owner_id)}${query}`);
-    return { tasks: data.tasks.map(mapBackendTask), total: data.total };
+    const data = await apiRequest(`/work/tasks/owner/${encodeURIComponent(owner_id)}${query}`);
+    const normalized = normalizeListResponse<BackendTask>(data);
+    return { tasks: normalized.items.map(mapBackendTask), total: normalized.total };
   },
 
   async byManager(manager_id: string, params: { skip?: number; limit?: number } = {}) {
     const { skip = 0, limit = 100 } = params;
     const query = buildQuery({ skip, limit });
-    const data = await apiRequest<{ tasks: BackendTask[]; total: number }>(`/work/tasks/manager/${encodeURIComponent(manager_id)}${query}`);
-    return { tasks: data.tasks.map(mapBackendTask), total: data.total };
+    const data = await apiRequest(`/work/tasks/manager/${encodeURIComponent(manager_id)}${query}`);
+    const normalized = normalizeListResponse<BackendTask>(data);
+    return { tasks: normalized.items.map(mapBackendTask), total: normalized.total };
   },
 
   async activeCount(owner_id: string) {

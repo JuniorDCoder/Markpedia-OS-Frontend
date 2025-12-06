@@ -39,30 +39,6 @@ export default function PerformanceListPage() {
         return '';
     };
 
-    const normalizeList = (res: any) => {
-        if (!res) return [];
-        if (Array.isArray(res)) return res;
-        if (Array.isArray(res.records)) return res.records;
-        if (Array.isArray(res.performance_records)) return res.performance_records;
-        if (Array.isArray(res.items)) return res.items;
-        if (Array.isArray(res.data)) return res.data;
-        return [];
-    };
-
-    const normalizeStats = (res: any) => {
-        if (!res) return null;
-        if (
-            typeof res === "object" &&
-            (res.averageScore ||
-                res.outstandingPerformers ||
-                res.employeesOnPIP ||
-                res.completionRate)
-        )
-            return res;
-        if (res.data && typeof res.data === "object") return res.data;
-        return res;
-    };
-
     useEffect(() => {
         const applyFilters = async () => {
             setLoading(true);
@@ -73,7 +49,7 @@ export default function PerformanceListPage() {
                 if (ratingFilter && ratingFilter !== "all") payload.rating = ratingFilter;
 
                 const res = await performanceService.filterPerformanceRecords(payload);
-                setPerformanceRecords(normalizeList(res));
+                setPerformanceRecords(res || []);
             } catch (err) {
                 console.error("Failed to apply performance filters", err);
             } finally {
@@ -93,9 +69,9 @@ export default function PerformanceListPage() {
                 performanceService.getPerformanceSummaries(),
                 performanceService.getPerformanceStats()
             ]);
-            setPerformanceRecords(normalizeList(records));
-            setPerformanceSummaries(normalizeList(summaries));
-            setPerformanceStats(normalizeStats(stats));
+            setPerformanceRecords(records || []);
+            setPerformanceSummaries(summaries || []);
+            setPerformanceStats(stats || null);
         } catch (error) {
             console.error("Error loading performance data:", error);
         } finally {
@@ -112,9 +88,10 @@ export default function PerformanceListPage() {
 
     const recordsArray = Array.isArray(performanceRecords) ? performanceRecords : [];
     const filteredRecords = recordsArray.filter(record => {
-        const emp = safeStr(getField(record, 'employeeName', 'employee_name', 'employee'));
+        // prefer camelCase fields from normalized records; fall back to snake_case if needed
+        const emp = safeStr(getField(record, 'employeeName', 'employee_name'));
         const dept = safeStr(getField(record, 'department', 'department_name'));
-        const rating = safeStr(getField(record, 'rating', 'performance_rating'));
+        const rating = safeStr(getField(record, 'rating')) || safeStr(getField(record, 'performanceRating', 'performance_rating'));
 
         const q = safeStr(searchTerm).toLowerCase();
         const matchesSearch = emp.toLowerCase().includes(q) || dept.toLowerCase().includes(q);
@@ -125,7 +102,7 @@ export default function PerformanceListPage() {
 
     const summariesArray = Array.isArray(performanceSummaries) ? performanceSummaries : [];
     const filteredSummaries = summariesArray.filter(summary => {
-        const emp = safeStr(getField(summary, 'employeeName', 'employee_name', 'employee'));
+        const emp = safeStr(getField(summary, 'employeeName', 'employee_name'));
         const dept = safeStr(getField(summary, 'department', 'department_name'));
         const perfRating = safeStr(getField(summary, 'performanceRating', 'performance_rating', 'rating'));
 
@@ -219,7 +196,9 @@ export default function PerformanceListPage() {
     const handleGenerate = async () => {
         try {
             toast.loading('Generating performance records...');
-            await performanceService.generate({});
+            // Generate bulk for current month without filters to replicate previous behaviour
+            const month = new Date().toISOString().slice(0,10).slice(0,7) + '-01';
+            await performanceService.generateBulk({ month });
             // reload
             await loadPerformanceStats();
             toast.dismiss();
@@ -249,7 +228,7 @@ export default function PerformanceListPage() {
     const handleValidateManager = async (id: string) => {
         try {
             toast.loading('Validating by manager...');
-            await performanceService.validateByManager(id);
+            await performanceService.validateByManager(id, { validator_role: 'manager', comments: 'Validated via UI' });
             await loadPerformanceStats();
             toast.dismiss();
             toast.success('Validated by manager');
@@ -263,7 +242,7 @@ export default function PerformanceListPage() {
     const handleValidateHR = async (id: string) => {
         try {
             toast.loading('Validating by HR...');
-            await performanceService.validateByHR(id);
+            await performanceService.validateByHR(id, { validator_role: 'hr', comments: 'Validated via UI' });
             await loadPerformanceStats();
             toast.dismiss();
             toast.success('Validated by HR');
@@ -314,63 +293,63 @@ export default function PerformanceListPage() {
         >
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-2">
-                    {getRatingIcon(record.rating)}
-                    <span className="font-medium text-sm md:text-base">{record.employeeName}</span>
-                    <Badge variant="outline" className={`${getDepartmentColor(record.department)} text-xs`}>
-                        {record.department}
+                    {getRatingIcon(safeStr(getField(record, 'rating')))}
+                    <span className="font-medium text-sm md:text-base">{safeStr(getField(record, 'employeeName'))}</span>
+                    <Badge variant="outline" className={`${getDepartmentColor(safeStr(getField(record, 'department')))} text-xs`}>
+                        {safeStr(getField(record, 'department'))}
                     </Badge>
-                    <Badge variant="secondary" className={`${getRatingColor(record.rating)} text-xs`}>
-                        {record.rating}
+                    <Badge variant="secondary" className={`${getRatingColor(safeStr(getField(record, 'rating')))} text-xs`}>
+                        {safeStr(getField(record, 'rating'))}
                     </Badge>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-muted-foreground">
                     <div>
                         <div className="font-medium">Overall Score</div>
-                        <div className="text-sm font-semibold">{record.weighted_total}</div>
+                        <div className="text-sm font-semibold">{safeStr(getField(record, 'weightedTotal', 'weighted_total', 'total'))}</div>
                     </div>
                     <div>
                         <div className="font-medium">Tasks</div>
-                        <div>{record.task_score}%</div>
+                        <div>{safeStr(getField(record, 'taskScore', 'task_score'))}%</div>
                     </div>
                     <div>
                         <div className="font-medium">Attendance</div>
-                        <div>{record.attendance_score}%</div>
+                        <div>{safeStr(getField(record, 'attendanceScore', 'attendance_score'))}%</div>
                     </div>
                     <div>
                         <div className="font-medium">Warnings</div>
-                        <div>{record.warning_level}</div>
+                        <div>{safeStr(getField(record, 'warningLevel', 'warning_level'))}</div>
                     </div>
                 </div>
 
-                {record.manager_comment && (
+                {safeStr(getField(record, 'managerComment', 'manager_comment')) && (
                     <div className="mt-2 text-xs text-muted-foreground">
                         <span className="font-medium">Manager: </span>
-                        {record.manager_comment}
+                        {safeStr(getField(record, 'managerComment', 'manager_comment'))}
                     </div>
                 )}
             </div>
 
             <div className="flex items-center gap-2 lg:flex-col lg:items-end lg:gap-1">
                 <div className="text-right">
-                    <div className="text-2xl font-bold text-primary">{record.weighted_total}</div>
+                    <div className="text-2xl font-bold text-primary">{safeStr(getField(record, 'weightedTotal', 'weighted_total', 'total'))}</div>
                     <div className="text-xs text-muted-foreground">Total Score</div>
                 </div>
                 <div className="flex items-center gap-1">
                     <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
-                        <Link href={`/people/performance/${record.id}`}>
+                        <Link href={`/people/performance/${safeStr(getField(record, 'id', 'record_id'))}`}>
                             <Eye className="h-4 w-4" />
                         </Link>
                     </Button>
                     <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
-                        <Link href={`/people/performance/${record.id}/edit`}>
+                        <Link href={`/people/performance/${safeStr(getField(record, 'id', 'record_id'))}/edit`}>
                             <Edit className="h-4 w-4" />
                         </Link>
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleValidateManager(record.id)} className="h-8">
+                    <Button variant="outline" size="sm" onClick={() => handleValidateManager(safeStr(getField(record, 'id', 'record_id')))} className="h-8">
                         Manager Validate
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleValidateHR(record.id)} className="h-8">
+                    <Button variant="outline" size="sm" onClick={() => handleValidateHR(safeStr(getField(record, 'id', 'record_id')))} className="h-8">
                         HR Validate
                     </Button>
                     <Button variant="destructive" size="sm" onClick={() => openDeleteDialog(record)} className="h-8">
@@ -388,39 +367,39 @@ export default function PerformanceListPage() {
         >
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-2">
-                    {getTrendIcon(summary.trend)}
-                    <span className="font-medium text-sm md:text-base">{summary.employeeName}</span>
-                    <Badge variant="outline" className={`${getDepartmentColor(summary.department)} text-xs`}>
-                        {summary.department}
+                    {getTrendIcon(safeStr(summary.trend))}
+                    <span className="font-medium text-sm md:text-base">{safeStr(getField(summary, 'employeeName'))}</span>
+                    <Badge variant="outline" className={`${getDepartmentColor(safeStr(getField(summary, 'department')))} text-xs`}>
+                        {safeStr(getField(summary, 'department'))}
                     </Badge>
-                    <Badge variant="secondary" className={`${getRatingColor(summary.performanceRating)} text-xs`}>
-                        {summary.performanceRating}
+                    <Badge variant="secondary" className={`${getRatingColor(safeStr(getField(summary, 'performanceRating')))} text-xs`}>
+                        {safeStr(getField(summary, 'performanceRating'))}
                     </Badge>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-muted-foreground">
                     <div>
                         <div className="font-medium">Current</div>
-                        <div className="text-sm font-semibold">{summary.currentRating}</div>
+                        <div className="text-sm font-semibold">{safeStr(getField(summary, 'currentRating'))}</div>
                     </div>
                     <div>
                         <div className="font-medium">Previous</div>
-                        <div>{summary.previousRating}</div>
+                        <div>{safeStr(getField(summary, 'previousRating'))}</div>
                     </div>
                     <div>
                         <div className="font-medium">Task Rate</div>
-                        <div>{summary.taskCompletionRate}%</div>
+                        <div>{safeStr(getField(summary, 'taskCompletionRate'))}%</div>
                     </div>
                     <div>
                         <div className="font-medium">Attendance</div>
-                        <div>{summary.attendanceRate}%</div>
+                        <div>{safeStr(getField(summary, 'attendanceRate'))}%</div>
                     </div>
                 </div>
             </div>
 
             <div className="flex items-center gap-4">
                 <div className="text-right">
-                    <div className="text-2xl font-bold text-primary">{summary.overallScore}</div>
+                    <div className="text-2xl font-bold text-primary">{safeStr(getField(summary, 'overallScore'))}</div>
                     <div className="text-xs text-muted-foreground">Overall</div>
                 </div>
                 <Badge
@@ -431,7 +410,7 @@ export default function PerformanceListPage() {
                                 'border-gray-200 text-gray-800'
                     }`}
                 >
-                    {summary.trend}
+                    {safeStr(summary.trend)}
                 </Badge>
             </div>
         </div>
