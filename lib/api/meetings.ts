@@ -1,5 +1,4 @@
 import { apiRequest } from './client';
-import { normalizeListResponse } from './normalize';
 import { Meeting, MeetingConfig, Decision, ActionItem, AgendaItem, DiscussionItem, RiskItem } from '@/types';
 
 // Backend types (snake_case)
@@ -377,11 +376,10 @@ export const meetingsApi = {
     async list(params: ListMeetingsParams = {}) {
         const { skip = 0, limit = 100, ...filters } = params;
         const query = buildQuery({ skip, limit, ...filters });
-        const data = await apiRequest(`/work/meetings/${query}`);
-        const normalized = normalizeListResponse<BackendMeeting>(data);
+        const data = await apiRequest<{ meetings: BackendMeeting[]; total: number }>(`/work/meetings/${query}`);
         return {
-            meetings: (normalized.items || []).map(mapBackendMeeting),
-            total: normalized.total
+            meetings: data.meetings.map(mapBackendMeeting),
+            total: data.total
         };
     },
 

@@ -1,5 +1,4 @@
 import {apiRequest} from "@/lib/api/client";
-import { normalizeListResponse } from './normalize';
 
 export interface Problem {
     id: string;
@@ -205,30 +204,16 @@ class ProblemsApi {
         if (date_to) queryParams.date_to = date_to;
 
         const queryString = this.buildQueryString(queryParams);
-        const data = await apiRequest(`/work/problems/${queryString}`);
-        const normalized = normalizeListResponse<Problem>(data);
-        return {
-            problems: normalized.items,
-            total: normalized.total,
-            page: 1,
-            pages: Math.ceil((normalized.total || normalized.items.length) / (queryParams.limit || 100)),
-        };
+        return apiRequest<ProblemListResponse>(`/work/problems/${queryString}`);
     }
 
     async filter(params: ProblemFilterParams & { skip?: number; limit?: number }): Promise<ProblemListResponse> {
         const { skip = 0, limit = 100, ...filterParams } = params;
         const queryString = this.buildQueryString({ skip, limit });
-        const data = await apiRequest(`/work/problems/filter${queryString}`, {
+        return apiRequest<ProblemListResponse>(`/work/problems/filter${queryString}`, {
             method: 'POST',
             body: JSON.stringify(filterParams)
         });
-        const normalized = normalizeListResponse<Problem>(data);
-        return {
-            problems: normalized.items,
-            total: normalized.total,
-            page: 1,
-            pages: Math.ceil((normalized.total || normalized.items.length) / (limit || 100)),
-        };
     }
 
     async getById(id: string): Promise<Problem> {
