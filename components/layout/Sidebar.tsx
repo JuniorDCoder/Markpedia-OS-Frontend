@@ -92,7 +92,14 @@ const navigation = {
             icon: Briefcase,
             roles: ['CEO', 'Admin', 'Manager', 'Employee', 'CXO'],
             phase: 1,
-        }
+        },
+        {
+            name: 'Departments',
+            href: '/work/departments',
+            icon: Building,
+            roles: ['CEO', 'Admin', 'Manager', 'Employee', 'CXO'],
+            phase: 1,
+        },
     ],
     people: [
         {
@@ -250,10 +257,10 @@ export function Sidebar() {
 
     // Tooltip wrapper component for sidebar items
     const SidebarItemWithTooltip = ({
-                                        item,
-                                        isActive,
-                                        children
-                                    }: {
+        item,
+        isActive,
+        children
+    }: {
         item: typeof navigation.main[0];
         isActive: boolean;
         children: React.ReactNode;

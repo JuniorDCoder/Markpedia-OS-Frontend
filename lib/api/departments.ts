@@ -36,4 +36,28 @@ export const departmentsApi = {
     const departments = await this.getAll({ limit: 1000 });
     return departments.map((d) => d.name).filter(Boolean);
   },
+
+  async getById(id: string): Promise<BackendDepartment> {
+    return apiRequest<BackendDepartment>(`/work/departments/${id}`);
+  },
+
+  async create(data: Partial<BackendDepartment>): Promise<BackendDepartment> {
+    return apiRequest<BackendDepartment>('/work/departments', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async update(id: string, data: Partial<BackendDepartment>): Promise<BackendDepartment> {
+    return apiRequest<BackendDepartment>(`/work/departments/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async remove(id: string): Promise<void> {
+    return apiRequest<void>(`/work/departments/${id}`, {
+      method: 'DELETE',
+    });
+  },
 };

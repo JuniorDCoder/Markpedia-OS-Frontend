@@ -32,7 +32,7 @@ function getBaseUrl() {
   const base = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL; // support either name
   if (!base) {
     // In development we can default to the provided URL for convenience
-    return 'http://127.0.0.1:8000';
+    throw new Error('FATAL: NEXT_PUBLIC_BACKEND_URL environment variable is not set!');
   }
   return base.replace(/\/$/, '');
 }
@@ -47,53 +47,65 @@ function getAuthToken() {
 }
 
 export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
-    const baseUrl = getBaseUrl();
-    const url = `${baseUrl}${path.startsWith('/') ? path : `/${path}`}`;
+  const baseUrl = getBaseUrl();
+  const url = `${baseUrl}${path.startsWith('/') ? path : `/${path}`}`;
 
-    const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        ...(options.headers || {}),
-    };
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    ...(options.headers || {}),
+  };
 
-    const token = getAuthToken();
-    if (token) {
-        (headers as any).Authorization = `Bearer ${token}`;
+  const token = getAuthToken();
+  if (token) {
+    (headers as any).Authorization = `Bearer ${token}`;
+  }
+
+  const res = await fetch(url, { ...options, headers });
+
+  // Handle successful responses with no content
+  if (res.status === 204 || res.headers.get('content-length') === '0') {
+    return undefined as T;
+  }
+
+  // Check if response is JSON
+  const contentType = res.headers.get('content-type');
+  const isJson = contentType?.includes('application/json');
+
+  if (!isJson) {
+    // For non-JSON successful responses, return as is
+    if (res.ok) {
+      return undefined as T;
     }
+    // For non-JSON error responses, throw with status text
+    const error: any = new Error(res.statusText);
+    error.status = res.status;
+    throw error;
+  }
 
-    const res = await fetch(url, { ...options, headers });
+  const data = await res.json();
 
-    // Handle successful responses with no content
-    if (res.status === 204 || res.headers.get('content-length') === '0') {
-        return undefined as T;
-    }
-
-    // Check if response is JSON
-    const contentType = res.headers.get('content-type');
-    const isJson = contentType?.includes('application/json');
-
-    if (!isJson) {
-        // For non-JSON successful responses, return as is
-        if (res.ok) {
-            return undefined as T;
+  if (!res.ok) {
+    if (res.status === 401) {
+      // Token expired or invalid
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
+        // Optional: Redirect to login if not already there
+        if (!window.location.pathname.includes('/auth/login')) {
+          window.location.href = '/auth/login?expired=true';
         }
-        // For non-JSON error responses, throw with status text
-        const error: any = new Error(res.statusText);
-        error.status = res.status;
-        throw error;
+      }
     }
 
-    const data = await res.json();
+    // Bubble up FastAPI validation errors and messages
+    const error: any = new Error(data?.detail?.[0]?.msg || data?.detail || res.statusText);
+    error.status = res.status;
+    error.data = data;
+    throw error;
+  }
 
-    if (!res.ok) {
-        // Bubble up FastAPI validation errors and messages
-        const error: any = new Error(data?.detail?.[0]?.msg || data?.detail || res.statusText);
-        error.status = res.status;
-        error.data = data;
-        throw error;
-    }
-
-    return data as T;
+  return data as T;
 }
 
 export async function loginApi(email: string, password: string) {

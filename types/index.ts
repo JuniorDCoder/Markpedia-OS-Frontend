@@ -1,4 +1,4 @@
-import {DataType} from "csstype";
+import { DataType } from "csstype";
 import Attachment = DataType.Attachment;
 
 export interface User {
@@ -36,8 +36,16 @@ export interface Entity {
     name: string;
     level: 'Global' | 'Regional' | 'Country';
     parentId?: string;
+    updated_at?: string;
     country: string;
-    headName: string;
+    headName?: string;
+    // Extended fields
+    budget?: number;
+    locations?: string[];
+    contact_email?: string;
+    contact_phone?: string;
+    parent_department?: string;
+    status?: string;
     email: string;
     establishedDate: string;
     active: boolean;
@@ -560,9 +568,15 @@ export interface ProblemAnalytics {
 export interface Department {
     id: string;
     name: string;
-    color: string;
     description: string;
-    memberCount: number;
+    manager_id?: string;
+    manager_name?: string;
+    member_count?: number;
+    created_at?: string;
+    updated_at?: string;
+    // For UI display/compatibility
+    color?: string;
+    headName?: string; // mapped from manager_name often
 }
 
 // Add/replace JobDescription frontend interface to match the client-side shape (camelCase)

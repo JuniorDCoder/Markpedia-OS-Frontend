@@ -27,28 +27,28 @@ const api = axios.create({
 
 // Mock data for development
 const mockUsers: User[] = [
-  {
-    id: '1',
-    email: 'ceo@company.com',
-    firstName: 'John',
-    lastName: 'Smith',
-    role: 'CEO',
-    department: 'Executive',
-    position: 'Chief Executive Officer',
-    isActive: true,
-    createdAt: '2024-01-01',
-  },
-  {
-    id: '2',
-    email: 'manager@company.com',
-    firstName: 'Sarah',
-    lastName: 'Johnson',
-    role: 'Manager',
-    department: 'Technology',
-    position: 'Engineering Manager',
-    isActive: true,
-    createdAt: '2024-01-01',
-  },
+    {
+        id: '1',
+        email: 'ceo@company.com',
+        firstName: 'John',
+        lastName: 'Smith',
+        role: 'CEO',
+        department: 'Executive',
+        position: 'Chief Executive Officer',
+        isActive: true,
+        createdAt: '2024-01-01',
+    },
+    {
+        id: '2',
+        email: 'manager@company.com',
+        firstName: 'Sarah',
+        lastName: 'Johnson',
+        role: 'Manager',
+        department: 'Technology',
+        position: 'Engineering Manager',
+        isActive: true,
+        createdAt: '2024-01-01',
+    },
 ];
 
 const mockProjects: Project[] = [
@@ -1255,55 +1255,55 @@ const mockAnalytics: ProblemAnalytics = {
 
 // API Services
 export const authService = {
-  login: async (email: string, password: string) => {
-    // Mock authentication
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    const user = mockUsers.find(u => u.email === email);
-    if (!user) throw new Error('User not found');
-    return user;
-  },
+    login: async (email: string, password: string) => {
+        // Mock authentication
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const user = mockUsers.find(u => u.email === email);
+        if (!user) throw new Error('User not found');
+        return user;
+    },
 
-  register: async (userData: Partial<User>) => {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    const newUser: User = {
-      id: Math.random().toString(36).substr(2, 9),
-      email: userData.email!,
-      firstName: userData.firstName!,
-      lastName: userData.lastName!,
-      role: userData.role || 'Employee',
-      department: userData.department,
-      position: userData.position,
-      isActive: true,
-      createdAt: new Date().toISOString(),
-    };
-    mockUsers.push(newUser);
-    return newUser;
-  },
+    register: async (userData: Partial<User>) => {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const newUser: User = {
+            id: Math.random().toString(36).substr(2, 9),
+            email: userData.email!,
+            firstName: userData.firstName!,
+            lastName: userData.lastName!,
+            role: userData.role || 'Employee',
+            department: userData.department,
+            position: userData.position,
+            isActive: true,
+            createdAt: new Date().toISOString(),
+        };
+        mockUsers.push(newUser);
+        return newUser;
+    },
 
-  forgotPassword: async (email: string) => {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    return { message: 'Password reset email sent' };
-  },
+    forgotPassword: async (email: string) => {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return { message: 'Password reset email sent' };
+    },
 };
 
 export const userService = {
-  getUsers: async (): Promise<User[]> => {
-    const { adminApi } = await import('@/lib/api/admin');
-    return adminApi.getUsers();
-  },
+    getUsers: async (): Promise<User[]> => {
+        const { adminApi } = await import('@/lib/api/admin');
+        return adminApi.getUsers();
+    },
 
-  getUser: async (id: string): Promise<User> => {
-    const users = await userService.getUsers();
-    const user = users.find(u => u.id === id);
-    if (!user) throw new Error('User not found');
-    return user;
-  },
+    getUser: async (id: string): Promise<User> => {
+        const users = await userService.getUsers();
+        const user = users.find(u => u.id === id);
+        if (!user) throw new Error('User not found');
+        return user;
+    },
 
-  updateUser: async (id: string, userData: Partial<User>): Promise<User> => {
-    // Placeholder: backend endpoint not specified; return merged local for now
-    const current = await userService.getUser(id);
-    return { ...current, ...userData } as User;
-  },
+    updateUser: async (id: string, userData: Partial<User>): Promise<User> => {
+        // Placeholder: backend endpoint not specified; return merged local for now
+        const current = await userService.getUser(id);
+        return { ...current, ...userData } as User;
+    },
 };
 
 export const projectService = {
@@ -1403,101 +1403,159 @@ export const projectService = {
 };
 
 export const departmentService = {
-  list: async (params?: { skip?: number; limit?: number; status?: string | null; parent_department?: string | null }): Promise<Department[]> => {
-    const { departmentsApi } = await import('@/lib/api/departments');
-    return departmentsApi.getAll(params || {});
-  },
-  names: async (): Promise<string[]> => {
-    const { departmentsApi } = await import('@/lib/api/departments');
-    return departmentsApi.getNames();
-  },
+    list: async (params?: { skip?: number; limit?: number; status?: string | null; parent_department?: string | null }): Promise<Department[]> => {
+        const { departmentsApi } = await import('@/lib/api/departments');
+        const data = await departmentsApi.getAll(params || {});
+        return data.map(d => ({
+            ...d,
+            headName: d.head,
+            manager_name: d.head, // fallback
+        })) as unknown as Department[];
+    },
+    names: async (): Promise<string[]> => {
+        const { departmentsApi } = await import('@/lib/api/departments');
+        return departmentsApi.getNames();
+    },
+    get: async (id: string): Promise<Department> => {
+        const { departmentsApi } = await import('@/lib/api/departments');
+        // Map backend response to frontend type if needed, or cast if they are compatible
+        const dept = await departmentsApi.getById(id);
+        const mapped: any = { ...dept };
+        mapped.headName = dept.head;
+        mapped.manager_name = dept.head;
+        return mapped as Department;
+    },
+    create: async (data: Partial<Department>): Promise<Department> => {
+        const { departmentsApi } = await import('@/lib/api/departments');
+        // Map frontend fields back to backend if needed
+        const payload: any = { ...data };
+
+        // Remove ID if present (shouldn't be for create, but safety)
+        if (payload.id) delete payload.id;
+
+        if (data.headName) {
+            payload.head = data.headName;
+            delete payload.headName;
+        }
+
+        const result = await departmentsApi.create(payload);
+        const mapped: any = { ...result };
+        mapped.headName = result.head;
+        mapped.manager_name = result.head;
+        return mapped as Department;
+    },
+    update: async (id: string, data: Partial<Department>): Promise<Department> => {
+        const { departmentsApi } = await import('@/lib/api/departments');
+        // Map frontend fields back to backend if needed
+        const payload: any = { ...data };
+
+        // Remove ID if present in body
+        delete payload.id;
+
+        // Map headName/head back to head or manager_id if needed by backend
+        // Assuming backend expects 'head' for the manager's name/id
+        if (data.headName) {
+            payload.head = data.headName;
+            delete payload.headName;
+        }
+
+        const result = await departmentsApi.update(id, payload);
+        const mapped: any = { ...result };
+        mapped.headName = result.head;
+        mapped.manager_name = result.head;
+        return mapped as Department;
+    },
+    delete: async (id: string): Promise<void> => {
+        const { departmentsApi } = await import('@/lib/api/departments');
+        return departmentsApi.remove(id);
+    },
 };
 
 export const taskService = {
-  // Back-compat helper: returns only array of tasks (used in Dashboard, SSG, etc.)
-  getTasks: async (): Promise<Task[]> => {
-    const { tasksApi } = await import('@/lib/api/tasks');
-    const { tasks } = await tasksApi.list({ skip: 0, limit: 100 });
-    return tasks;
-  },
+    // Back-compat helper: returns only array of tasks (used in Dashboard, SSG, etc.)
+    getTasks: async (): Promise<Task[]> => {
+        const { tasksApi } = await import('@/lib/api/tasks');
+        const { tasks } = await tasksApi.list({ skip: 0, limit: 100 });
+        return tasks;
+    },
 
-  // Paginated list with filters
-  listTasks: async (params?: {
-    skip?: number;
-    limit?: number;
-    owner_id?: string | null;
-    manager_id?: string | null;
-    department_id?: string | null;
-    project_id?: string | null;
-    status?: string | null;
-    priority?: string | null;
-  }): Promise<{ tasks: Task[]; total: number }> => {
-    const { tasksApi } = await import('@/lib/api/tasks');
-    return tasksApi.list(params || {});
-  },
+    // Paginated list with filters
+    listTasks: async (params?: {
+        skip?: number;
+        limit?: number;
+        owner_id?: string | null;
+        manager_id?: string | null;
+        department_id?: string | null;
+        project_id?: string | null;
+        status?: string | null;
+        priority?: string | null;
+    }): Promise<{ tasks: Task[]; total: number }> => {
+        const { tasksApi } = await import('@/lib/api/tasks');
+        return tasksApi.list(params || {});
+    },
 
-  getTask: async (id: string): Promise<Task> => {
-    const { tasksApi } = await import('@/lib/api/tasks');
-    return tasksApi.getById(id);
-  },
+    getTask: async (id: string): Promise<Task> => {
+        const { tasksApi } = await import('@/lib/api/tasks');
+        return tasksApi.getById(id);
+    },
 
-  createTask: async (taskData: Partial<Task>): Promise<Task> => {
-    const { tasksApi } = await import('@/lib/api/tasks');
-    return tasksApi.create(taskData);
-  },
+    createTask: async (taskData: Partial<Task>): Promise<Task> => {
+        const { tasksApi } = await import('@/lib/api/tasks');
+        return tasksApi.create(taskData);
+    },
 
-  updateTask: async (id: string, taskData: Partial<Task>): Promise<Task> => {
-    const { tasksApi } = await import('@/lib/api/tasks');
-    return tasksApi.update(id, taskData);
-  },
+    updateTask: async (id: string, taskData: Partial<Task>): Promise<Task> => {
+        const { tasksApi } = await import('@/lib/api/tasks');
+        return tasksApi.update(id, taskData);
+    },
 
-  deleteTask: async (id: string): Promise<void> => {
-    const { tasksApi } = await import('@/lib/api/tasks');
-    return tasksApi.remove(id);
-  },
+    deleteTask: async (id: string): Promise<void> => {
+        const { tasksApi } = await import('@/lib/api/tasks');
+        return tasksApi.remove(id);
+    },
 
-  validateTask: async (id: string, managerId: string): Promise<Task> => {
-    const { tasksApi } = await import('@/lib/api/tasks');
-    return tasksApi.validate(id, managerId);
-  },
+    validateTask: async (id: string, managerId: string): Promise<Task> => {
+        const { tasksApi } = await import('@/lib/api/tasks');
+        return tasksApi.validate(id, managerId);
+    },
 
-  submitTaskReport: async (
-    taskId: string,
-    reportData: {
-      content: string;
-      attachments?: File[];
-      proof_of_completion?: any;
-    }
-  ): Promise<Task> => {
-    const { tasksApi } = await import('@/lib/api/tasks');
-    // Convert File[] to string names if provided to match API contract
-    const attachmentNames = reportData.attachments?.map((f) => (typeof f === 'string' ? f : (f as File).name));
-    return tasksApi.submitReport(taskId, {
-      content: reportData.content,
-      attachments: attachmentNames,
-      proof_of_completion: reportData.proof_of_completion ?? null,
-    });
-  },
+    submitTaskReport: async (
+        taskId: string,
+        reportData: {
+            content: string;
+            attachments?: File[];
+            proof_of_completion?: any;
+        }
+    ): Promise<Task> => {
+        const { tasksApi } = await import('@/lib/api/tasks');
+        // Convert File[] to string names if provided to match API contract
+        const attachmentNames = reportData.attachments?.map((f) => (typeof f === 'string' ? f : (f as File).name));
+        return tasksApi.submitReport(taskId, {
+            content: reportData.content,
+            attachments: attachmentNames,
+            proof_of_completion: reportData.proof_of_completion ?? null,
+        });
+    },
 
-  getWeeklyReport: async (employeeId: string, weekStart: string): Promise<TaskReport> => {
-    const { tasksApi } = await import('@/lib/api/tasks');
-    return tasksApi.weeklyReport(employeeId, weekStart);
-  },
+    getWeeklyReport: async (employeeId: string, weekStart: string): Promise<TaskReport> => {
+        const { tasksApi } = await import('@/lib/api/tasks');
+        return tasksApi.weeklyReport(employeeId, weekStart);
+    },
 
-  byOwner: async (owner_id: string, params?: { skip?: number; limit?: number }): Promise<{ tasks: Task[]; total: number }> => {
-    const { tasksApi } = await import('@/lib/api/tasks');
-    return tasksApi.byOwner(owner_id, params);
-  },
+    byOwner: async (owner_id: string, params?: { skip?: number; limit?: number }): Promise<{ tasks: Task[]; total: number }> => {
+        const { tasksApi } = await import('@/lib/api/tasks');
+        return tasksApi.byOwner(owner_id, params);
+    },
 
-  byManager: async (manager_id: string, params?: { skip?: number; limit?: number }): Promise<{ tasks: Task[]; total: number }> => {
-    const { tasksApi } = await import('@/lib/api/tasks');
-    return tasksApi.byManager(manager_id, params);
-  },
+    byManager: async (manager_id: string, params?: { skip?: number; limit?: number }): Promise<{ tasks: Task[]; total: number }> => {
+        const { tasksApi } = await import('@/lib/api/tasks');
+        return tasksApi.byManager(manager_id, params);
+    },
 
-  activeCount: async (owner_id: string): Promise<number> => {
-    const { tasksApi } = await import('@/lib/api/tasks');
-    return tasksApi.activeCount(owner_id);
-  },
+    activeCount: async (owner_id: string): Promise<number> => {
+        const { tasksApi } = await import('@/lib/api/tasks');
+        return tasksApi.activeCount(owner_id);
+    },
 };
 
 export const meetingService = {

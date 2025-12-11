@@ -1,0 +1,221 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useAuthStore } from '@/store/auth';
+import { departmentService } from '@/services/api';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowLeft, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+export default function NewDepartmentPage() {
+    const { user } = useAuthStore();
+    const router = useRouter();
+    const [loading, setLoading] = useState(false);
+    const [formData, setFormData] = useState({
+        name: '',
+        description: '',
+        headName: '',
+        headName: '',
+        color: '#3b82f6',
+        parent_department: '',
+        budget: 0,
+        locations: '',
+        contact_email: '',
+        contact_phone: ''
+    });
+
+    // RBAC Check
+    if (user?.role !== 'CEO') {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+                <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
+                <p className="text-muted-foreground mb-4">Only the CEO can create new departments.</p>
+                <Button asChild>
+                    <Link href="/work/departments">Back to Departments</Link>
+                </Button>
+            </div>
+        );
+    }
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!formData.name || !formData.description) {
+            toast.error('Please fill in all required fields');
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await departmentService.create({
+                ...formData,
+                member_count: 0,
+                // transform locations string to array if needed
+                locations: formData.locations ? formData.locations.split(',').map(s => s.trim()) : [],
+            });
+            toast.success('Department created successfully');
+            router.push('/work/departments');
+            router.refresh();
+        } catch (error) {
+            toast.error('Failed to create department');
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="max-w-2xl mx-auto space-y-6">
+            <div className="flex items-center gap-4">
+                <Button variant="ghost" size="icon" asChild>
+                    <Link href="/work/departments">
+                        <ArrowLeft className="h-4 w-4" />
+                    </Link>
+                </Button>
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight">Create New Department</h1>
+                    <p className="text-muted-foreground">Add a new department to the organization structure</p>
+                </div>
+            </div>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Department Details</CardTitle>
+                    <CardDescription>
+                        Enter the basic information for the new department.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="space-y-2">
+                            <Label htmlFor="name">Department Name <span className="text-red-500">*</span></Label>
+                            <Input
+                                id="name"
+                                placeholder="e.g. Engineering, Sales, HR"
+                                value={formData.name}
+                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                required
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="description">Description <span className="text-red-500">*</span></Label>
+                            <Textarea
+                                id="description"
+                                placeholder="Briefly describe the department's purpose and responsibilities"
+                                value={formData.description}
+                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                rows={4}
+                                required
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="headName">Department Head</Label>
+                                <Input
+                                    id="headName"
+                                    placeholder="Name of the department lead"
+                                    value={formData.headName}
+                                    onChange={(e) => setFormData({ ...formData, headName: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="color">Theme Color</Label>
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        id="color"
+                                        type="color"
+                                        value={formData.color}
+                                        onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                                        className="w-12 h-10 p-1 cursor-pointer"
+                                    />
+                                    <span className="text-sm text-muted-foreground font-mono">{formData.color}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="parent_department">Parent Department</Label>
+                                <Input
+                                    id="parent_department"
+                                    placeholder="e.g. Operations"
+                                    value={formData.parent_department}
+                                    onChange={(e) => setFormData({ ...formData, parent_department: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="budget">Annual Budget ($)</Label>
+                                <Input
+                                    id="budget"
+                                    type="number"
+                                    placeholder="0"
+                                    value={formData.budget}
+                                    onChange={(e) => setFormData({ ...formData, budget: Number(e.target.value) })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="locations">Locations (comma separated)</Label>
+                            <Input
+                                id="locations"
+                                placeholder="e.g. New York, London, Remote"
+                                value={formData.locations}
+                                onChange={(e) => setFormData({ ...formData, locations: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="contact_email">Contact Email</Label>
+                                <Input
+                                    id="contact_email"
+                                    type="email"
+                                    placeholder="dept@example.com"
+                                    value={formData.contact_email}
+                                    onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="contact_phone">Contact Phone</Label>
+                                <Input
+                                    id="contact_phone"
+                                    type="tel"
+                                    placeholder="+1-555-0000"
+                                    value={formData.contact_phone}
+                                    onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-3 pt-4">
+                            <Button variant="outline" asChild>
+                                <Link href="/work/departments">Cancel</Link>
+                            </Button>
+                            <Button type="submit" disabled={loading}>
+                                {loading ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Creating...
+                                    </>
+                                ) : (
+                                    'Create Department'
+                                )}
+                            </Button>
+                        </div>
+                    </form>
+                </CardContent>
+            </Card>
+        </div>
+    );
+}
