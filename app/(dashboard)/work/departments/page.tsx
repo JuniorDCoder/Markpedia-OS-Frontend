@@ -19,7 +19,8 @@ import {
     Edit,
     Trash2,
     Calendar,
-    Eye
+    Eye,
+    AlertCircle
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -29,15 +30,13 @@ import {
     DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import toast from 'react-hot-toast';
 
 export default function DepartmentsPage() {
@@ -48,6 +47,7 @@ export default function DepartmentsPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [deptToDelete, setDeptToDelete] = useState<Department | null>(null);
+    const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
     const [deleting, setDeleting] = useState(false);
 
     // Only CEO can manage departments
@@ -78,6 +78,12 @@ export default function DepartmentsPage() {
     const handleDeleteConfirm = async () => {
         if (!deptToDelete) return;
 
+        const expectedText = `DELETE ${deptToDelete.id}`;
+        if (deleteConfirmationText !== expectedText) {
+            toast.error(`Type "${expectedText}" to confirm`);
+            return;
+        }
+
         try {
             setDeleting(true);
             await departmentService.delete(deptToDelete.id);
@@ -89,6 +95,7 @@ export default function DepartmentsPage() {
             setDeleting(false);
             setDeleteDialogOpen(false);
             setDeptToDelete(null);
+            setDeleteConfirmationText('');
         }
     };
 
@@ -103,27 +110,51 @@ export default function DepartmentsPage() {
 
     return (
         <div className="space-y-6 p-6">
-            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the department
-                            "{deptToDelete?.name}" and remove it from the organization.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={handleDeleteConfirm}
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-600">
+                            <AlertCircle className="h-5 w-5" />
+                            Delete Department
+                        </DialogTitle>
+                    </DialogHeader>
+                    <DialogDescription>
+                        This action cannot be undone. This will permanently delete the department
+                        "{deptToDelete?.name}" and remove it from the organization.
+                        <br /><br />
+                        To confirm deletion, type: <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">DELETE {deptToDelete?.id}</code>
+                    </DialogDescription>
+
+                    <div className="mt-4">
+                        <Input
+                            placeholder={`DELETE ${deptToDelete?.id}`}
+                            value={deleteConfirmationText}
+                            onChange={(e) => setDeleteConfirmationText(e.target.value)}
                             disabled={deleting}
-                            className="bg-red-600 hover:bg-red-700 text-white"
+                        />
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setDeleteDialogOpen(false);
+                                setDeleteConfirmationText('');
+                            }}
+                            disabled={deleting}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleDeleteConfirm}
+                            disabled={deleting || deleteConfirmationText !== `DELETE ${deptToDelete?.id}`}
                         >
                             {deleting ? 'Deleting...' : 'Delete Department'}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
