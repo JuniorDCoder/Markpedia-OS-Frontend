@@ -10,7 +10,9 @@ import {
     OtterAIWebhookPayload,
     Decision, ActionItem, Problem, JobDescription, Department, Framework, ProblemAnalytics, ProblemKPI,
     Entity,
-    Employee
+    Employee,
+    TaskReport,
+    OrganigramSnapshot
 } from '@/types'
 
 import { MeetingConfig } from '@/types';
@@ -1318,7 +1320,7 @@ export const projectService = {
             const result = await projectsApi.listAll();
             // Ensure we return an array even if the structure is different
             return Array.isArray(result) ? result :
-                result?.projects || [];
+                (result as any)?.projects || [];
         } catch (error) {
             console.error('Error in getProjects:', error);
             return [];
@@ -1399,7 +1401,7 @@ export const projectService = {
             const { projectsApi } = await import('@/lib/api/projects');
             const result = await projectsApi.search(term);
             return Array.isArray(result) ? result :
-                result?.projects || [];
+                (result as any)?.projects || [];
         } catch (error) {
             console.error('Error searching projects:', error);
             return [];
@@ -1851,7 +1853,7 @@ export const jobDescriptionService = {
         if (index === -1) throw new Error('Job description not found');
 
         const current = mockJobDescriptions[index];
-        const versionParts = current.version.split('.');
+        const versionParts = (current.version || '1.0').split('.');
         const newVersion = `${versionParts[0]}.${parseInt(versionParts[1]) + 1}`;
 
         const newJD: JobDescription = {

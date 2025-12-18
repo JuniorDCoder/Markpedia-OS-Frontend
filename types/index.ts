@@ -413,10 +413,9 @@ export interface AgendaItem {
 
 export interface DiscussionItem {
     id: string;
-    topic: string;
-    speaker: string;
-    points: string[];
-    timestamp?: string;
+    agendaItem: string;
+    summary: string;
+    agreements: string;
 }
 
 export interface Decision {
