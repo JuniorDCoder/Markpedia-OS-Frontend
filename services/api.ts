@@ -8,7 +8,9 @@ import {
     CashbookEntry,
     Meeting,
     OtterAIWebhookPayload,
-    Decision, ActionItem, Problem, JobDescription, Department, Framework, ProblemAnalytics, ProblemKPI
+    Decision, ActionItem, Problem, JobDescription, Department, Framework, ProblemAnalytics, ProblemKPI,
+    Entity,
+    Employee
 } from '@/types'
 
 import { MeetingConfig } from '@/types';
@@ -894,12 +896,12 @@ const mockMeetings: Meeting[] = [
         purpose: 'To review Q3 performance, identify key challenges, and define strategic objectives and KPIs for Q4 2025 aligned with the company\'s annual OKRs.',
 
         agenda: [
-            { id: '1', item: 'Review of last meeting\'s actions', presenter: 'CEO', duration: '10 min', order: 1 },
-            { id: '2', item: 'Department performance updates', presenter: 'Strategy Dept', duration: '20 min', order: 2 },
-            { id: '3', item: 'Budget & finance review', presenter: 'CFO', duration: '15 min', order: 3 },
-            { id: '4', item: 'Risk & compliance update', presenter: 'Legal', duration: '10 min', order: 4 },
-            { id: '5', item: 'New innovations', presenter: 'COO', duration: '15 min', order: 5 },
-            { id: '6', item: 'Closing remarks', presenter: 'CEO', duration: '10 min', order: 6 }
+            { id: '1', topic: 'Review of last meeting\'s actions', presenter: 'CEO', duration: '10 min' },
+            { id: '2', topic: 'Department performance updates', presenter: 'Strategy Dept', duration: '20 min' },
+            { id: '3', topic: 'Budget & finance review', presenter: 'CFO', duration: '15 min' },
+            { id: '4', topic: 'Risk & compliance update', presenter: 'Legal', duration: '10 min' },
+            { id: '5', topic: 'New innovations', presenter: 'COO', duration: '15 min' },
+            { id: '6', topic: 'Closing remarks', presenter: 'CEO', duration: '10 min' }
         ],
 
         discussion: [
@@ -956,35 +958,35 @@ const mockMeetings: Meeting[] = [
         actionItems: [
             {
                 id: '1',
-                description: 'Prepare supplier penalty clause draft',
-                assignedTo: 'Legal Officer',
-                department: 'Legal',
+                item: 'Prepare supplier penalty clause draft',
+                owner: 'Legal Officer',
                 dueDate: '2025-10-15',
-                status: 'In Progress'
+                status: 'In Progress',
+                priority: 'High'
             },
             {
                 id: '2',
-                description: 'Set up AI verification prototype',
-                assignedTo: 'Tech Lead',
-                department: 'Engineering',
+                item: 'Set up AI verification prototype',
+                owner: 'Tech Lead',
                 dueDate: '2025-10-25',
-                status: 'Planned'
+                status: 'Not Started',
+                priority: 'Medium'
             },
             {
                 id: '3',
-                description: 'Draft revised Q4 forecast',
-                assignedTo: 'CFO',
-                department: 'Finance',
+                item: 'Draft revised Q4 forecast',
+                owner: 'CFO',
                 dueDate: '2025-10-13',
-                status: 'Pending'
+                status: 'Not Started',
+                priority: 'High'
             },
             {
                 id: '4',
-                description: 'Update delivery contracts',
-                assignedTo: 'COO',
-                department: 'Logistics',
+                item: 'Update delivery contracts',
+                owner: 'COO',
                 dueDate: '2025-10-20',
-                status: 'Pending'
+                status: 'Not Started',
+                priority: 'Medium'
             }
         ],
 
@@ -993,6 +995,7 @@ const mockMeetings: Meeting[] = [
                 id: '1',
                 risk: 'Supplier delays',
                 impact: 'High',
+                likelihood: 'High',
                 mitigation: 'Renegotiate contract clauses',
                 owner: 'Legal'
             },
@@ -1000,6 +1003,7 @@ const mockMeetings: Meeting[] = [
                 id: '2',
                 risk: 'Fuel overspend',
                 impact: 'Medium',
+                likelihood: 'Medium',
                 mitigation: 'Budget adjustment & fleet optimization',
                 owner: 'Finance'
             },
@@ -1007,6 +1011,7 @@ const mockMeetings: Meeting[] = [
                 id: '3',
                 risk: 'Extended delivery SLA',
                 impact: 'High',
+                likelihood: 'High',
                 mitigation: 'Integrate tracking dashboard',
                 owner: 'Logistics'
             }
@@ -1043,10 +1048,10 @@ const mockMeetings: Meeting[] = [
         purpose: 'Plan Q1 2026 marketing campaigns and align with sales targets.',
 
         agenda: [
-            { id: '1', item: 'Q4 2025 campaign review', presenter: 'CMO', duration: '15 min', order: 1 },
-            { id: '2', item: 'Q1 2026 budget allocation', presenter: 'Finance Rep', duration: '20 min', order: 2 },
-            { id: '3', item: 'New campaign proposals', presenter: 'Marketing Team', duration: '30 min', order: 3 },
-            { id: '4', item: 'Sales alignment', presenter: 'Sales Head', duration: '15 min', order: 4 }
+            { id: '1', topic: 'Q4 2025 campaign review', presenter: 'CMO', duration: '15 min' },
+            { id: '2', topic: 'Q1 2026 budget allocation', presenter: 'Finance Rep', duration: '20 min' },
+            { id: '3', topic: 'New campaign proposals', presenter: 'Marketing Team', duration: '30 min' },
+            { id: '4', topic: 'Sales alignment', presenter: 'Sales Head', duration: '15 min' }
         ],
 
         discussion: [],
@@ -1685,7 +1690,7 @@ export const problemService = {
     },
 
     // Update action status
-    updateActionStatus: async (problemId: string, actionId: string, type: 'corrective' | 'preventive', status: string): Promise<Problem> => {
+    updateActionStatus: async (problemId: string, actionId: string, type: 'corrective' | 'preventive', status: 'Planned' | 'In Progress' | 'Done'): Promise<Problem> => {
         const problem = await problemService.getProblem(problemId);
 
         if (type === 'corrective') {
@@ -1862,6 +1867,64 @@ export const jobDescriptionService = {
         mockJobDescriptions.push(newJD);
         return newJD;
     },
+};
+
+export const entityService = {
+    getEntities: async (): Promise<Entity[]> => {
+        const { entityService: api } = await import('@/lib/api/entities');
+        return api.getEntities();
+    },
+    getEntity: async (id: string): Promise<Entity | null> => {
+        const { entityService: api } = await import('@/lib/api/entities');
+        return api.getEntity(id);
+    },
+    getChildEntities: async (parentId: string): Promise<Entity[]> => {
+        const { entityService: api } = await import('@/lib/api/entities');
+        return api.getChildEntities(parentId);
+    },
+    createEntity: async (data: any): Promise<Entity> => {
+        const { entityService: api } = await import('@/lib/api/entities');
+        return api.createEntity(data);
+    },
+    updateEntity: async (id: string, data: any): Promise<Entity> => {
+        const { entityService: api } = await import('@/lib/api/entities');
+        return api.updateEntity(id, data);
+    },
+    deleteEntity: async (id: string): Promise<void> => {
+        const { entityService: api } = await import('@/lib/api/entities');
+        return api.deleteEntity(id);
+    },
+    getDepartments: async (): Promise<Department[]> => {
+        // Fallback to departmentService or use entityService's department fetcher if distinct
+        const { entityService: api } = await import('@/lib/api/entities');
+        return api.getDepartments();
+    }
+};
+
+export const snapshotService = {
+    getSnapshots: async (): Promise<OrganigramSnapshot[]> => {
+        const { snapshotApi } = await import('@/lib/api/snapshots');
+        return snapshotApi.getAll();
+    },
+    getSnapshot: async (id: string): Promise<OrganigramSnapshot | undefined> => {
+        const { snapshotApi } = await import('@/lib/api/snapshots');
+        return snapshotApi.getById(id);
+    },
+    createSnapshot: async (data: Partial<OrganigramSnapshot>): Promise<OrganigramSnapshot> => {
+        const { snapshotApi } = await import('@/lib/api/snapshots');
+        return snapshotApi.create(data);
+    }
+};
+
+export const employeeService = {
+    getEmployees: async (): Promise<Employee[]> => {
+        const { employeeApi } = await import('@/lib/api/employees');
+        return employeeApi.getAll();
+    },
+    getEmployee: async (id: string): Promise<Employee | undefined> => {
+        const { employeeApi } = await import('@/lib/api/employees');
+        return employeeApi.getById(id);
+    }
 };
 
 export default api;

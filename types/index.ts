@@ -421,12 +421,10 @@ export interface DiscussionItem {
 
 export interface Decision {
     id: string;
-    topic: string;
-    decision: string;
-    rationale?: string;
-    voted: string[];
-    opposed: string[];
-    abstained: string[];
+    description: string;
+    responsible: string;
+    approvedBy: string;
+    deadline: string;
 }
 
 export interface ActionItem {
@@ -969,7 +967,7 @@ export interface CalendarEvent {
     createdAt: string;
 }
 
-export interface AgendaItem {
+export interface CalendarAgendaItem {
     id: string;
     title: string;
     description?: string;

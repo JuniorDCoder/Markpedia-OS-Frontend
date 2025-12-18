@@ -53,7 +53,7 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
     const [deptToAdd, setDeptToAdd] = useState<string>('');
 
     // New item states
-    const [newAgendaItem, setNewAgendaItem] = useState({ item: '', presenter: '', duration: '' });
+    const [newAgendaItem, setNewAgendaItem] = useState({ topic: '', presenter: '', duration: '' });
     const [newDiscussionItem, setNewDiscussionItem] = useState({ agendaItem: '', summary: '', agreements: '' });
     const [newDecision, setNewDecision] = useState({ description: '', responsible: '', approvedBy: '', deadline: '' });
     const [newActionItem, setNewActionItem] = useState({ item: '', owner: '', dueDate: '', status: 'Not Started' as 'Not Started' | 'In Progress' | 'Completed' | 'Delayed', priority: 'Medium' as 'Low' | 'Medium' | 'High' | 'Critical' });
@@ -106,15 +106,14 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
     };
 
     const addAgendaItem = async () => {
-        if (!newAgendaItem.item.trim() || !meeting) return;
+        if (!newAgendaItem.topic.trim() || !meeting) return;
 
         try {
             const agendaItem: AgendaItem = {
                 id: `agenda-${Date.now()}`,
-                item: newAgendaItem.item,
+                topic: newAgendaItem.topic,
                 presenter: newAgendaItem.presenter,
-                duration: newAgendaItem.duration,
-                order: meeting.agenda.length + 1
+                duration: newAgendaItem.duration
             };
 
             const updatedMeeting = {
@@ -122,7 +121,7 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
                 agenda: [...meeting.agenda, agendaItem]
             };
             setMeeting(updatedMeeting);
-            setNewAgendaItem({ item: '', presenter: '', duration: '' });
+            setNewAgendaItem({ topic: '', presenter: '', duration: '' });
             toast.success('Agenda item added successfully');
         } catch (error) {
             toast.error('Failed to add agenda item');
@@ -594,7 +593,7 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
                             <div key={item.id} className="flex items-start justify-between p-3 bg-gray-50 rounded border">
                                 <div className="flex-1">
                                     <div className="flex items-start justify-between">
-                                        <p className="font-medium">{item.item}</p>
+                                        <p className="font-medium">{item.topic}</p>
                                         {editing && (
                                             <Button
                                                 variant="ghost"
@@ -623,8 +622,8 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                 <Input
                                     placeholder="Agenda item"
-                                    value={newAgendaItem.item}
-                                    onChange={(e) => setNewAgendaItem({ ...newAgendaItem, item: e.target.value })}
+                                    value={newAgendaItem.topic}
+                                    onChange={(e) => setNewAgendaItem({ ...newAgendaItem, topic: e.target.value })}
                                 />
                                 <Input
                                     placeholder="Presenter"
@@ -637,7 +636,7 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
                                         value={newAgendaItem.duration}
                                         onChange={(e) => setNewAgendaItem({ ...newAgendaItem, duration: e.target.value })}
                                     />
-                                    <Button onClick={addAgendaItem} disabled={!newAgendaItem.item.trim()}>
+                                    <Button onClick={addAgendaItem} disabled={!newAgendaItem.topic.trim()}>
                                         <Plus className="h-4 w-4" />
                                     </Button>
                                 </div>
@@ -880,7 +879,7 @@ export default function MeetingDetailClient({ meetingId, initialMeeting }: Meeti
                                         value={newActionItem.dueDate}
                                         onChange={(e) => setNewActionItem({ ...newActionItem, dueDate: e.target.value })}
                                     />
-                                    <Select value={newActionItem.priority} onValueChange={(v: 'Low'|'Medium'|'High'|'Critical') => setNewActionItem({ ...newActionItem, priority: v })}>
+                                    <Select value={newActionItem.priority} onValueChange={(v: 'Low' | 'Medium' | 'High' | 'Critical') => setNewActionItem({ ...newActionItem, priority: v })}>
                                         <SelectTrigger className="w-[130px]"><SelectValue placeholder="Priority" /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="Low">Low</SelectItem>

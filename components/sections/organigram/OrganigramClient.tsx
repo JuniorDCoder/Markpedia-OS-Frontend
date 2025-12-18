@@ -46,12 +46,12 @@ interface OrganigramNode {
 }
 
 export default function OrganigramClient({
-                                             employees,
-                                             snapshots,
-                                             departments,
-                                             entities,
-                                             user
-                                         }: OrganigramClientProps) {
+    employees,
+    snapshots,
+    departments,
+    entities,
+    user
+}: OrganigramClientProps) {
     const [searchTerm, setSearchTerm] = useState('');
     const [departmentFilter, setDepartmentFilter] = useState('all');
     const [levelFilter, setLevelFilter] = useState<'all' | 'Global' | 'Regional' | 'Country'>('all');
@@ -526,12 +526,15 @@ export default function OrganigramClient({
                         <Camera className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                         Snapshot
                     </Button>
-                    <Button variant="outline" asChild size="sm" className="flex-1 sm:flex-none text-xs">
-                        <Link href="/strategy/organigram/employees/new">
-                            <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                            Add Employee
-                        </Link>
-                    </Button>
+                    {/* Only CEO can add employees */}
+                    {user?.role === 'CEO' && (
+                        <Button variant="outline" asChild size="sm" className="flex-1 sm:flex-none text-xs">
+                            <Link href="/strategy/organigram/employees/new">
+                                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                Add Employee
+                            </Link>
+                        </Button>
+                    )}
                     {canManage && (
                         <Button asChild size="sm" className="flex-1 sm:flex-none text-xs">
                             <Link href="/strategy/organigram/edit">
@@ -569,11 +572,10 @@ export default function OrganigramClient({
                                 {snapshots.map(snapshot => (
                                     <div
                                         key={snapshot.id}
-                                        className={`p-2 sm:p-3 border rounded-lg cursor-pointer transition-colors ${
-                                            selectedSnapshot?.id === snapshot.id
+                                        className={`p-2 sm:p-3 border rounded-lg cursor-pointer transition-colors ${selectedSnapshot?.id === snapshot.id
                                                 ? 'border-blue-500 bg-blue-50'
                                                 : 'border-gray-200 hover:bg-gray-50'
-                                        }`}
+                                            }`}
                                         onClick={() => setSelectedSnapshot(snapshot)}
                                     >
                                         <div className="flex items-center justify-between">
