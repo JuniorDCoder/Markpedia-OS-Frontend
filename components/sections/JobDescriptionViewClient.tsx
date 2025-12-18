@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/store/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -38,11 +39,15 @@ export default function JobDescriptionViewClient({
 	initialJobDescription
 }: JobDescriptionViewClientProps) {
 	const router = useRouter();
+	const { user } = useAuthStore();
 	const [jobDescription, setJobDescription] = useState<JobDescription | null>(initialJobDescription || null);
 	const [departments, setDepartments] = useState<Department[]>([]);
 	const [loading, setLoading] = useState(!initialJobDescription);
 	const [exporting, setExporting] = useState(false);
 	const [unauthorized, setUnauthorized] = useState(false);
+
+	// Only CEO can edit or create new versions
+	const isCEO = user?.role === 'CEO';
 
 	useEffect(() => {
 		if (!initialJobDescription) loadJobDescription();
@@ -267,13 +272,15 @@ export default function JobDescriptionViewClient({
 					{/* Action Buttons */}
 					<div className="flex flex-col sm:flex-row lg:flex-col gap-3 lg:items-end lg:w-80">
 						<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 gap-2">
-							<Button
-								onClick={() => router.push(`/work/job-descriptions/${jobDescriptionId}/edit`)}
-								className="bg-blue-600 hover:bg-blue-700 w-full"
-							>
-								<Edit className="h-4 w-4 mr-2" />
-								Edit JD
-							</Button>
+							{isCEO && (
+								<Button
+									onClick={() => router.push(`/work/job-descriptions/${jobDescriptionId}/edit`)}
+									className="bg-blue-600 hover:bg-blue-700 w-full"
+								>
+									<Edit className="h-4 w-4 mr-2" />
+									Edit JD
+								</Button>
+							)}
 							<Button
 								variant="outline"
 								onClick={handleExportPDF}
@@ -287,7 +294,7 @@ export default function JobDescriptionViewClient({
 								)}
 								Export PDF
 							</Button>
-							{jobDescription.status === 'Approved' && (
+							{isCEO && jobDescription.status === 'Approved' && (
 								<Button
 									variant="outline"
 									onClick={createNewVersion}
@@ -493,85 +500,85 @@ export default function JobDescriptionViewClient({
 
 /* === Enhanced Helper Components === */
 function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string | number; color: string }) {
-    return (
-        <Card className={`border ${color} shadow-sm hover:shadow-md transition-shadow`}>
-            <CardContent className="pt-6 text-center">
-                <div className="flex justify-center mb-2">{icon}</div>
-                <div className="text-2xl font-bold text-gray-900 mb-1">{value}</div>
-                <p className="text-sm text-muted-foreground">{label}</p>
-            </CardContent>
-        </Card>
-    );
+	return (
+		<Card className={`border ${color} shadow-sm hover:shadow-md transition-shadow`}>
+			<CardContent className="pt-6 text-center">
+				<div className="flex justify-center mb-2">{icon}</div>
+				<div className="text-2xl font-bold text-gray-900 mb-1">{value}</div>
+				<p className="text-sm text-muted-foreground">{label}</p>
+			</CardContent>
+		</Card>
+	);
 }
 
 function InfoListCard({ title, icon, items, color, bgColor }: {
-    title: string;
-    icon: React.ReactNode;
-    items: string[];
-    color: string;
-    bgColor: string;
+	title: string;
+	icon: React.ReactNode;
+	items: string[];
+	color: string;
+	bgColor: string;
 }) {
-    return (
-        <Card className={`border ${color} shadow-sm`}>
-            <CardHeader className={`${bgColor} border-b ${color}`}>
-                <CardTitle className="flex items-center text-sm font-semibold">
-                    {icon}
-                    <span className="ml-2">{title}</span>
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-                <ul className="space-y-2">
-                    {items.map((item, i) => (
-                        <li key={i} className="flex items-start text-sm p-2 rounded hover:bg-gray-50 transition-colors">
-                            <span className="text-blue-600 mr-2 mt-1 flex-shrink-0">•</span>
-                            <span className="text-muted-foreground leading-relaxed">{item}</span>
-                        </li>
-                    ))}
-                </ul>
-            </CardContent>
-        </Card>
-    );
+	return (
+		<Card className={`border ${color} shadow-sm`}>
+			<CardHeader className={`${bgColor} border-b ${color}`}>
+				<CardTitle className="flex items-center text-sm font-semibold">
+					{icon}
+					<span className="ml-2">{title}</span>
+				</CardTitle>
+			</CardHeader>
+			<CardContent className="pt-6">
+				<ul className="space-y-2">
+					{items.map((item, i) => (
+						<li key={i} className="flex items-start text-sm p-2 rounded hover:bg-gray-50 transition-colors">
+							<span className="text-blue-600 mr-2 mt-1 flex-shrink-0">•</span>
+							<span className="text-muted-foreground leading-relaxed">{item}</span>
+						</li>
+					))}
+				</ul>
+			</CardContent>
+		</Card>
+	);
 }
 
 function BadgeListCard({ title, icon, items, color, bgColor }: {
-    title: string;
-    icon: React.ReactNode;
-    items: string[];
-    color: string;
-    bgColor: string;
+	title: string;
+	icon: React.ReactNode;
+	items: string[];
+	color: string;
+	bgColor: string;
 }) {
-    return (
-        <Card className={`border ${color} shadow-sm`}>
-            <CardHeader className={`${bgColor} border-b ${color}`}>
-                <CardTitle className="flex items-center text-sm font-semibold">
-                    {icon}
-                    <span className="ml-2">{title}</span>
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-                <div className="flex flex-wrap gap-2">
-                    {items.map((item, i) => (
-                        <Badge
-                            key={i}
-                            variant="outline"
-                            className="bg-white text-gray-700 border-gray-300 hover:border-gray-400 transition-colors text-xs px-3 py-1"
-                        >
-                            {item}
-                        </Badge>
-                    ))}
-                </div>
-            </CardContent>
-        </Card>
-    );
+	return (
+		<Card className={`border ${color} shadow-sm`}>
+			<CardHeader className={`${bgColor} border-b ${color}`}>
+				<CardTitle className="flex items-center text-sm font-semibold">
+					{icon}
+					<span className="ml-2">{title}</span>
+				</CardTitle>
+			</CardHeader>
+			<CardContent className="pt-6">
+				<div className="flex flex-wrap gap-2">
+					{items.map((item, i) => (
+						<Badge
+							key={i}
+							variant="outline"
+							className="bg-white text-gray-700 border-gray-300 hover:border-gray-400 transition-colors text-xs px-3 py-1"
+						>
+							{item}
+						</Badge>
+					))}
+				</div>
+			</CardContent>
+		</Card>
+	);
 }
 
 function MetaLine({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
-    return (
-        <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
-            <span className="text-sm font-medium text-gray-700">{label}</span>
-            <span className={`text-sm ${highlight ? 'text-orange-600 font-semibold' : 'text-muted-foreground'}`}>
-                {value}
-            </span>
-        </div>
-    );
+	return (
+		<div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
+			<span className="text-sm font-medium text-gray-700">{label}</span>
+			<span className={`text-sm ${highlight ? 'text-orange-600 font-semibold' : 'text-muted-foreground'}`}>
+				{value}
+			</span>
+		</div>
+	);
 }

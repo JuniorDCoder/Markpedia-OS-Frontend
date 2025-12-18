@@ -565,7 +565,7 @@ export interface ProblemAnalytics {
 export interface Department {
     id: string;
     name: string;
-    description: string;
+    description?: string;
     manager_id?: string;
     manager_name?: string;
     member_count?: number;

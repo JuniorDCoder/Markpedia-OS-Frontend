@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useAuthStore } from '@/store/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +32,7 @@ import toast from 'react-hot-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 
 export default function JobDescriptionsPage() {
+    const { user } = useAuthStore();
     const [jobDescriptions, setJobDescriptions] = useState<JobDescription[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [loading, setLoading] = useState(true);
@@ -41,6 +43,9 @@ export default function JobDescriptionsPage() {
     const [jobToDelete, setJobToDelete] = useState<JobDescription | null>(null);
     const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
+
+    // Only CEO can create, edit, or delete job descriptions
+    const isCEO = user?.role === 'CEO';
 
     useEffect(() => {
         loadJobDescriptions();
@@ -198,12 +203,14 @@ export default function JobDescriptionsPage() {
                         Structured and version-controlled job description system
                     </p>
                 </div>
-                <Button asChild className="w-full sm:w-auto">
-                    <Link href="/work/job-descriptions/new">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Create Job Description
-                    </Link>
-                </Button>
+                {isCEO && (
+                    <Button asChild className="w-full sm:w-auto">
+                        <Link href="/work/job-descriptions/new">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Create Job Description
+                        </Link>
+                    </Button>
+                )}
             </div>
 
             {/* KPI Tiles - As per client specification */}
@@ -301,7 +308,7 @@ export default function JobDescriptionsPage() {
                                 ? 'Try adjusting your search or filter criteria'
                                 : 'Get started by creating your first job description'}
                         </p>
-                        {!searchTerm && statusFilter === 'all' && departmentFilter === 'all' && (
+                        {!searchTerm && statusFilter === 'all' && departmentFilter === 'all' && isCEO && (
                             <Button asChild className="w-full sm:w-auto">
                                 <Link href="/work/job-descriptions/new">
                                     <Plus className="h-4 w-4 mr-2" />
@@ -436,15 +443,17 @@ export default function JobDescriptionsPage() {
                                                 View
                                             </Link>
                                         </Button>
-                                        <Button asChild variant="ghost" size="sm" className="text-xs sm:text-sm">
-                                            <Link href={`/work/job-descriptions/${jd.id}/edit`}>
-                                                <Edit className="h-4 w-4 mr-1" />
-                                                Edit
-                                            </Link>
-                                        </Button>
+                                        {isCEO && (
+                                            <Button asChild variant="ghost" size="sm" className="text-xs sm:text-sm">
+                                                <Link href={`/work/job-descriptions/${jd.id}/edit`}>
+                                                    <Edit className="h-4 w-4 mr-1" />
+                                                    Edit
+                                                </Link>
+                                            </Button>
+                                        )}
                                     </div>
                                     <div className="flex items-center space-x-1">
-                                        {jd.status === 'Approved' && (
+                                        {isCEO && jd.status === 'Approved' && (
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
@@ -463,14 +472,16 @@ export default function JobDescriptionsPage() {
                                         >
                                             <Download className="h-4 w-4" />
                                         </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="text-xs sm:text-sm"
-                                            onClick={() => openDeleteDialog(jd)}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                        {isCEO && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="text-xs sm:text-sm"
+                                                onClick={() => openDeleteDialog(jd)}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        )}
                                     </div>
                                 </div>
                             </div>

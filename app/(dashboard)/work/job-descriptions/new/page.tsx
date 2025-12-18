@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/store/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -34,6 +35,7 @@ import toast from 'react-hot-toast';
 
 export default function NewJobDescriptionPage() {
     const router = useRouter();
+    const { user } = useAuthStore();
     const [loading, setLoading] = useState(false);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [activeTab, setActiveTab] = useState('basic');
@@ -63,6 +65,14 @@ export default function NewJobDescriptionPage() {
         status: 'Draft',
         version: '1.0'
     });
+
+    // Check if user is CEO
+    useEffect(() => {
+        if (user && user.role !== 'CEO') {
+            toast.error('Only CEO can create job descriptions');
+            router.push('/work/job-descriptions');
+        }
+    }, [user, router]);
 
     useEffect(() => {
         loadDepartments();
@@ -186,8 +196,8 @@ export default function NewJobDescriptionPage() {
                                     {['basic', 'details', 'performance', 'additional'].map((tab, index) => (
                                         <div key={tab} className="flex flex-col items-center">
                                             <div className={`w-3 h-3 rounded-full mb-1 ${formProgress[tab as keyof typeof formProgress]
-                                                    ? 'bg-green-500'
-                                                    : 'bg-gray-300'
+                                                ? 'bg-green-500'
+                                                : 'bg-gray-300'
                                                 }`} />
                                             <span className="capitalize">{tab}</span>
                                         </div>
@@ -215,8 +225,8 @@ export default function NewJobDescriptionPage() {
                                         key={id}
                                         value={id}
                                         className={`text-xs sm:text-sm px-2 sm:px-3 py-2 h-auto rounded-lg transition-all duration-200 ${status === 'complete'
-                                                ? 'data-[state=active]:bg-green-500 data-[state=active]:text-white bg-green-100 text-green-700'
-                                                : 'data-[state=active]:bg-blue-500 data-[state=active]:text-white'
+                                            ? 'data-[state=active]:bg-green-500 data-[state=active]:text-white bg-green-100 text-green-700'
+                                            : 'data-[state=active]:bg-blue-500 data-[state=active]:text-white'
                                             }`}
                                     >
                                         <div className="flex items-center gap-2">
