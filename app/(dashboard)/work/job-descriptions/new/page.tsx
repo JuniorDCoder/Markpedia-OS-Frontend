@@ -185,11 +185,10 @@ export default function NewJobDescriptionPage() {
                                 <div className="flex justify-between text-xs text-muted-foreground">
                                     {['basic', 'details', 'performance', 'additional'].map((tab, index) => (
                                         <div key={tab} className="flex flex-col items-center">
-                                            <div className={`w-3 h-3 rounded-full mb-1 ${
-                                                formProgress[tab as keyof typeof formProgress]
+                                            <div className={`w-3 h-3 rounded-full mb-1 ${formProgress[tab as keyof typeof formProgress]
                                                     ? 'bg-green-500'
                                                     : 'bg-gray-300'
-                                            }`} />
+                                                }`} />
                                             <span className="capitalize">{tab}</span>
                                         </div>
                                     ))}
@@ -215,11 +214,10 @@ export default function NewJobDescriptionPage() {
                                     <TabsTrigger
                                         key={id}
                                         value={id}
-                                        className={`text-xs sm:text-sm px-2 sm:px-3 py-2 h-auto rounded-lg transition-all duration-200 ${
-                                            status === 'complete'
+                                        className={`text-xs sm:text-sm px-2 sm:px-3 py-2 h-auto rounded-lg transition-all duration-200 ${status === 'complete'
                                                 ? 'data-[state=active]:bg-green-500 data-[state=active]:text-white bg-green-100 text-green-700'
                                                 : 'data-[state=active]:bg-blue-500 data-[state=active]:text-white'
-                                        }`}
+                                            }`}
                                     >
                                         <div className="flex items-center gap-2">
                                             <Icon className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -284,7 +282,7 @@ export default function NewJobDescriptionPage() {
                                                     {departments.map(dept => (
                                                         <SelectItem key={dept.id} value={dept.id} className="text-sm sm:text-base">
                                                             <div className="flex items-center gap-2">
-                                                                <div className={`w-3 h-3 rounded-full ${dept.color.split(' ')[0]}`} />
+                                                                <div className={`w-3 h-3 rounded-full ${dept.color?.split(' ')[0] || 'bg-gray-400'}`} />
                                                                 {dept.name}
                                                             </div>
                                                         </SelectItem>
