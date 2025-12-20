@@ -43,11 +43,16 @@ import {
 import { Employee } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
+import { useAuthStore } from '@/store/auth';
+
 interface EmployeesClientProps {
     initialEmployees: Employee[];
 }
 
 export default function EmployeesClient({ initialEmployees }: EmployeesClientProps) {
+    const { user } = useAuthStore();
+    const canManage = user && ['CEO', 'HR', 'Admin', 'CXO'].includes(user.role);
+
     const [employees, setEmployees] = useState<Employee[]>(initialEmployees || []);
     const [searchTerm, setSearchTerm] = useState('');
     const [designationFilter, setDesignationFilter] = useState('All');
@@ -100,12 +105,14 @@ export default function EmployeesClient({ initialEmployees }: EmployeesClientPro
                     <h1 className="text-2xl font-bold tracking-tight">Employees</h1>
                     <p className="text-muted-foreground">Manage your organization's workforce.</p>
                 </div>
-                <Button asChild>
-                    <Link href="/strategy/organigram/employees/new">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add New Hire
-                    </Link>
-                </Button>
+                {canManage && (
+                    <Button asChild>
+                        <Link href="/strategy/organigram/employees/new">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add New Hire
+                        </Link>
+                    </Button>
+                )}
             </div>
 
             {/* Filters Bar */}
@@ -244,18 +251,22 @@ export default function EmployeesClient({ initialEmployees }: EmployeesClientPro
                                                         View Profile
                                                     </Link>
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem asChild>
-                                                    <Link href={`/people/employees/${employee.id}`}>
-                                                        <Edit className="h-4 w-4 mr-2" />
-                                                        Edit Employee
-                                                    </Link>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem asChild>
-                                                    <Link href={`mailto:${employee.email}`}>
-                                                        <Mail className="h-4 w-4 mr-2" />
-                                                        Email
-                                                    </Link>
-                                                </DropdownMenuItem>
+                                                {canManage && (
+                                                    <>
+                                                        <DropdownMenuItem asChild>
+                                                            <Link href={`/people/employees/${employee.id}`}>
+                                                                <Edit className="h-4 w-4 mr-2" />
+                                                                Edit Employee
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem asChild>
+                                                            <Link href={`mailto:${employee.email}`}>
+                                                                <Mail className="h-4 w-4 mr-2" />
+                                                                Email
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                    </>
+                                                )}
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem className="text-destructive">
                                                     Delete

@@ -16,9 +16,9 @@ export default function EmployeeNewPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Only CEOs can create employees
-        if (user && user.role !== 'CEO') {
-            router.push('/strategy/organigram');
+        // Access Control: CEO, HR, Admin, CXO can create employees
+        if (user && !['CEO', 'HR', 'Admin', 'CXO'].includes(user.role)) {
+            router.push('/people/employees');
             return;
         }
 
@@ -51,8 +51,8 @@ export default function EmployeeNewPage() {
         );
     }
 
-    // Double-check: Only CEO can access
-    if (user.role !== 'CEO') {
+    // Double-check access
+    if (!['CEO', 'HR', 'Admin', 'CXO'].includes(user.role)) {
         return null; // Will redirect via useEffect
     }
 
