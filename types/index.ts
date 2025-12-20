@@ -14,6 +14,27 @@ export interface User {
     createdAt: string;
     lastLogin?: string;
     permissions?: string[]; // e.g., ['view_reports', 'manage_users']
+    // Extended Profile Fields
+    salutation?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    mobile?: string;
+    country?: string;
+    address?: string;
+    about?: string;
+    businessAddress?: string;
+    joiningDate?: string;
+    loginAllowed?: boolean;
+    emailNotifications?: boolean;
+    hourlyRate?: number;
+    slackMemberId?: string;
+    skills?: string[];
+    probationEndDate?: string;
+    noticePeriodStartDate?: string;
+    noticePeriodEndDate?: string;
+    employmentType?: string;
+    maritalStatus?: string;
+    language?: string;
 }
 
 export interface Employee {
@@ -28,7 +49,29 @@ export interface Employee {
     reportsTo?: string;
     team?: string[];
     isActive: boolean;
+    status?: 'CANDIDATE' | 'ONBOARDING' | 'ACTIVE' | 'OFFBOARDING' | 'INACTIVE';
     entityId?: string;
+    // Extended
+    salutation?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    mobile?: string;
+    country?: string;
+    address?: string;
+    about?: string;
+    businessAddress?: string;
+    joiningDate?: string;
+    loginAllowed?: boolean;
+    emailNotifications?: boolean;
+    hourlyRate?: number;
+    slackMemberId?: string;
+    skills?: string[];
+    probationEndDate?: string;
+    noticePeriodStartDate?: string;
+    noticePeriodEndDate?: string;
+    employmentType?: string;
+    maritalStatus?: string;
+    language?: string;
 }
 
 export interface Entity {

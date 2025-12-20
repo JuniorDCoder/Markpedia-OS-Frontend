@@ -140,18 +140,26 @@ const mockEmployees: Employee[] = [
 
 export const employeeApi = {
     async getAll(): Promise<Employee[]> {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve(mockEmployees);
-            }, 100);
-        });
+        const { adminApi } = await import('@/lib/api/admin');
+        const users = await adminApi.getUsers();
+        // Simple map
+        return users.map(u => ({
+            id: u.id,
+            name: `${u.firstName} ${u.lastName}`,
+            email: u.email,
+            title: u.position || 'Employee',
+            role: (u.role as any),
+            department: u.department || 'Unassigned',
+            avatar: u.avatar,
+            startDate: u.createdAt,
+            isActive: u.isActive,
+            status: u.isActive ? 'ACTIVE' : 'INACTIVE',
+            entityId: '',
+        }));
     },
 
     async getById(id: string): Promise<Employee | undefined> {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve(mockEmployees.find(e => e.id === id));
-            }, 100);
-        });
+        const employees = await this.getAll();
+        return employees.find(e => e.id === id);
     }
 };

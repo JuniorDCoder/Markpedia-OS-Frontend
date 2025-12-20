@@ -34,6 +34,8 @@ export const PHASE_ROUTES: Record<Phase, string[]> = {
         '/people/leave',
         '/people/performance',
         '/people/warnings',
+        '/people/lifecycle-management',
+        '/people/employees',
 
         // Money
         '/money/cashbook',
@@ -66,8 +68,8 @@ export const PHASE_ROUTES: Record<Phase, string[]> = {
         '/people/attendance',
         '/people/leave',
         '/people/performance',
-        '/people/warnings',
         '/money/cashbook',
+        '/people/lifecycle-management',
         '/money/requests',
         '/strategy/goals',
         '/strategy/journal',
@@ -94,8 +96,8 @@ export const PHASE_ROUTES: Record<Phase, string[]> = {
         '/people/attendance',
         '/people/leave',
         '/people/performance',
-        '/people/warnings',
         '/money/cashbook',
+        '/people/lifecycle-management',
         '/money/requests',
         '/strategy/goals',
         '/strategy/journal',

@@ -7,6 +7,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Employee, OrganigramSnapshot, Department, User, Entity } from '@/types';
 import {
     Plus,
@@ -62,6 +71,7 @@ export default function OrganigramClient({
     const [selectedNode, setSelectedNode] = useState<string | null>(null);
     const [mobileView, setMobileView] = useState<'organigram' | 'list'>('organigram');
     const [viewMode, setViewMode] = useState<'tree' | 'matrix' | 'map'>('tree');
+    const [isDepartmentStatsOpen, setIsDepartmentStatsOpen] = useState(false);
     const organigramRef = useRef<HTMLDivElement>(null);
 
     // Get entity level for an employee
@@ -427,13 +437,17 @@ export default function OrganigramClient({
 
         return (
             <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
-                <Card className="border shadow-sm">
+                <Card
+                    className="border shadow-sm cursor-pointer hover:bg-accent/50 transition-colors"
+                    onClick={() => setIsDepartmentStatsOpen(true)}
+                >
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-xs sm:text-sm font-medium">Total Employees</CardTitle>
                         <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-xl sm:text-2xl font-bold">{employees.length}</div>
+                        <p className="text-xs text-muted-foreground mt-1">Click to view breakdown</p>
                     </CardContent>
                 </Card>
                 <Card className="border shadow-sm">
@@ -573,8 +587,8 @@ export default function OrganigramClient({
                                     <div
                                         key={snapshot.id}
                                         className={`p-2 sm:p-3 border rounded-lg cursor-pointer transition-colors ${selectedSnapshot?.id === snapshot.id
-                                                ? 'border-blue-500 bg-blue-50'
-                                                : 'border-gray-200 hover:bg-gray-50'
+                                            ? 'border-blue-500 bg-blue-50'
+                                            : 'border-gray-200 hover:bg-gray-50'
                                             }`}
                                         onClick={() => setSelectedSnapshot(snapshot)}
                                     >

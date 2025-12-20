@@ -38,6 +38,7 @@ import {
     Shield,
     HeartHandshake,
     Lock,
+    UserCog,
 } from 'lucide-react';
 
 const navigation = {
@@ -102,6 +103,13 @@ const navigation = {
         },
     ],
     people: [
+        {
+            name: 'Employees',
+            href: '/people/employees',
+            icon: Users,
+            roles: ['CEO', 'Admin', 'Manager', 'CXO', 'Employee'],
+            phase: 1,
+        },
         {
             name: 'Attendance',
             href: '/people/attendance',

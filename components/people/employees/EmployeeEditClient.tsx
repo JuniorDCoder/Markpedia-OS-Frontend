@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -10,22 +10,25 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Department, User, Entity } from '@/types';
-import { ArrowLeft, Save, Upload, User as UserIcon } from 'lucide-react';
+import { ArrowLeft, Save, Upload, User as UserIcon, Trash } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { LoadingSpinner } from '@/components/ui/loading';
 
-interface EmployeeNewClientProps {
+interface EmployeeEditClientProps {
+    employeeId: string;
     departments: Department[];
     entities?: Entity[];
-    user: User;
+    user?: User; // Current logged in user
 }
 
-export default function EmployeeNewClient({ departments, entities = [], user }: EmployeeNewClientProps) {
+export default function EmployeeEditClient({ employeeId, departments, entities = [], user }: EmployeeEditClientProps) {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
+    const [isFetching, setIsFetching] = useState(true);
 
     const [formData, setFormData] = useState({
         // Account Details
-        employeeId: 'Auto-generated',
+        employeeId: '',
         salutation: '',
         name: '',
         email: '',
@@ -35,7 +38,7 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
         country: '',
         mobile: '',
         gender: '',
-        joiningDate: new Date().toISOString().split('T')[0],
+        joiningDate: '',
         reportsTo: '',
         language: 'English',
         role: 'Employee' as 'CEO' | 'Manager' | 'Employee' | 'Admin' | 'CXO',
@@ -59,8 +62,60 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
         maritalStatus: 'Single',
         businessAddress: '',
 
-        entityId: '', // Added for compatibility with legacy organization logic
+        entityId: '',
     });
+
+    useEffect(() => {
+        async function fetchEmployee() {
+            try {
+                const { adminApi } = await import('@/lib/api/admin');
+                const emp = await adminApi.getUser(employeeId);
+
+                // Map API response to form data
+                setFormData({
+                    employeeId: emp.id,
+                    salutation: emp.salutation || '',
+                    name: `${emp.firstName} ${emp.lastName}`,
+                    email: emp.email,
+                    dateOfBirth: emp.dateOfBirth || '',
+                    designation: emp.position || '',
+                    department: emp.department || '',
+                    country: emp.country || '',
+                    mobile: emp.mobile || '',
+                    gender: emp.gender || '',
+                    joiningDate: emp.joiningDate || (emp.createdAt ? emp.createdAt.split('T')[0] : ''),
+                    reportsTo: (emp as any).reportsTo || '',
+                    language: emp.language || 'English',
+                    role: (emp.role as any) || 'Employee',
+
+                    address: emp.address || '',
+                    about: emp.about || '',
+
+                    loginAllowed: emp.isActive,
+                    emailNotifications: emp.emailNotifications !== false,
+                    hourlyRate: emp.hourlyRate ? String(emp.hourlyRate) : '',
+                    slackMemberId: emp.slackMemberId || '',
+                    skills: emp.skills ? emp.skills.join(', ') : '',
+
+                    probationEndDate: emp.probationEndDate || '',
+                    noticePeriodStartDate: emp.noticePeriodStartDate || '',
+                    noticePeriodEndDate: emp.noticePeriodEndDate || '',
+                    employmentType: emp.employmentType || 'Full-time',
+                    maritalStatus: emp.maritalStatus || 'Single',
+                    businessAddress: emp.businessAddress || '',
+
+                    entityId: emp.entityId || '',
+                });
+            } catch (error) {
+                console.error('Error fetching employee:', error);
+                toast.error('Failed to load employee details');
+            } finally {
+                setIsFetching(false);
+            }
+        }
+
+        fetchEmployee();
+    }, [employeeId]);
 
     const handleInputChange = (field: string, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -71,7 +126,7 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
         setIsLoading(true);
 
         // Basic validation
-        if (!formData.name || !formData.email || !formData.department || !formData.joiningDate) {
+        if (!formData.name || !formData.email || !formData.department) {
             toast.error('Please fill in all required fields marked with *');
             setIsLoading(false);
             return;
@@ -80,21 +135,18 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
         try {
             const { adminApi } = await import('@/lib/api/admin');
 
-            // Split name
             const [firstName, ...lastNameParts] = formData.name.split(' ');
             const lastName = lastNameParts.join(' ');
 
-            await adminApi.createUser({
+            await adminApi.updateUser(employeeId, {
                 email: formData.email,
                 firstName: firstName,
                 lastName: lastName,
                 role: formData.role,
                 department: formData.department,
-                position: formData.designation, // Mapping designation to position
+                title: formData.designation, // Maps to position in adminApi
                 isActive: formData.loginAllowed,
 
-                // Extended fields (passed to adminApi, which might ignore them if not mapped in payload, 
-                // but we updated types to include them, and admin.ts needs to include them in payload)
                 salutation: formData.salutation,
                 dateOfBirth: formData.dateOfBirth,
                 mobile: formData.mobile,
@@ -119,32 +171,62 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
                 employmentType: formData.employmentType,
                 maritalStatus: formData.maritalStatus,
 
-                // Entity mapping for legacy
-                entityId: formData.entityId || (entities.length > 0 ? entities[0].id : undefined)
+                entityId: formData.entityId,
             } as any);
 
-            toast.success('Employee created successfully');
+            toast.success('Employee updated successfully');
             router.push('/people/employees');
             router.refresh();
         } catch (error) {
-            console.error('Error creating employee:', error);
-            toast.error('Failed to create employee');
+            console.error('Error updating employee:', error);
+            toast.error('Failed to update employee');
         } finally {
             setIsLoading(false);
         }
     };
+
+    const handleDelete = async () => {
+        if (!confirm('Are you sure you want to delete this employee? This action cannot be undone.')) return;
+
+        setIsLoading(true);
+        try {
+            const { adminApi } = await import('@/lib/api/admin');
+            await adminApi.deleteUser(employeeId);
+            toast.success('Employee deleted successfully');
+            router.push('/people/employees');
+            router.refresh();
+        } catch (error) {
+            console.error('Error deleting employee:', error);
+            toast.error('Failed to delete employee');
+            setIsLoading(false);
+        }
+    };
+
+    if (isFetching) {
+        return (
+            <div className="flex h-[50vh] items-center justify-center">
+                <LoadingSpinner size="lg" />
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6 max-w-5xl mx-auto pb-10">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Add Employee</h1>
-                    <p className="text-sm text-muted-foreground mt-1">Create a new employee profile with full details.</p>
+                    <h1 className="text-2xl font-bold tracking-tight">Edit Employee</h1>
+                    <p className="text-sm text-muted-foreground mt-1">Update employee profile details.</p>
                 </div>
-                <Button variant="outline" asChild>
-                    <Link href="/people/employees">Cancel</Link>
-                </Button>
+                <div className="flex gap-2">
+                    <Button variant="destructive" size="sm" onClick={handleDelete} title="Delete Employee">
+                        <Trash className="w-4 h-4 mr-2" />
+                        Delete
+                    </Button>
+                    <Button variant="outline" asChild>
+                        <Link href="/people/employees">Cancel</Link>
+                    </Button>
+                </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -156,7 +238,7 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
                     <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-4 gap-6">
                         {/* Row 1 */}
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Employee ID <span className="text-red-500">*</span></label>
+                            <label className="text-sm font-medium">Employee ID</label>
                             <Input value={formData.employeeId} disabled className="bg-gray-50" />
                         </div>
                         <div className="space-y-2">
@@ -262,12 +344,11 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
 
                         {/* Row 6 */}
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Joining Date <span className="text-red-500">*</span></label>
+                            <label className="text-sm font-medium">Joining Date</label>
                             <Input
                                 type="date"
                                 value={formData.joiningDate}
                                 onChange={(e) => handleInputChange('joiningDate', e.target.value)}
-                                required
                             />
                         </div>
                         <div className="space-y-2">
@@ -301,14 +382,14 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
                                 <SelectContent>
                                     <SelectItem value="Employee">Employee</SelectItem>
                                     <SelectItem value="Manager">Manager</SelectItem>
-                                    {user.role === 'CEO' && <SelectItem value="CEO">CEO</SelectItem>}
-                                    {user.role === 'CEO' && <SelectItem value="Admin">Admin</SelectItem>}
-                                    {user.role === 'CEO' && <SelectItem value="CXO">CXO</SelectItem>}
+                                    <SelectItem value="CEO">CEO</SelectItem>
+                                    <SelectItem value="Admin">Admin</SelectItem>
+                                    <SelectItem value="CXO">CXO</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
 
-                        {/* Hidden Entity ID for legacy - select the first available global one if needed, or user adds in future */}
+                        {/* Hidden Entity ID for legacy */}
                         {entities.length > 0 && (
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Entity</label>
@@ -498,7 +579,7 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
                         </div>
 
                         <div className="space-y-2 md:col-span-2">
-                            <label className="text-sm font-medium">Business Address <span className="text-red-500">*</span></label>
+                            <label className="text-sm font-medium">Business Address</label>
                             <Input
                                 value={formData.businessAddress}
                                 onChange={(e) => handleInputChange('businessAddress', e.target.value)}
@@ -510,10 +591,7 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
 
                 <div className="flex items-center gap-4 pt-4">
                     <Button type="submit" size="lg" disabled={isLoading} className="bg-red-600 hover:bg-red-700 text-white min-w-[150px]">
-                        {isLoading ? 'Saving...' : 'Save'}
-                    </Button>
-                    <Button type="button" variant="outline" size="lg" disabled={isLoading}>
-                        Save & Add More
+                        {isLoading ? 'Updating...' : 'Save Changes'}
                     </Button>
                     <Button type="button" variant="ghost" size="lg" asChild>
                         <Link href="/people/employees">Cancel</Link>
