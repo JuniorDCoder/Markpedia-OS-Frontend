@@ -49,8 +49,6 @@ export default function JobDescriptionEditClient({ jobDescriptionId, initialJobD
         status: 'Draft',
     });
 
-});
-
 // Check if user is CEO
 useEffect(() => {
     if (user && user.role !== 'CEO') {
