@@ -107,7 +107,7 @@ const navigation = {
             name: 'Employees',
             href: '/people/employees',
             icon: Users,
-            roles: ['CEO', 'Admin', 'Manager', 'CXO', 'Employee'],
+            roles: ['CEO', 'Admin', 'Manager', 'CXO'],
             phase: 1,
         },
         {
