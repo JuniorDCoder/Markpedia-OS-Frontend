@@ -221,6 +221,13 @@ const navigation = {
     ],
     other: [
         {
+            name: 'Password Manager',
+            href: '/other/passwords',
+            icon: Lock,
+            roles: ['CEO', 'CXO'],
+            phase: 1,
+        },
+        {
             name: 'Time',
             href: '/time',
             icon: Calendar,

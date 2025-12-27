@@ -54,7 +54,10 @@ export const PHASE_ROUTES: Record<Phase, string[]> = {
         '/settings',
 
         // Profile
-        '/profile'
+        '/profile',
+
+        // Other
+        '/other/passwords'
     ],
     2: [
         // Phase 1 routes plus Phase 2
@@ -76,7 +79,9 @@ export const PHASE_ROUTES: Record<Phase, string[]> = {
         '/strategy/entities',
         '/strategy/organigram',
         '/resources',
+        '/resources',
         '/settings',
+        '/other/passwords',
 
         // Phase 2 routes
         '/community/feed',
@@ -105,6 +110,7 @@ export const PHASE_ROUTES: Record<Phase, string[]> = {
         '/strategy/organigram',
         '/resources',
         '/settings',
+        '/other/passwords',
         '/community/feed',
         '/community/recognition',
         '/chats',
