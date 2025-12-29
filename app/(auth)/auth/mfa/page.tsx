@@ -15,15 +15,15 @@ import { useAuthStore } from '@/store/auth';
 import { Shield } from 'lucide-react';
 
 const mfaSchema = z.object({
-    refreshToken: z.string()
-        .min(1, 'Refresh token is required'),
+    code: z.string()
+        .length(6, 'Verification code must be 6 digits'),
 });
 
 type MfaForm = z.infer<typeof mfaSchema>;
 
 export default function MfaPage() {
     const [email, setEmail] = useState<string>('');
-    const { isLoading, isAuthenticated, getMfaSession, setUser, setLoading } = useAuthStore();
+    const { isLoading, isAuthenticated, getMfaSession, setUser, setLoading, verifyMfa } = useAuthStore();
     const router = useRouter();
 
     useEffect(() => {
@@ -55,59 +55,9 @@ export default function MfaPage() {
     const onSubmit = async (data: MfaForm) => {
         try {
             setLoading(true);
-
-            // Get the stored login response
-            const loginResponseStr = sessionStorage.getItem('mfa_login_response');
-            if (!loginResponseStr) {
-                throw new Error('No login session found. Please login again.');
-            }
-
-            const loginResponse = JSON.parse(loginResponseStr);
-
-            // Verify the refresh token matches what was sent from backend
-            if (loginResponse.refresh_token && data.refreshToken === loginResponse.refresh_token) {
-                // Authentication successful - transform user data to frontend format
-                const user = {
-                    id: loginResponse.user.id,
-                    email: loginResponse.user.email,
-                    firstName: loginResponse.user.first_name ?? '',
-                    lastName: loginResponse.user.last_name ?? '',
-                    role: loginResponse.user.role ?? '',
-                    department: loginResponse.user.department,
-                    position: loginResponse.user.position,
-                    avatar: loginResponse.user.avatar,
-                    isActive: loginResponse.user.is_active ?? true,
-                    createdAt: loginResponse.user.created_at ?? new Date().toISOString(),
-                    lastLogin: loginResponse.user.last_login,
-                    permissions: loginResponse.user.permissions,
-                };
-
-                // Store tokens in localStorage
-                if (typeof window !== 'undefined') {
-                    localStorage.setItem('auth_token', loginResponse.access_token);
-                    localStorage.setItem('refresh_token', data.refreshToken);
-                    // Note: setUser will handle storing the user object in localStorage
-
-                    // Clear MFA session
-                    sessionStorage.removeItem('mfa_pre_auth_token');
-                    sessionStorage.removeItem('mfa_email');
-                    sessionStorage.removeItem('mfa_login_response');
-                }
-
-                // Update Zustand store - this will also store user in localStorage
-                setUser(user);
-                setLoading(false);
-
-                toast.success('Authentication successful! Welcome back.');
-
-                // Small delay to ensure state is fully updated before navigation
-                setTimeout(() => {
-                    router.push('/dashboard');
-                }, 100);
-            } else {
-                setLoading(false);
-                toast.error('Invalid refresh token. Please try again.');
-            }
+            await verifyMfa(data.code);
+            toast.success('Authentication successful! Welcome back.');
+            router.push('/dashboard');
         } catch (error: any) {
             setLoading(false);
             const msg = error?.message || 'Authentication failed';
@@ -134,7 +84,7 @@ export default function MfaPage() {
                     <div>
                         <CardTitle className="text-2xl text-primary font-bold">Multi-Factor Authentication</CardTitle>
                         <CardDescription>
-                            Enter the refresh token sent to <span className="font-medium">{email}</span>
+                            Enter the 6-digit verification code sent to <span className="font-medium">{email}</span>
                         </CardDescription>
                     </div>
                 </CardHeader>
@@ -142,22 +92,23 @@ export default function MfaPage() {
                 <form onSubmit={handleSubmit(onSubmit)}>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="refreshToken">Refresh Token</Label>
+                            <Label htmlFor="code">Verification Code</Label>
                             <Input
-                                id="refreshToken"
+                                id="code"
                                 type="text"
-                                placeholder="Enter refresh token "
-                                {...register('refreshToken')}
-                                className={errors.refreshToken ? 'border-destructive' : ''}
+                                placeholder="Enter 6-digit code"
+                                {...register('code')}
+                                className={errors.code ? 'border-destructive' : ''}
+                                maxLength={6}
                                 autoFocus
                             />
-                            {errors.refreshToken && (
-                                <p className="text-sm text-destructive">{errors.refreshToken.message}</p>
+                            {errors.code && (
+                                <p className="text-sm text-destructive">{errors.code.message}</p>
                             )}
                         </div>
 
                         <div className="text-sm text-muted-foreground">
-                            <p>Enter Verification token</p>
+                            <p>Check your email for the verification code.</p>
                         </div>
                     </CardContent>
 
