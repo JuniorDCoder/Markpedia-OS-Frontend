@@ -16,6 +16,7 @@ export const PHASE_ROUTES: Record<Phase, string[]> = {
         // Auth Pages
         '/',
         '/auth/login',
+        '/auth/mfa',
 
         // Main
         '/dashboard',

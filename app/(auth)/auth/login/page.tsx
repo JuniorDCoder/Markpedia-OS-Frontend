@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect, useState} from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
@@ -45,8 +45,10 @@ export default function LoginPage() {
     const onSubmit = async (data: LoginForm) => {
         try {
             await login(data.email, data.password);
-            toast.success('Welcome back! Logged in successfully.');
-            router.push('/dashboard');
+
+            // Always redirect to MFA page after successful login
+            toast.success('Login successful! Please verify with MFA code.');
+            router.push('/auth/mfa');
         } catch (error: any) {
             const msg = error?.data?.detail?.[0]?.msg || error?.data?.detail || error?.message || 'Login failed';
             toast.error(Array.isArray(msg) ? msg.join(', ') : String(msg));

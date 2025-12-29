@@ -10,8 +10,37 @@ export type ValidationError = {
 };
 
 export type LoginResponse = {
+  access_token?: string;
+  token_type?: 'bearer' | string;
+  user: {
+    email: string;
+    first_name: string;
+    last_name: string;
+    role: string;
+    department?: string;
+    position?: string;
+    avatar?: string;
+    permissions?: string[];
+    id: string;
+    is_active: boolean;
+    created_at: string;
+    last_login?: string;
+  };
+  pre_auth_token?: string;
+  mfa_required?: boolean;
+  refresh_token?: string;
+};
+
+export type MfaVerifyRequest = {
+  email: string;
+  code: string;
+  pre_auth_token: string;
+};
+
+export type MfaVerifyResponse = {
   access_token: string;
   token_type: 'bearer' | string;
+  refresh_token: string;
   user: {
     email: string;
     first_name: string;
@@ -114,3 +143,11 @@ export async function loginApi(email: string, password: string) {
     body: JSON.stringify({ email, password }),
   });
 }
+
+export async function verifyMfaApi(request: MfaVerifyRequest) {
+  return apiRequest<MfaVerifyResponse>('/auth/verify-mfa', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+}
+

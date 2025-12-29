@@ -1,16 +1,19 @@
 import { create } from 'zustand';
 import { AuthState, User } from '@/types';
-import { loginApi } from '@/lib/api/client';
+import { loginApi, verifyMfaApi, MfaVerifyRequest } from '@/lib/api/client';
 
 interface AuthStore extends AuthState {
-    login: (email: string, password: string) => Promise<void>;
+    login: (email: string, password: string) => Promise<{ mfaRequired: boolean }>;
+    verifyMfa: (code: string) => Promise<void>;
     logout: () => void;
     setUser: (user: User) => void;
     setLoading: (loading: boolean) => void;
     hasPermission: (permission: string) => boolean;
+    getMfaSession: () => { email: string; preAuthToken: string } | null;
+    clearMfaSession: () => void;
     isAuthenticated: boolean;
     isLoading: boolean;
-    isInitialized: boolean; // Add this flag
+    isInitialized: boolean;
 }
 
 function mapBackendUser(u: any): User {
@@ -35,6 +38,11 @@ const STORAGE_KEYS = {
     user: 'auth_user',
 };
 
+const MFA_SESSION_KEYS = {
+    preAuthToken: 'mfa_pre_auth_token',
+    email: 'mfa_email',
+};
+
 export const useAuthStore = create<AuthStore>((set, get) => {
     // Initialize with default values
     const initialState = {
@@ -57,12 +65,50 @@ export const useAuthStore = create<AuthStore>((set, get) => {
             set({ isLoading: true });
             try {
                 const res = await loginApi(email, password);
+
+                // Always require MFA verification - store session data
+                // Use pre_auth_token if available, otherwise use access_token temporarily
+                const preAuthToken = res.pre_auth_token || res.access_token || '';
+
+                if (typeof window !== 'undefined') {
+                    sessionStorage.setItem(MFA_SESSION_KEYS.preAuthToken, preAuthToken);
+                    sessionStorage.setItem(MFA_SESSION_KEYS.email, email);
+                    // Store the full response for MFA page to use
+                    sessionStorage.setItem('mfa_login_response', JSON.stringify(res));
+                }
+
+                set({ isLoading: false });
+                return { mfaRequired: true };
+            } catch (error) {
+                set({ isLoading: false });
+                throw error;
+            }
+        },
+
+        verifyMfa: async (code: string) => {
+            set({ isLoading: true });
+            try {
+                const mfaSession = get().getMfaSession();
+                if (!mfaSession) {
+                    throw new Error('No MFA session found. Please login again.');
+                }
+
+                const request: MfaVerifyRequest = {
+                    email: mfaSession.email,
+                    code,
+                    pre_auth_token: mfaSession.preAuthToken,
+                };
+
+                const res = await verifyMfaApi(request);
                 const user = mapBackendUser(res.user);
-                // persist
+
+                // Clear MFA session and persist auth data
+                get().clearMfaSession();
                 if (typeof window !== 'undefined') {
                     localStorage.setItem(STORAGE_KEYS.token, res.access_token);
                     localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(res.user));
                 }
+
                 set({ user, isAuthenticated: true, isLoading: false, isInitialized: true });
             } catch (error) {
                 set({ isLoading: false });
@@ -75,6 +121,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
                 localStorage.removeItem(STORAGE_KEYS.token);
                 localStorage.removeItem(STORAGE_KEYS.user);
             }
+            get().clearMfaSession();
             set({ user: null, isAuthenticated: false, isInitialized: true });
         },
 
@@ -82,6 +129,27 @@ export const useAuthStore = create<AuthStore>((set, get) => {
             set({ user, isAuthenticated: true, isInitialized: true });
             if (typeof window !== 'undefined') {
                 localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(user));
+            }
+        },
+
+        getMfaSession: () => {
+            if (typeof window === 'undefined') return null;
+            try {
+                const preAuthToken = sessionStorage.getItem(MFA_SESSION_KEYS.preAuthToken);
+                const email = sessionStorage.getItem(MFA_SESSION_KEYS.email);
+                if (preAuthToken && email) {
+                    return { preAuthToken, email };
+                }
+            } catch {
+                // ignore errors
+            }
+            return null;
+        },
+
+        clearMfaSession: () => {
+            if (typeof window !== 'undefined') {
+                sessionStorage.removeItem(MFA_SESSION_KEYS.preAuthToken);
+                sessionStorage.removeItem(MFA_SESSION_KEYS.email);
             }
         },
 
