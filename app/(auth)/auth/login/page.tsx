@@ -46,6 +46,7 @@ export default function LoginPage() {
         try {
             await login(data.email, data.password);
 
+
             // Always redirect to MFA page after successful login
             toast.success('Login successful! Please verify with MFA code.');
             router.push('/auth/mfa');
