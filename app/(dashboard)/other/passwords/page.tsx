@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { PasswordEntry, passwordApi } from '@/lib/api/passwords';
+import { PasswordEntry } from '@/lib/api/passwords';
 import { PasswordList } from '@/components/sections/passwords/PasswordList';
 import { PasswordForm } from '@/components/sections/passwords/PasswordForm';
 import { Button } from '@/components/ui/button';
@@ -29,8 +29,18 @@ import { ChangeMasterPasswordDialog } from '@/components/sections/passwords/Chan
 import { usePasswordStore } from '@/lib/stores/password-store';
 
 export default function PasswordsPage() {
-    const [passwords, setPasswords] = useState<PasswordEntry[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    // State is now managed by the store
+    const {
+        isLocked,
+        checkInactivity,
+        updateActivity,
+        lock,
+        decryptedPasswords,
+        addPassword,
+        updatePassword,
+        deletePassword
+    } = usePasswordStore();
+
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [editingPassword, setEditingPassword] = useState<PasswordEntry | undefined>(undefined);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,8 +50,6 @@ export default function PasswordsPage() {
     const [passwordToDelete, setPasswordToDelete] = useState<PasswordEntry | null>(null);
     const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
-
-    const { isLocked, checkInactivity, updateActivity, lock } = usePasswordStore();
 
     // Inactivity check effect
     useEffect(() => {
@@ -62,23 +70,6 @@ export default function PasswordsPage() {
             lock(); // Lock on exit
         };
     }, []);
-
-    const fetchPasswords = async () => {
-        try {
-            const data = await passwordApi.getAll();
-            setPasswords(data);
-        } catch (error) {
-            toast.error('Failed to load passwords.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        if (!isLocked) {
-            fetchPasswords();
-        }
-    }, [isLocked]);
 
     const handleCreate = () => {
         setEditingPassword(undefined);
@@ -107,8 +98,7 @@ export default function PasswordsPage() {
 
         try {
             setIsDeleting(true);
-            await passwordApi.delete(passwordToDelete.id);
-            setPasswords(passwords.filter(p => p.id !== passwordToDelete.id));
+            await deletePassword(passwordToDelete.id);
             toast.success('Password deleted successfully.');
             setDeleteDialogOpen(false);
             setPasswordToDelete(null);
@@ -123,12 +113,10 @@ export default function PasswordsPage() {
         setIsSubmitting(true);
         try {
             if (editingPassword) {
-                const updated = await passwordApi.update(editingPassword.id, data);
-                setPasswords(passwords.map(p => (p.id === updated.id ? updated : p)));
+                await updatePassword(editingPassword.id, data);
                 toast.success('Password updated successfully.');
             } else {
-                const created = await passwordApi.create(data);
-                setPasswords([created, ...passwords]);
+                await addPassword(data);
                 toast.success('Password created successfully.');
             }
             setIsSheetOpen(false);
@@ -206,17 +194,11 @@ export default function PasswordsPage() {
                 </div>
             </div>
 
-            {isLoading ? (
-                <div className="flex h-[200px] w-full items-center justify-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-            ) : (
-                <PasswordList
-                    passwords={passwords}
-                    onEdit={handleEdit}
-                    onDelete={handleDeleteClick}
-                />
-            )}
+            <PasswordList
+                passwords={decryptedPasswords}
+                onEdit={handleEdit}
+                onDelete={handleDeleteClick}
+            />
 
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                 <SheetContent className="sm:max-w-[540px]">
@@ -241,3 +223,4 @@ export default function PasswordsPage() {
         </div>
     );
 }
+

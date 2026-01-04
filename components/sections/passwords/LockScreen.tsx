@@ -9,7 +9,7 @@ import { Lock, Unlock, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export function LockScreen() {
-    const { hasMasterPassword, unlock, setMasterPassword } = usePasswordStore();
+    const { hasVault, unlock, setMasterPassword } = usePasswordStore();
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
@@ -20,16 +20,19 @@ export function LockScreen() {
         setError('');
         setIsLoading(true);
 
-        // Simulate a small delay for better UX (prevent brute force feeling)
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        if (unlock(password)) {
-            toast.success('Vault unlocked');
-        } else {
-            setError('Incorrect master password');
-            toast.error('Incorrect password');
+        try {
+            const success = await unlock(password);
+            if (success) {
+                toast.success('Vault unlocked');
+            } else {
+                setError('Incorrect password or corrupted data');
+                toast.error('Failed to unlock vault');
+            }
+        } catch (e) {
+            setError('An error occurred');
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
     };
 
     const handleSetup = async (e: React.FormEvent) => {
@@ -47,14 +50,18 @@ export function LockScreen() {
         }
 
         setIsLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 800)); // Simulate hashing delay
-
-        setMasterPassword(password);
-        toast.success('Master password set successfully');
-        setIsLoading(false);
+        try {
+            await setMasterPassword(password);
+            toast.success('Master password set successfully');
+        } catch (e) {
+            toast.error('Failed to create encrypted vault');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    if (!hasMasterPassword) {
+    // If no vault exists, show setup screen
+    if (!hasVault) {
         return (
             <div className="flex items-center justify-center min-h-[600px]">
                 <Card className="w-full max-w-md">
@@ -133,3 +140,4 @@ export function LockScreen() {
         </div>
     );
 }
+

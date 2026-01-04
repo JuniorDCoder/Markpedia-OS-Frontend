@@ -1,5 +1,8 @@
-import { v4 as uuidv4 } from 'uuid';
+// lib/api/passwords.ts
+import { EncryptedData } from '@/lib/crypto';
 
+// 1. The UI Model (What the app sees after decryption)
+// This remains mostly the same to avoid breaking UI components
 export interface PasswordEntry {
     id: string;
     title: string;
@@ -13,119 +16,58 @@ export interface PasswordEntry {
     isFavorite?: boolean;
 }
 
-// Initial mock data
-const mockPasswords: PasswordEntry[] = [
-    {
-        id: '1',
-        title: 'Google (Personal)',
-        username: 'barthez@gmail.com',
-        website: 'https://google.com',
-        category: 'personal',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        isFavorite: true,
-    },
-    {
-        id: '2',
-        title: 'Corporate Email',
-        username: 'barthez@markpedia.com',
-        website: 'https://mail.markpedia.com',
-        category: 'work',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        isFavorite: true,
-    },
-    {
-        id: '3',
-        title: 'Banking Portal',
-        username: 'user123456',
-        website: 'https://bank.com',
-        category: 'finance',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        isFavorite: false,
-    },
-];
+// 2. The Storage Model (What is saved in localStorage)
+export interface EncryptedPayload {
+    username?: string;
+    password?: string;
+    website?: string;
+    notes?: string;
+}
 
-// Helper to simulate network delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+export interface VaultItem {
+    id: string;
+    // Plaintext Metadata
+    title: string;
+    category?: 'personal' | 'work' | 'finance' | 'social' | 'other';
+    isFavorite?: boolean;
+    createdAt: string;
+    updatedAt: string;
+    // Encrypted Content
+    encryptedData: EncryptedData;
+}
+
+export interface VaultStorage {
+    validator: EncryptedData; // Canary to verify master password
+    items: VaultItem[];
+}
 
 class PasswordService {
-    private storageKey = 'markpedia_passwords_mock';
-    private memoryStore: PasswordEntry[] = [];
+    private storageKey = 'markpedia_passwords_vault_v2'; // Changed key for v2 migration
 
-    constructor() {
-        if (typeof window !== 'undefined') {
-            this.loadFromStorage();
-        } else {
-            this.memoryStore = [...mockPasswords];
-        }
-    }
-
-    private loadFromStorage() {
+    loadVault(): VaultStorage | null {
+        if (typeof window === 'undefined') return null;
         try {
             const stored = localStorage.getItem(this.storageKey);
             if (stored) {
-                this.memoryStore = JSON.parse(stored);
-            } else {
-                this.memoryStore = [...mockPasswords];
-                this.saveToStorage();
+                return JSON.parse(stored) as VaultStorage;
             }
         } catch (e) {
-            console.error('Failed to load passwords from local storage', e);
-            this.memoryStore = [...mockPasswords];
+            console.error('Failed to load vault', e);
         }
+        return null;
     }
 
-    private saveToStorage() {
+    saveVault(data: VaultStorage): void {
         if (typeof window !== 'undefined') {
-            localStorage.setItem(this.storageKey, JSON.stringify(this.memoryStore));
+            localStorage.setItem(this.storageKey, JSON.stringify(data));
         }
     }
 
-    async getAll(): Promise<PasswordEntry[]> {
-        await delay(300); // Simulate network latency
-        return [...this.memoryStore];
-    }
-
-    async getById(id: string): Promise<PasswordEntry | undefined> {
-        await delay(200);
-        return this.memoryStore.find(p => p.id === id);
-    }
-
-    async create(data: Omit<PasswordEntry, 'id' | 'createdAt' | 'updatedAt'>): Promise<PasswordEntry> {
-        await delay(400);
-        const newEntry: PasswordEntry = {
-            ...data,
-            id: uuidv4(),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-        };
-        this.memoryStore = [newEntry, ...this.memoryStore];
-        this.saveToStorage();
-        return newEntry;
-    }
-
-    async update(id: string, data: Partial<PasswordEntry>): Promise<PasswordEntry> {
-        await delay(400);
-        const index = this.memoryStore.findIndex(p => p.id === id);
-        if (index === -1) throw new Error('Password not found');
-
-        const updatedEntry = {
-            ...this.memoryStore[index],
-            ...data,
-            updatedAt: new Date().toISOString(),
-        };
-
-        this.memoryStore[index] = updatedEntry;
-        this.saveToStorage();
-        return updatedEntry;
-    }
-
-    async delete(id: string): Promise<void> {
-        await delay(300);
-        this.memoryStore = this.memoryStore.filter(p => p.id !== id);
-        this.saveToStorage();
+    // Clear old v1 vault if exists
+    clearLegacyVault() {
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('markpedia_passwords_vault');
+        }
     }
 }
 
