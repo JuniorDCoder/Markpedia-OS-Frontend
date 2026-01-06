@@ -45,7 +45,7 @@ export const employeeApi = {
             const e = await apiRequest<any>(`/admin/employees/${id}`);
             return {
                 id: e.id,
-                name: `${e.first_name || ''} ${e.last_name || ''}`.trim(),
+                name: e.name || `${e.first_name || ''} ${e.last_name || ''}`.trim(),
                 email: e.email,
                 title: e.position || 'Employee',
                 role: e.role,

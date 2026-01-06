@@ -259,6 +259,20 @@ export default function EmployeesClient({ initialEmployees }: EmployeesClientPro
                                                                 Edit Employee
                                                             </Link>
                                                         </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem asChild>
+                                                            <Link href={`/people/onboarding/${employee.id}`}>
+                                                                <User className="h-4 w-4 mr-2" />
+                                                                Onboard
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem asChild>
+                                                            <Link href={`/people/offboarding/${employee.id}`}>
+                                                                <User className="h-4 w-4 mr-2" />
+                                                                Offboard
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
                                                         <DropdownMenuItem asChild>
                                                             <Link href={`mailto:${employee.email}`}>
                                                                 <Mail className="h-4 w-4 mr-2" />

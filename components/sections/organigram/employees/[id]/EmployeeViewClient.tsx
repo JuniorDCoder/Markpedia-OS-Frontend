@@ -200,6 +200,12 @@ export default function EmployeeViewClient({ employee, user }: EmployeeViewClien
                             </Button>
 
                             <Button variant="outline" className="w-full justify-start" asChild>
+                                <Link href={`/people/onboarding/${employee.id}`}>
+                                    View Onboarding
+                                </Link>
+                            </Button>
+
+                            <Button variant="outline" className="w-full justify-start" asChild>
                                 <Link href={`mailto:${employee.email}`}>
                                     Send Email
                                 </Link>
@@ -236,8 +242,8 @@ export default function EmployeeViewClient({ employee, user }: EmployeeViewClien
                             <div className="flex justify-between">
                                 <span className="text-muted-foreground">Profile Status:</span>
                                 <span className={employee.isActive ? 'text-green-600' : 'text-gray-600'}>
-                  {employee.isActive ? 'Complete' : 'Incomplete'}
-                </span>
+                                    {employee.isActive ? 'Complete' : 'Incomplete'}
+                                </span>
                             </div>
                         </CardContent>
                     </Card>
