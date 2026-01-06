@@ -12,22 +12,27 @@ type EmployeeCreationData = Partial<Employee> & { password?: string };
 export const employeeApi = {
     async getAll(): Promise<Employee[]> {
         try {
-            const employees = await apiRequest<any[]>('/admin/employees/');
-            return employees.map(e => ({
+            const response = await apiRequest<any>('/admin/employees/');
+
+            // Handle specific key 'employees' based on debug output, or generic items/data
+            const employeesList = Array.isArray(response) ? response : (response.employees || response.items || response.data || []);
+
+            return employeesList.map((e: any) => ({
                 id: e.id,
-                name: `${e.first_name || ''} ${e.last_name || ''}`.trim(),
+                name: e.name || `${e.first_name || ''} ${e.last_name || ''}`.trim(),
                 email: e.email,
-                title: e.position || 'Employee',
+                title: e.title || e.position || 'Employee',
                 role: e.role,
-                department: e.department || 'Unassigned',
+                department: e.department || e.department_name || 'Unassigned',
                 avatar: e.avatar,
-                startDate: e.joining_date || e.created_at,
-                isActive: e.is_active,
-                status: e.is_active ? 'ACTIVE' : 'INACTIVE',
-                // Map extended fields if they exist in list view, otherwise defaults
-                entityId: e.entity_id || '',
-                reportsTo: e.report_to || '',
-                employmentType: e.employment_type || 'Full-time'
+                startDate: e.startDate || e.joining_date || e.created_at,
+                // Handle different boolean flag names
+                isActive: e.is_active !== undefined ? e.is_active : (e.isActive !== undefined ? e.isActive : true),
+                status: (e.status || (e.is_active ? 'ACTIVE' : 'INACTIVE')).toUpperCase(),
+                // Map extended fields
+                entityId: e.entityId || e.entity_id || '',
+                reportsTo: e.reportsTo || e.report_to || '',
+                employmentType: e.employmentType || e.employment_type || 'Full-time'
             }));
         } catch (error) {
             console.error('Failed to fetch from admin API', error);
@@ -154,10 +159,12 @@ export const employeeApi = {
         // Prepare payload - only send what's changed/allowed
         const payload: Record<string, any> = {
             // Map Employee fields to backend fields
-            first_name: data.name?.split(' ')[0],
+            name: data.name, // Use direct name field as per backend response
+            first_name: data.name?.split(' ')[0], // Keep for backward compatibility if needed
             last_name: data.name?.split(' ').slice(1).join(' '),
             email: data.email,
-            position: data.title,
+            title: data.title, // Use direct title field
+            position: data.title, // Keep for backward compatibility
             department: data.department,
             role: data.role,
             is_active: data.isActive,
@@ -183,7 +190,7 @@ export const employeeApi = {
             marital_status: data.maritalStatus,
             language: data.language,
             business_address: data.businessAddress,
-            report_to: data.reportsTo, // Note: backend often expects specific keys, check schema if available or assume standard convention
+            report_to: data.reportsTo,
             entity_id: data.entityId
         };
 
@@ -196,19 +203,21 @@ export const employeeApi = {
         });
 
         // Map response back to Employee
-        // Assuming response is similar to User structure for now, or we reuse mapping if close enough
         return {
             id: res.id,
-            name: `${res.first_name || ''} ${res.last_name || ''}`.trim(),
+            name: res.name || `${res.first_name || ''} ${res.last_name || ''}`.trim(),
             email: res.email,
-            title: res.position || '',
+            title: res.title || res.position || '',
             role: res.role,
-            department: res.department,
+            department: res.department || res.department_name || '',
             avatar: res.avatar,
-            startDate: res.created_at || new Date().toISOString(),
-            isActive: res.is_active,
-            status: res.is_active ? 'ACTIVE' : 'INACTIVE',
-            // ... map other fields if they come back
+            startDate: res.startDate || res.joining_date || res.created_at || new Date().toISOString(),
+            isActive: res.is_active !== undefined ? res.is_active : (res.isActive !== undefined ? res.isActive : true),
+            status: (res.status || (res.is_active ? 'ACTIVE' : 'INACTIVE')).toUpperCase(),
+            // Map extended fields
+            entityId: res.entityId || res.entity_id || '',
+            reportsTo: res.reportsTo || res.report_to || '',
+            employmentType: res.employmentType || res.employment_type || 'Full-time'
         } as Employee;
     }
 };
