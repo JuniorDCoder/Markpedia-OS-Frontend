@@ -79,19 +79,25 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                     return;
                 }
 
+                // Helper to format date for input (yyyy-MM-dd)
+                const formatDate = (dateString?: string) => {
+                    if (!dateString) return '';
+                    return dateString.split('T')[0];
+                };
+
                 // Map Employee (public) response to form data
                 setFormData({
                     employeeId: emp.id,
                     salutation: emp.salutation || '',
                     name: emp.name,
                     email: emp.email,
-                    dateOfBirth: emp.dateOfBirth || '',
+                    dateOfBirth: formatDate(emp.dateOfBirth),
                     designation: emp.title || '',
                     department: emp.department || '',
                     country: emp.country || '',
                     mobile: emp.mobile || '',
                     gender: emp.gender || '',
-                    joiningDate: emp.joiningDate || emp.startDate || '',
+                    joiningDate: formatDate(emp.joiningDate || emp.startDate),
                     reportsTo: emp.reportsTo || '',
                     language: emp.language || 'English',
                     role: (emp.role as any) || 'Employee',
@@ -105,9 +111,9 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                     slackMemberId: emp.slackMemberId || '',
                     skills: typeof emp.skills === 'string' ? emp.skills : (Array.isArray(emp.skills) ? emp.skills.join(', ') : ''),
 
-                    probationEndDate: emp.probationEndDate || '',
-                    noticePeriodStartDate: emp.noticePeriodStartDate || '',
-                    noticePeriodEndDate: emp.noticePeriodEndDate || '',
+                    probationEndDate: formatDate(emp.probationEndDate),
+                    noticePeriodStartDate: formatDate(emp.noticePeriodStartDate),
+                    noticePeriodEndDate: formatDate(emp.noticePeriodEndDate),
                     employmentType: emp.employmentType || 'Full-time',
                     maritalStatus: emp.maritalStatus || 'Single',
                     businessAddress: emp.businessAddress || '',
@@ -142,18 +148,14 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
         }
 
         try {
-            const { adminApi } = await import('@/lib/api/admin');
+            const { employeeApi } = await import('@/lib/api/employees');
 
-            const [firstName, ...lastNameParts] = formData.name.split(' ');
-            const lastName = lastNameParts.join(' ');
-
-            await adminApi.updateUser(employeeId, {
+            await employeeApi.update(employeeId, {
                 email: formData.email,
-                firstName: firstName,
-                lastName: lastName,
+                name: formData.name, // Pass full name, let API handle split
                 role: formData.role,
                 department: formData.department,
-                title: formData.designation, // Maps to position in adminApi
+                title: formData.designation,
                 isActive: formData.loginAllowed,
 
                 salutation: formData.salutation,
@@ -161,7 +163,7 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                 mobile: formData.mobile,
                 country: formData.country,
                 gender: formData.gender,
-                joiningDate: formData.joiningDate,
+                startDate: formData.joiningDate, // key mismatch fix: joiningDate -> startDate
                 language: formData.language,
 
                 address: formData.address,
@@ -172,7 +174,7 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                 emailNotifications: formData.emailNotifications,
                 hourlyRate: formData.hourlyRate ? Number(formData.hourlyRate) : undefined,
                 slackMemberId: formData.slackMemberId,
-                skills: formData.skills ? formData.skills.split(',').map(s => s.trim()) : [],
+                skills: formData.skills ? formData.skills.split(',').map((s: string) => s.trim()) : [],
 
                 probationEndDate: formData.probationEndDate,
                 noticePeriodStartDate: formData.noticePeriodStartDate,
@@ -181,7 +183,7 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                 maritalStatus: formData.maritalStatus,
 
                 entityId: formData.entityId,
-            } as any);
+            });
 
             toast.success('Employee updated successfully');
             router.push('/people/employees');

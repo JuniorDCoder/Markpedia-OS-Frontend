@@ -41,12 +41,24 @@ export const usePasswordStore = create<PasswordStore>((set, get) => ({
         const validator = await encryptVault(VALIDATOR_STRING, password);
 
         // 2. Initialize Empty Vault
-        const newVault: VaultStorage = {
-            validator,
-            items: []
-        };
+        // 2. Save to Backend
+        // 2. Save to Backend
+        const validatorJson = JSON.stringify(validator);
 
-        passwordApi.saveVault(newVault);
+        await apiRequest('/vault/setup', {
+            method: 'POST',
+            body: JSON.stringify({
+                validator: validatorJson,
+                kdf_salt: validator.salt
+            })
+        });
+
+        await apiRequest('/vault/salt', {
+            method: 'POST',
+            body: JSON.stringify({ validator: validatorJson })
+        });
+
+        // passwordApi.saveVault(newVault); // REMOVE: No longer using local vault
         passwordApi.clearLegacyVault(); // Cleanup old version
 
         memoryMasterPassword = password;
@@ -163,18 +175,13 @@ export const usePasswordStore = create<PasswordStore>((set, get) => ({
         const newItem = await passwordApi.createVaultItem({
             title: data.title,
             category: data.category,
-            isFavorite: data.isFavorite,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            encryptedData
-        };
-
-        // 4. Update Storage
-        const newVaultItems = [newItem, ...vault.items];
-        passwordApi.saveVault({
-            ...vault,
-            items: newVaultItems
+            is_favorite: !!data.isFavorite,
+            encrypted_data: encryptedJson
         });
+
+        // 4. Update Storage (Local state update only, backend handled above)
+        // const newVaultItems = [newItem, ...vault.items]; // REMOVE: invalid vault reference
+        // passwordApi.saveVault({ ... }); // REMOVE
 
         // 3. Update State
         const { decryptedPasswords } = get();
@@ -208,32 +215,23 @@ export const usePasswordStore = create<PasswordStore>((set, get) => ({
             notes: updatedEntry.notes
         };
         const encryptedData = await encryptVault(JSON.stringify(payload), memoryMasterPassword);
+        const encryptedJson = JSON.stringify(encryptedData);
 
-        // 3. Update Vault Item
-        const updatedVaultItems = vault.items.map(item => {
-            if (item.id === id) {
-                return {
-                    id: item.id,
-                    title: updatedEntry.title,
-                    category: updatedEntry.category,
-                    isFavorite: updatedEntry.isFavorite,
-                    createdAt: item.createdAt,
-                    updatedAt: updatedEntry.updatedAt,
-                    encryptedData
-                };
-            }
-            return item;
+        // 2. Update in Backend
+        const updatedItem = await passwordApi.updateVaultItem(id, {
+            title: updatedEntry.title,
+            category: updatedEntry.category,
+            is_favorite: !!updatedEntry.isFavorite,
+            encrypted_data: encryptedJson
         });
 
-        // 4. Update Storage
-        passwordApi.saveVault({
-            ...vault,
-            items: updatedVaultItems
-        });
+        // 4. Update Storage (Local state update only)
+        // passwordApi.saveVault({ ... }); // REMOVE
 
         // 3. Update State
         const newDecryptedList = [...decryptedPasswords];
         newDecryptedList[currentIndex] = {
+            ...updatedEntry,
             ...updatedEntry,
             updatedAt: updatedItem.updated_at
         };

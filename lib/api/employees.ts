@@ -4,215 +4,78 @@ import { adminApi, mapBackendUser } from './admin';
 
 
 
-// Mock employee data for organigram
-const mockEmployees: Employee[] = [
-    // Global Level
-    {
-        id: '1',
-        name: 'Ngu Divine',
-        email: 'ceo@markpedia.com',
-        title: 'Founder & CEO',
-        role: 'CEO',
-        department: 'Executive',
-        avatar: '/avatars/ngu.jpg',
-        startDate: '2023-01-15',
-        isActive: true,
-        entityId: 'global-1'
-    },
-    {
-        id: '2',
-        name: 'Global COO',
-        email: 'coo@markpedia.com',
-        title: 'Chief Operations Officer',
-        role: 'CXO',
-        department: 'Operations',
-        avatar: '/avatars/coo.jpg',
-        startDate: '2023-01-20',
-        reportsTo: '1',
-        isActive: true,
-        entityId: 'global-1'
-    },
-    {
-        id: '3',
-        name: 'Global CTO',
-        email: 'cto@markpedia.com',
-        title: 'Chief Technology Officer',
-        role: 'CXO',
-        department: 'Technology',
-        avatar: '/avatars/cto.jpg',
-        startDate: '2023-01-20',
-        reportsTo: '1',
-        isActive: true,
-        entityId: 'global-1'
-    },
-    {
-        id: '4',
-        name: 'Global CFO',
-        email: 'cfo@markpedia.com',
-        title: 'Chief Finance Officer',
-        role: 'CXO',
-        department: 'Finance',
-        avatar: '/avatars/cfo.jpg',
-        startDate: '2023-01-20',
-        reportsTo: '1',
-        isActive: true,
-        entityId: 'global-1'
-    },
-
-    // Regional Level - Africa
-    {
-        id: '5',
-        name: 'Africa Regional Director',
-        email: 'africa.director@markpedia.com',
-        title: 'Regional Director - Africa',
-        role: 'Manager',
-        department: 'Regional Management',
-        avatar: '/avatars/africa-director.jpg',
-        startDate: '2023-02-15',
-        reportsTo: '2',
-        isActive: true,
-        entityId: 'region-1'
-    },
-    {
-        id: '6',
-        name: 'Regional Operations Manager',
-        email: 'africa.ops@markpedia.com',
-        title: 'Regional Operations Manager',
-        role: 'Manager',
-        department: 'Operations',
-        avatar: '/avatars/ops-manager.jpg',
-        startDate: '2023-02-20',
-        reportsTo: '5',
-        isActive: true,
-        entityId: 'region-1'
-    },
-    {
-        id: '7',
-        name: 'Regional Tech Lead',
-        email: 'africa.tech@markpedia.com',
-        title: 'Regional Technology Lead',
-        role: 'Manager',
-        department: 'Technology',
-        avatar: '/avatars/tech-lead.jpg',
-        startDate: '2023-02-20',
-        reportsTo: '5',
-        isActive: true,
-        entityId: 'region-1'
-    },
-
-    // Country Level - Cameroon
-    {
-        id: '8',
-        name: 'Cameroon Country Director',
-        email: 'cameroon.director@markpedia.com',
-        title: 'Country Director - Cameroon',
-        role: 'Manager',
-        department: 'Country Management',
-        avatar: '/avatars/cameroon-director.jpg',
-        startDate: '2023-03-15',
-        reportsTo: '5',
-        isActive: true,
-        entityId: 'country-1'
-    },
-    {
-        id: '9',
-        name: 'Cameroon Tech Lead',
-        email: 'cameroon.tech@markpedia.com',
-        title: 'Tech Department Lead',
-        role: 'Manager',
-        department: 'Technology',
-        avatar: '/avatars/cameroon-tech.jpg',
-        startDate: '2023-03-20',
-        reportsTo: '8',
-        isActive: true,
-        entityId: 'country-1'
-    },
-    {
-        id: '10',
-        name: 'Cameroon Logistics Manager',
-        email: 'cameroon.logistics@markpedia.com',
-        title: 'Logistics Manager',
-        role: 'Manager',
-        department: 'Logistics',
-        avatar: '/avatars/logistics-manager.jpg',
-        startDate: '2023-03-20',
-        reportsTo: '8',
-        isActive: true,
-        entityId: 'country-1'
-    }
-];
+// Mock data removed - replaced by backend API calls
 
 // Need to extend Employee to include optional password for creation
 type EmployeeCreationData = Partial<Employee> & { password?: string };
 
 export const employeeApi = {
     async getAll(): Promise<Employee[]> {
-        const { adminApi } = await import('@/lib/api/admin');
         try {
-            const users = await adminApi.getUsers();
-            return users.map(u => ({
-                id: u.id,
-                name: `${u.firstName} ${u.lastName}`.trim(),
-                email: u.email,
-                title: u.position || 'Employee',
-                role: (u.role as any),
-                reportsTo: '', // Not currently available in User type
-                department: u.department || 'Unassigned',
-                avatar: u.avatar,
-                startDate: u.createdAt,
-                isActive: u.isActive,
-                status: u.isActive ? 'ACTIVE' : 'INACTIVE',
-                entityId: '', // Not currently available in User type
+            const employees = await apiRequest<any[]>('/admin/employees/');
+            return employees.map(e => ({
+                id: e.id,
+                name: `${e.first_name || ''} ${e.last_name || ''}`.trim(),
+                email: e.email,
+                title: e.position || 'Employee',
+                role: e.role,
+                department: e.department || 'Unassigned',
+                avatar: e.avatar,
+                startDate: e.joining_date || e.created_at,
+                isActive: e.is_active,
+                status: e.is_active ? 'ACTIVE' : 'INACTIVE',
+                // Map extended fields if they exist in list view, otherwise defaults
+                entityId: e.entity_id || '',
+                reportsTo: e.report_to || '',
+                employmentType: e.employment_type || 'Full-time'
             }));
         } catch (error) {
-            console.warn('Failed to fetch from admin API, falling back to mock data', error);
-            return mockEmployees;
+            console.error('Failed to fetch from admin API', error);
+            return [];
         }
     },
 
     async getById(id: string): Promise<Employee | undefined> {
-        const { adminApi } = await import('@/lib/api/admin');
         try {
-            const u = await adminApi.getUser(id);
+            const e = await apiRequest<any>(`/admin/employees/${id}`);
             return {
-                id: u.id,
-                name: `${u.firstName} ${u.lastName}`.trim(),
-                email: u.email,
-                title: u.position || 'Employee',
-                role: (u.role as any),
-                reportsTo: '',
-                department: u.department || 'Unassigned',
-                avatar: u.avatar,
-                startDate: u.createdAt,
-                isActive: u.isActive,
-                status: u.isActive ? 'ACTIVE' : 'INACTIVE',
-                entityId: '',
+                id: e.id,
+                name: `${e.first_name || ''} ${e.last_name || ''}`.trim(),
+                email: e.email,
+                title: e.position || 'Employee',
+                role: e.role,
+                department: e.department || 'Unassigned',
+                avatar: e.avatar,
+                startDate: e.joining_date || e.created_at,
+                isActive: e.is_active,
+                status: e.is_active ? 'ACTIVE' : 'INACTIVE',
+                entityId: e.entity_id || '',
 
-                // Map other available fields if they exist in User type in the future
-                // For now, we use defaults or empty strings to satisfy Employee type
-                salutation: '',
-                dateOfBirth: '',
-                mobile: '',
-                gender: '',
-                country: '',
-                address: '',
-                about: '',
-                joiningDate: u.createdAt, // Fallback
-                loginAllowed: u.isActive,
-                emailNotifications: true,
-                hourlyRate: 0,
-                slackMemberId: '',
-                skills: [],
-                probationEndDate: '',
-                noticePeriodStartDate: '',
-                noticePeriodEndDate: '',
-                employmentType: 'Full-time',
-                maritalStatus: 'Single',
-                language: 'English',
-                businessAddress: ''
+                // Map extended fields
+                salutation: e.salutation || '',
+                dateOfBirth: e.date_of_birth || '',
+                mobile: e.mobile || '',
+                gender: e.gender || '',
+                country: e.country || '',
+                address: e.address || '',
+                about: e.about || '',
+                joiningDate: e.joining_date || e.created_at,
+                loginAllowed: e.login_allowed !== false, // Default to true if unavail?
+                emailNotifications: e.email_notifications !== false,
+                hourlyRate: e.hourly_rate || 0,
+                slackMemberId: e.slack_member_id || '',
+                skills: e.skills || [],
+                probationEndDate: e.probation_end_date || '',
+                noticePeriodStartDate: e.notice_period_start_date || '',
+                noticePeriodEndDate: e.notice_period_end_date || '',
+                employmentType: e.employment_type || 'Full-time',
+                maritalStatus: e.marital_status || 'Single',
+                language: e.language || 'English',
+                businessAddress: e.business_address || '',
+                reportsTo: e.report_to || ''
             } as Employee;
         } catch (error) {
-            console.warn(`Failed to fetch user ${id} from admin API`, error);
+            console.warn(`Failed to fetch employee ${id} from admin API`, error);
             return undefined;
         }
     },
@@ -328,7 +191,7 @@ export const employeeApi = {
         Object.keys(payload).forEach(key => payload[key] === undefined && delete payload[key]);
 
         const res = await apiRequest<any>(`/admin/employees/${id}`, {
-            method: 'PATCH', // Using PATCH for partial updates usually
+            method: 'PUT',
             body: JSON.stringify(payload)
         });
 
