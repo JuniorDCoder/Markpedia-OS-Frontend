@@ -29,6 +29,7 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
         salutation: '',
         name: '',
         email: '',
+        password: '', // Added password field
         dateOfBirth: '',
         designation: '',
         department: '',
@@ -71,36 +72,32 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
         setIsLoading(true);
 
         // Basic validation
-        if (!formData.name || !formData.email || !formData.department || !formData.joiningDate) {
+        if (!formData.name || !formData.email || !formData.password || !formData.department || !formData.joiningDate) {
             toast.error('Please fill in all required fields marked with *');
             setIsLoading(false);
             return;
         }
 
         try {
-            const { adminApi } = await import('@/lib/api/admin');
+            const { employeeApi } = await import('@/lib/api/employees');
 
-            // Split name
-            const [firstName, ...lastNameParts] = formData.name.split(' ');
-            const lastName = lastNameParts.join(' ');
 
-            await adminApi.createUser({
+            await employeeApi.create({
+                name: formData.name,
                 email: formData.email,
-                firstName: firstName,
-                lastName: lastName,
+                password: formData.password, // Pass password
                 role: formData.role,
                 department: formData.department,
-                position: formData.designation, // Mapping designation to position
-                isActive: formData.loginAllowed,
+                title: formData.designation, // Map designation to title
+                isActive: formData.loginAllowed, // Map loginAllowed to isActive
 
-                // Extended fields (passed to adminApi, which might ignore them if not mapped in payload, 
-                // but we updated types to include them, and admin.ts needs to include them in payload)
+                // Extended fields
                 salutation: formData.salutation,
                 dateOfBirth: formData.dateOfBirth,
                 mobile: formData.mobile,
                 country: formData.country,
                 gender: formData.gender,
-                joiningDate: formData.joiningDate,
+                startDate: formData.joiningDate, // Map joiningDate to startDate
                 language: formData.language,
 
                 address: formData.address,
@@ -111,7 +108,7 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
                 emailNotifications: formData.emailNotifications,
                 hourlyRate: formData.hourlyRate ? Number(formData.hourlyRate) : undefined,
                 slackMemberId: formData.slackMemberId,
-                skills: formData.skills ? formData.skills.split(',').map(s => s.trim()) : [],
+                skills: formData.skills ? formData.skills.split(',').map((s: string) => s.trim()) : [],
 
                 probationEndDate: formData.probationEndDate,
                 noticePeriodStartDate: formData.noticePeriodStartDate,
@@ -119,9 +116,8 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
                 employmentType: formData.employmentType,
                 maritalStatus: formData.maritalStatus,
 
-                // Entity mapping for legacy
                 entityId: formData.entityId || (entities.length > 0 ? entities[0].id : undefined)
-            } as any);
+            });
 
             toast.success('Employee created successfully');
             router.push('/people/employees');
@@ -189,6 +185,16 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
                                 placeholder="e.g. johndoe@example.com"
                                 value={formData.email}
                                 onChange={(e) => handleInputChange('email', e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                            <label className="text-sm font-medium">Password <span className="text-red-500">*</span></label>
+                            <Input
+                                type="password"
+                                placeholder="Enter initial password"
+                                value={formData.password}
+                                onChange={(e) => handleInputChange('password', e.target.value)}
                                 required
                             />
                         </div>

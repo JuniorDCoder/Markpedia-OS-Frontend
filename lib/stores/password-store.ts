@@ -37,14 +37,17 @@ export const usePasswordStore = create<PasswordStore>((set, get) => ({
 
     setMasterPassword: async (password: string) => {
         // 1. Create Validator (Canary)
-        const validatorData = await encryptVault(VALIDATOR_STRING, password);
-        const validatorJson = JSON.stringify(validatorData);
+        // We encrypt a known string. If we can decrypt it later, the password is correct.
+        const validator = await encryptVault(VALIDATOR_STRING, password);
 
-        // 2. Save to Backend
-        await apiRequest('/vault/salt', {
-            method: 'POST',
-            body: JSON.stringify({ validator: validatorJson })
-        });
+        // 2. Initialize Empty Vault
+        const newVault: VaultStorage = {
+            validator,
+            items: []
+        };
+
+        passwordApi.saveVault(newVault);
+        passwordApi.clearLegacyVault(); // Cleanup old version
 
         memoryMasterPassword = password;
 
@@ -159,9 +162,18 @@ export const usePasswordStore = create<PasswordStore>((set, get) => ({
         // 2. Create in Backend
         const newItem = await passwordApi.createVaultItem({
             title: data.title,
-            category: data.category || 'other',
-            is_favorite: !!data.isFavorite,
-            encrypted_data: encryptedJson
+            category: data.category,
+            isFavorite: data.isFavorite,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            encryptedData
+        };
+
+        // 4. Update Storage
+        const newVaultItems = [newItem, ...vault.items];
+        passwordApi.saveVault({
+            ...vault,
+            items: newVaultItems
         });
 
         // 3. Update State
@@ -196,14 +208,27 @@ export const usePasswordStore = create<PasswordStore>((set, get) => ({
             notes: updatedEntry.notes
         };
         const encryptedData = await encryptVault(JSON.stringify(payload), memoryMasterPassword);
-        const encryptedJson = JSON.stringify(encryptedData);
 
-        // 2. Update in Backend
-        const updatedItem = await passwordApi.updateVaultItem(id, {
-            title: updatedEntry.title,
-            category: updatedEntry.category,
-            is_favorite: !!updatedEntry.isFavorite,
-            encrypted_data: encryptedJson
+        // 3. Update Vault Item
+        const updatedVaultItems = vault.items.map(item => {
+            if (item.id === id) {
+                return {
+                    id: item.id,
+                    title: updatedEntry.title,
+                    category: updatedEntry.category,
+                    isFavorite: updatedEntry.isFavorite,
+                    createdAt: item.createdAt,
+                    updatedAt: updatedEntry.updatedAt,
+                    encryptedData
+                };
+            }
+            return item;
+        });
+
+        // 4. Update Storage
+        passwordApi.saveVault({
+            ...vault,
+            items: updatedVaultItems
         });
 
         // 3. Update State
