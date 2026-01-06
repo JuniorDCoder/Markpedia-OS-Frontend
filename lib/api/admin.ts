@@ -50,17 +50,33 @@ export const adminApi = {
       last_name: userData.lastName || '',
       role: userData.role,
       department: userData.department,
-      position: userData.title, // User.title maps to position
+      position: userData.title || userData.position, // User.title maps to position
       avatar: userData.avatar,
       is_active: userData.isActive !== false,
-      // entity id handling might be needed but User type doesn't have it explicitly as a top field in mapBackendUser?
-      // Wait, previous file view showed User has department, position.
-      // But Employee interface has entityId.
-      // The User interface in lib/api/admin.ts (imported from types) might not match Employee exactly.
-      // Let's check types/index.ts.
-      // User interface: role, department, position.
-      // Employee interface: title, entityId.
-      // I'll send extra fields if needed, but for now map what we can.
+
+      // Extended fields
+      salutation: userData.salutation,
+      date_of_birth: userData.dateOfBirth,
+      mobile: userData.mobile,
+      country: userData.country,
+      gender: userData.gender,
+      joining_date: userData.joiningDate,
+      address: userData.address,
+      about: userData.about,
+      business_address: userData.businessAddress,
+      login_allowed: userData.loginAllowed,
+      email_notifications: userData.emailNotifications,
+      hourly_rate: userData.hourlyRate,
+      slack_member_id: userData.slackMemberId,
+      skills: userData.skills,
+      probation_end_date: userData.probationEndDate,
+      notice_period_start_date: userData.noticePeriodStartDate,
+      notice_period_end_date: userData.noticePeriodEndDate,
+      employment_type: userData.employmentType,
+      marital_status: userData.maritalStatus,
+      language: userData.language,
+      reports_to: userData.reportsTo,
+      entity_id: userData.entityId,
     };
     const res = await apiRequest<BackendUser>('/admin/users/', {
       method: 'POST',

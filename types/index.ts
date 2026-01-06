@@ -35,6 +35,9 @@ export interface User {
     employmentType?: string;
     maritalStatus?: string;
     language?: string;
+    title?: string;
+    reportsTo?: string;
+    entityId?: string;
 }
 
 export interface Employee {
