@@ -41,32 +41,74 @@ export interface UpdateOffboardingTaskRequest {
     completed_by?: string;
 }
 
+// Raw interfaces matching backend response
+interface RawOffboardingTask {
+    id: string;
+    task_name: string;
+    description: string | null;
+    status: string; // "Pending", "Completed"
+    category: string;
+    responsible_role: string;
+    responsible_person_id: string | null;
+    created_at: string;
+    updated_at: string;
+    completed_at: string | null;
+    completed_by: string | null;
+    document_url: string | null;
+}
+
+interface RawOffboardingProcess {
+    id: string;
+    employee_id: string;
+    employee_name: string;
+    status: string; // "Initiated"
+    progress_percentage: number;
+    created_at: string;
+    tasks: RawOffboardingTask[];
+    last_working_day?: string;
+    reason?: string;
+}
+
 export const offboardingApi = {
     /**
      * Initiate offboarding process for an employee
      */
     async initiate(data: InitiateOffboardingRequest): Promise<OffboardingProcess> {
-        return apiRequest<OffboardingProcess>('/people/offboarding/initiate', {
+        const rawData = await apiRequest<RawOffboardingProcess>('/people/offboarding/initiate', {
             method: 'POST',
             body: JSON.stringify(data),
         });
+        return mapProcess(rawData);
     },
 
     /**
      * Get offboarding process details for an employee
      */
     async getProcess(employeeId: string): Promise<OffboardingProcess> {
-        return apiRequest<OffboardingProcess>(`/people/offboarding/${employeeId}`);
+        const rawData = await apiRequest<RawOffboardingProcess>(`/people/offboarding/${employeeId}`);
+        return mapProcess(rawData);
     },
 
     /**
      * Update an offboarding task
      */
     async updateTask(taskId: string, data: UpdateOffboardingTaskRequest): Promise<OffboardingTask> {
-        return apiRequest<OffboardingTask>(`/people/offboarding/task/${taskId}`, {
+        const payload = { ...data };
+        const res = await apiRequest<RawOffboardingTask>(`/people/offboarding/task/${taskId}`, {
             method: 'PUT',
-            body: JSON.stringify(data),
+            body: JSON.stringify(payload),
         });
+
+        // Map response back
+        return {
+            id: res.id,
+            title: res.task_name,
+            description: res.description || '',
+            status: mapTaskStatus(res.status),
+            // category: res.category, // if needed
+            completed_at: res.completed_at || undefined,
+            order: 0,
+        };
     },
 
     /**
@@ -119,3 +161,43 @@ export const offboardingApi = {
         });
     },
 };
+
+// Helper functions
+function mapTaskStatus(status: string): 'pending' | 'in_progress' | 'completed' {
+    const s = status.toLowerCase();
+    if (s === 'completed') return 'completed';
+    if (s === 'in_progress' || s === 'inprogress') return 'in_progress';
+    return 'pending';
+}
+
+function mapProcessStatus(status: string): 'not_started' | 'in_progress' | 'completed' {
+    const s = status.toLowerCase();
+    if (s === 'completed') return 'completed';
+    if (s === 'initiated' || s === 'in_progress') return 'in_progress';
+    return 'not_started';
+}
+
+function mapProcess(rawData: RawOffboardingProcess): OffboardingProcess {
+    return {
+        id: rawData.id,
+        employee_id: rawData.employee_id,
+        employee_name: rawData.employee_name,
+        status: mapProcessStatus(rawData.status),
+        progress_percentage: rawData.progress_percentage,
+        created_at: rawData.created_at,
+        updated_at: rawData.created_at, // Fallback
+        last_working_day: rawData.last_working_day,
+        reason: rawData.reason,
+        tasks: (rawData.tasks || []).map((task, index) => ({
+            id: task.id,
+            title: task.task_name,
+            description: task.description || '',
+            status: mapTaskStatus(task.status),
+            // category: task.category,
+            completed_at: task.completed_at || undefined,
+            completed_by: task.completed_by || undefined,
+            order: index, // Backend array order implies sequence
+            documents: task.document_url ? [task.document_url] : [],
+        })),
+    };
+}

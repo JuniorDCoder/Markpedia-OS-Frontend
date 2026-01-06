@@ -37,8 +37,8 @@ export const PHASE_ROUTES: Record<Phase, string[]> = {
         '/people/warnings',
         '/people/lifecycle-management',
         '/people/employees',
-        '/people/onboarding-test', // Test page for API exploration
         '/people/onboarding', // Employee onboarding pages
+        '/people/offboarding', // Employee offboarding pages
 
         // Money
         '/money/cashbook',
