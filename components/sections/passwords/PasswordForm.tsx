@@ -33,6 +33,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const formSchema = z.object({
     title: z.string().min(2, 'Title must be at least 2 characters'),
@@ -41,6 +42,7 @@ const formSchema = z.object({
     website: z.string().url('Invalid URL').optional().or(z.literal('')),
     category: z.enum(['personal', 'work', 'finance', 'social', 'other']),
     notes: z.string().optional(),
+    isFavorite: z.boolean().default(false),
 });
 
 interface PasswordFormProps {
@@ -68,6 +70,7 @@ export function PasswordForm({
             website: defaultValues?.website || '',
             category: defaultValues?.category || 'personal',
             notes: defaultValues?.notes || '',
+            isFavorite: defaultValues?.isFavorite || false,
         },
     });
 
@@ -215,6 +218,26 @@ export function PasswordForm({
                                 />
                             </FormControl>
                             <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="isFavorite"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                            <FormControl>
+                                <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                                <FormLabel>
+                                    Mark as Favorite
+                                </FormLabel>
+                            </div>
                         </FormItem>
                     )}
                 />
