@@ -24,6 +24,9 @@ interface PasswordStore {
     addPassword: (entry: Omit<PasswordEntry, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
     updatePassword: (id: string, entry: Partial<PasswordEntry>) => Promise<void>;
     deletePassword: (id: string) => Promise<void>;
+    checkVaultStatus: () => Promise<void>;
+    verifyPassword: (password: string) => boolean;
+    changeMasterPassword: (newPassword: string) => Promise<void>;
 }
 
 let memoryMasterPassword: string | null = null;
@@ -45,17 +48,13 @@ export const usePasswordStore = create<PasswordStore>((set, get) => ({
         // 2. Save to Backend
         const validatorJson = JSON.stringify(validator);
 
-        await apiRequest('/vault/setup', {
+        // Update KDF Parameters (Salt & Validator) via new Endpoint
+        await apiRequest('/vault/salt', {
             method: 'POST',
             body: JSON.stringify({
                 validator: validatorJson,
                 kdf_salt: validator.salt
             })
-        });
-
-        await apiRequest('/vault/salt', {
-            method: 'POST',
-            body: JSON.stringify({ validator: validatorJson })
         });
 
         // passwordApi.saveVault(newVault); // REMOVE: No longer using local vault
@@ -232,7 +231,6 @@ export const usePasswordStore = create<PasswordStore>((set, get) => ({
         const newDecryptedList = [...decryptedPasswords];
         newDecryptedList[currentIndex] = {
             ...updatedEntry,
-            ...updatedEntry,
             updatedAt: updatedItem.updated_at
         };
         set({ decryptedPasswords: newDecryptedList, lastActivity: Date.now() });
@@ -243,6 +241,91 @@ export const usePasswordStore = create<PasswordStore>((set, get) => ({
         await passwordApi.deleteVaultItem(id);
         const { decryptedPasswords } = get();
         set({ decryptedPasswords: decryptedPasswords.filter(p => p.id !== id), lastActivity: Date.now() });
+    },
+
+    checkVaultStatus: async () => {
+        try {
+            // Attempt to get salt. If 200 OK, vault exists.
+            // If 404 or empty response (handled by apiRequest throwing or returning null), vault doesn't exist
+            // Using a simple check.
+            const { kdf_salt } = await apiRequest<{ kdf_salt: string }>('/vault/salt');
+            if (kdf_salt) {
+                set({ hasVault: true });
+            }
+        } catch (error: any) {
+            // If 404, clearly no vault.
+            // If other error (e.g. 500), we probably shouldn't assume no vault, but for now fallback to setup might be safer or just error.
+            // Assuming 404 means "Not Found" -> "No Vault"
+            if (error?.status === 404 || error?.message?.includes('Not Found')) {
+                set({ hasVault: false });
+            }
+            // For other errors, we might want to log but not necessarily reset hasVault if it was true.
+            // But since hasVault starts false, we need to know if we failed to fetch.
+        }
+    },
+
+    verifyPassword: (password: string) => {
+        return memoryMasterPassword === password;
+    },
+
+    changeMasterPassword: async (newPassword: string) => {
+        if (!memoryMasterPassword) throw new Error('Vault is locked');
+
+        const { decryptedPasswords } = get();
+
+        // 1. Generate new Crypto Context (Salt + Validator)
+        const validator = await encryptVault(VALIDATOR_STRING, newPassword);
+        const validatorJson = JSON.stringify(validator);
+
+        // 2. Re-encrypt ALL items with new password
+        // We do this concurrently.
+        const reEncryptionPromises = decryptedPasswords.map(async (entry) => {
+            const payload = {
+                username: entry.username,
+                password: entry.password,
+                website: entry.website,
+                notes: entry.notes
+            };
+            const encryptedData = await encryptVault(JSON.stringify(payload), newPassword);
+            return {
+                id: entry.id,
+                encrypted_data: JSON.stringify(encryptedData),
+                // We keep other metadata same
+                title: entry.title,
+                category: entry.category,
+                is_favorite: !!entry.isFavorite
+            };
+        });
+
+        const reEncryptedItems = await Promise.all(reEncryptionPromises);
+
+        // 3. Update Salt & Validator on Backend
+        await apiRequest('/vault/salt', {
+            method: 'POST',
+            body: JSON.stringify({
+                validator: validatorJson,
+                kdf_salt: validator.salt
+            })
+        });
+
+        // 4. Update Backend Items
+        // This is the risky part if it fails halfway.
+        // But we have to do it.
+        const updatePromises = reEncryptedItems.map(item =>
+            passwordApi.updateVaultItem(item.id, {
+                title: item.title,
+                category: item.category,
+                is_favorite: item.is_favorite,
+                encrypted_data: item.encrypted_data
+            })
+        );
+
+        await Promise.all(updatePromises);
+
+        // 5. Update Local State
+        memoryMasterPassword = newPassword;
+        // decryptedPasswords don't change, they are still the same cleartext
+        // But we should notify or just rely on memoryMasterPassword update.
     }
 }));
 

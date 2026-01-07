@@ -1,19 +1,40 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePasswordStore } from '@/lib/stores/password-store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Lock, Unlock, ShieldCheck } from 'lucide-react';
+import { Lock, Unlock, ShieldCheck, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export function LockScreen() {
-    const { hasVault, unlock, setMasterPassword } = usePasswordStore();
+    const { hasVault, unlock, setMasterPassword, checkVaultStatus } = usePasswordStore();
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isCheckingVault, setIsCheckingVault] = useState(true);
+
+    // Check backend status on mount to see if vault really exists
+    useEffect(() => {
+        const check = async () => {
+            await checkVaultStatus();
+            setIsCheckingVault(false);
+        };
+        check();
+    }, [checkVaultStatus]);
+
+    if (isCheckingVault) {
+        return (
+            <div className="flex items-center justify-center min-h-[600px]">
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    <p className="text-muted-foreground text-sm">Checking vault status...</p>
+                </div>
+            </div>
+        );
+    }
 
     const handleUnlock = async (e: React.FormEvent) => {
         e.preventDefault();

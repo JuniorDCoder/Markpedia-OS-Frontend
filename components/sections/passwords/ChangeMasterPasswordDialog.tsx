@@ -23,7 +23,7 @@ export function ChangeMasterPasswordDialog() {
     const [confirmNewPassword, setConfirmNewPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    const { verifyPassword, setMasterPassword } = usePasswordStore();
+    const { verifyPassword, changeMasterPassword } = usePasswordStore();
 
     const handleOpenChange = (isOpen: boolean) => {
         setOpen(isOpen);
@@ -69,7 +69,7 @@ export function ChangeMasterPasswordDialog() {
             return;
         }
 
-        setMasterPassword(newPassword);
+        await changeMasterPassword(newPassword);
         toast.success('Master password updated successfully');
         setIsLoading(false);
         setOpen(false);
