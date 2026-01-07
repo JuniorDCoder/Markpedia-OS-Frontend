@@ -173,7 +173,7 @@ export const usePasswordStore = create<PasswordStore>((set, get) => ({
         // 2. Create in Backend
         const newItem = await passwordApi.createVaultItem({
             title: data.title,
-            category: data.category,
+            category: data.category || 'other',
             is_favorite: !!data.isFavorite,
             encrypted_data: encryptedJson
         });
@@ -219,7 +219,7 @@ export const usePasswordStore = create<PasswordStore>((set, get) => ({
         // 2. Update in Backend
         const updatedItem = await passwordApi.updateVaultItem(id, {
             title: updatedEntry.title,
-            category: updatedEntry.category,
+            category: updatedEntry.category || 'other',
             is_favorite: !!updatedEntry.isFavorite,
             encrypted_data: encryptedJson
         });
@@ -314,7 +314,7 @@ export const usePasswordStore = create<PasswordStore>((set, get) => ({
         const updatePromises = reEncryptedItems.map(item =>
             passwordApi.updateVaultItem(item.id, {
                 title: item.title,
-                category: item.category,
+                category: item.category || 'other',
                 is_favorite: item.is_favorite,
                 encrypted_data: item.encrypted_data
             })
