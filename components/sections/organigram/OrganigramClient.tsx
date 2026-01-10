@@ -70,7 +70,7 @@ export default function OrganigramClient({
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const [selectedNode, setSelectedNode] = useState<string | null>(null);
     const [mobileView, setMobileView] = useState<'organigram' | 'list'>('organigram');
-    const [viewMode, setViewMode] = useState<'tree' | 'matrix' | 'map'>('tree');
+    const [viewMode, setViewMode] = useState<'tree' | 'matrix' | 'map' | 'canvas'>('canvas');
     const [isDepartmentStatsOpen, setIsDepartmentStatsOpen] = useState(false);
     const organigramRef = useRef<HTMLDivElement>(null);
 
@@ -138,6 +138,20 @@ export default function OrganigramClient({
 
     const canManage = user?.role === 'CEO' || user?.role === 'Admin' || user?.role === 'CXO';
 
+    // Flatten tree for canvas view
+    const flattenNodes = (nodes: OrganigramNode[]): OrganigramNode[] => {
+        let flat: OrganigramNode[] = [];
+        nodes.forEach(node => {
+            flat.push(node);
+            if (node.children?.length) {
+                flat = [...flat, ...flattenNodes(node.children)];
+            }
+        });
+        return flat;
+    };
+
+    const canvasNodes = selectedSnapshot ? flattenNodes(organigramTree) : [];
+
     const handleDragStart = (e: React.DragEvent, nodeId: string) => {
         setIsDragging(true);
         setSelectedNode(nodeId);
@@ -153,6 +167,8 @@ export default function OrganigramClient({
         setIsDragging(false);
         const nodeId = e.dataTransfer.getData('text/plain');
         // Handle drop logic here - update node position
+        // Note: View-only component doesn't save position changes permanently 
+        // that's done in the Edit component.
         console.log('Dropped node:', nodeId);
     };
 
@@ -166,6 +182,127 @@ export default function OrganigramClient({
         console.log('Taking snapshot');
     };
 
+    const renderCanvasNode = (node: OrganigramNode) => {
+        const { employee, position, children } = node;
+        // In canvas view, we rely entirely on absolute positions
+        // If position is missing/invalid, we might need a fallback or it will be at 0,0
+        // The snapshot data is expected to have valid positions from the editor.
+
+        const employeeLevel = getEmployeeLevel(employee);
+        const levelColor = getLevelColor(employeeLevel);
+        const levelIcon = getLevelIcon(employeeLevel);
+
+        return (
+            <div
+                key={node.id}
+                title={canManage ? "Go to Edit mode to move nodes" : undefined}
+                className={`
+            absolute bg-white border-2 rounded-lg p-3 sm:p-4 shadow-sm min-w-[160px] sm:min-w-[200px]
+            transition-all duration-200 hover:shadow-md hover:border-blue-300
+            ${selectedNode === node.id ? 'border-blue-500 shadow-md' : 'border-gray-200'}
+            ${employeeLevel === 'Global' ? 'border-blue-300 bg-blue-50' : ''}
+            ${employeeLevel === 'Regional' ? 'border-green-300 bg-green-50' : ''}
+            ${employeeLevel === 'Country' ? 'border-yellow-300 bg-yellow-50' : ''}
+          `}
+                style={{
+                    left: position.x,
+                    top: position.y,
+                    // Canvas view nodes need width/height if we want to draw lines precisely
+                    // For now we just position the box
+                }}
+            >
+                {/* Level color indicator */}
+                <div
+                    className="absolute top-0 left-0 w-full h-1 rounded-t-lg"
+                    style={{ backgroundColor: levelColor }}
+                />
+
+                <div className="text-center">
+                    <div className="flex items-center justify-between mb-2 gap-1">
+                        <div className="flex items-center gap-1 flex-1">
+                            {levelIcon}
+                            <Badge
+                                variant="secondary"
+                                className="text-xs capitalize flex-1 truncate"
+                                style={{
+                                    backgroundColor: levelColor + '20',
+                                    color: levelColor
+                                }}
+                            >
+                                {employeeLevel}
+                            </Badge>
+                        </div>
+                        {canManage && (
+                            <div className="flex gap-1 flex-shrink-0">
+                                <Button asChild variant="ghost" size="icon" className="h-5 w-5 sm:h-6 sm:w-6">
+                                    <Link href="/strategy/organigram/edit">
+                                        <Edit className="h-2 w-2 sm:h-3 sm:w-3" />
+                                    </Link>
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+
+                    <h3 className="font-semibold text-sm mb-1 line-clamp-1">{employee.name}</h3>
+                    <p className="text-xs text-muted-foreground mb-2 line-clamp-1">{employee.title}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-1">{employee.email}</p>
+
+                    {employee.role === 'CEO' && (
+                        <Badge variant="default" className="mt-2 bg-purple-500 text-xs">CEO</Badge>
+                    )}
+                    {employee.role === 'CXO' && (
+                        <Badge variant="default" className="mt-2 bg-blue-500 text-xs">CXO</Badge>
+                    )}
+                </div>
+
+                {/* Lines to children rendered separately or SVG overlay? 
+                         For simplicity in this step, we render the box. 
+                         Lines are tricky in canvas view without an SVG layer. 
+                         The Edit component likely has logic for this.
+                     */}
+            </div>
+        );
+    }
+
+    // Draw connections for Canvas View
+    const renderConnections = () => {
+        if (!selectedSnapshot) return null;
+
+        // We need to find nodes by ID easily
+        const nodeMap = new Map(canvasNodes.map(n => [n.id, n]));
+
+        return (
+            <svg className="absolute inset-0 pointer-events-none w-full h-full overflow-visible">
+                {canvasNodes.map(node => {
+                    if (!node.children || node.children.length === 0) return null;
+                    return node.children.map(child => {
+                        // The child object in 'node.children' is the recursive object,
+                        // so it has the position data we need.
+                        // Wait, 'children' in OrganigramNode is OrganigramNode[], so yes.
+
+                        const startX = node.position.x + 100; // approx center (width 200/2)
+                        const startY = node.position.y + 100; // approx bottom (height ~100) - adjust as needed
+                        const endX = child.position.x + 100;
+                        const endY = child.position.y;
+
+                        return (
+                            <line
+                                key={`${node.id}-${child.id}`}
+                                x1={startX}
+                                y1={startY}
+                                x2={endX}
+                                y2={endY}
+                                stroke="#9CA3AF"
+                                strokeWidth="2"
+                                strokeDasharray="4"
+                            />
+                        );
+                    });
+                })}
+            </svg>
+        );
+    };
+
     const renderOrganigramNode = (node: OrganigramNode, level: number = 0) => {
         const { employee, position, children } = node;
         const employeeLevel = getEmployeeLevel(employee);
@@ -176,20 +313,20 @@ export default function OrganigramClient({
             <div key={node.id} className="flex flex-col items-center">
                 {/* Node */}
                 <div
-                    draggable={canManage}
-                    onDragStart={(e) => handleDragStart(e, node.id)}
+                    // In Tree View we do NOT use absolute positioning from the snapshot
+                    // We let the Flex layout handle it.
+                    // However, the original code had: style={{ transform: ..., position: 'absolute' }}
+                    // which conflicts with "flex flex-col".
+                    // The original code was likely trying to do a hybrid or just broken.
+                    // We will remove absolute positioning here for the Tree View to let it flow naturally.
                     className={`
-            relative bg-white border-2 rounded-lg p-3 sm:p-4 shadow-sm cursor-move min-w-[160px] sm:min-w-[200px]
+            relative bg-white border-2 rounded-lg p-3 sm:p-4 shadow-sm cursor-pointer min-w-[160px] sm:min-w-[200px]
             transition-all duration-200 hover:shadow-md hover:border-blue-300
             ${selectedNode === node.id ? 'border-blue-500 shadow-md' : 'border-gray-200'}
             ${employeeLevel === 'Global' ? 'border-blue-300 bg-blue-50' : ''}
             ${employeeLevel === 'Regional' ? 'border-green-300 bg-green-50' : ''}
             ${employeeLevel === 'Country' ? 'border-yellow-300 bg-yellow-50' : ''}
           `}
-                    style={{
-                        transform: `translate(${position.x}px, ${position.y}px)`,
-                        position: 'absolute'
-                    }}
                 >
                     {/* Level color indicator */}
                     <div
@@ -212,28 +349,11 @@ export default function OrganigramClient({
                                     {employeeLevel}
                                 </Badge>
                             </div>
-                            {canManage && (
-                                <div className="flex gap-1 flex-shrink-0">
-                                    <Button variant="ghost" size="icon" className="h-5 w-5 sm:h-6 sm:w-6">
-                                        <Edit className="h-2 w-2 sm:h-3 sm:w-3" />
-                                    </Button>
-                                </div>
-                            )}
                         </div>
 
                         <h3 className="font-semibold text-sm mb-1 line-clamp-1">{employee.name}</h3>
                         <p className="text-xs text-muted-foreground mb-2 line-clamp-1">{employee.title}</p>
                         <p className="text-xs text-muted-foreground line-clamp-1">{employee.email}</p>
-
-                        {employee.role === 'CEO' && (
-                            <Badge variant="default" className="mt-2 bg-purple-500 text-xs">CEO</Badge>
-                        )}
-                        {employee.role === 'CXO' && (
-                            <Badge variant="default" className="mt-2 bg-blue-500 text-xs">CXO</Badge>
-                        )}
-                        {employee.role === 'Manager' && (
-                            <Badge variant="default" className="mt-2 bg-green-500 text-xs">Manager</Badge>
-                        )}
                     </div>
 
                     {/* Connection line to children */}
@@ -416,9 +536,10 @@ export default function OrganigramClient({
                     <label className="block text-sm font-medium mb-2">View Mode</label>
                     <Select value={viewMode} onValueChange={(value: any) => setViewMode(value)}>
                         <SelectTrigger className="text-sm">
-                            <SelectValue placeholder="Tree View" />
+                            <SelectValue placeholder="Canvas View" />
                         </SelectTrigger>
                         <SelectContent>
+                            <SelectItem value="canvas">Canvas View</SelectItem>
                             <SelectItem value="tree">Tree View</SelectItem>
                             <SelectItem value="matrix">Matrix View</SelectItem>
                             <SelectItem value="map">Map View</SelectItem>
@@ -684,8 +805,15 @@ export default function OrganigramClient({
                                     onDragOver={handleDragOver}
                                     onDrop={handleDrop}
                                 >
-                                    {organigramTree.length > 0 ? (
-                                        organigramTree.map(node => renderOrganigramNode(node))
+                                    {/* Render Connections only in Canvas View */}
+                                    {viewMode === 'canvas' && renderConnections()}
+
+                                    {(viewMode === 'canvas' ? canvasNodes : organigramTree).length > 0 ? (
+                                        viewMode === 'canvas' ? (
+                                            canvasNodes.map(node => renderCanvasNode(node))
+                                        ) : (
+                                            organigramTree.map(node => renderOrganigramNode(node))
+                                        )
                                     ) : (
                                         <div className="absolute inset-0 flex items-center justify-center p-4">
                                             <div className="text-center">

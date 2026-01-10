@@ -34,11 +34,31 @@ const mockSnapshots: OrganigramSnapshot[] = [
     }
 ];
 
+const STORAGE_KEY = 'organigram_snapshots';
+
+// Mock data initializer (used if LocalStorage is empty)
+const initializeStorage = (): OrganigramSnapshot[] => {
+    if (typeof window === 'undefined') return mockSnapshots;
+    const existing = localStorage.getItem(STORAGE_KEY);
+    if (!existing) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(mockSnapshots));
+        return mockSnapshots;
+    }
+    try {
+        return JSON.parse(existing);
+    } catch (e) {
+        console.error('Failed to parse snapshots from localStorage', e);
+        return mockSnapshots;
+    }
+};
+
 export const snapshotApi = {
     async getAll(): Promise<OrganigramSnapshot[]> {
         return new Promise((resolve) => {
             setTimeout(() => {
-                resolve(mockSnapshots);
+                const snapshots = initializeStorage();
+                // Return newest first so the default view is the latest
+                resolve(snapshots.reverse());
             }, 100);
         });
     },
@@ -46,7 +66,8 @@ export const snapshotApi = {
     async getById(id: string): Promise<OrganigramSnapshot | undefined> {
         return new Promise((resolve) => {
             setTimeout(() => {
-                resolve(mockSnapshots.find(s => s.id === id));
+                const snapshots = initializeStorage();
+                resolve(snapshots.find(s => s.id === id));
             }, 100);
         });
     },
@@ -54,12 +75,20 @@ export const snapshotApi = {
     async create(data: Partial<OrganigramSnapshot>): Promise<OrganigramSnapshot> {
         return new Promise((resolve) => {
             setTimeout(() => {
+                const snapshots = initializeStorage();
                 const newSnapshot = {
                     ...data,
                     id: Math.random().toString(36).substr(2, 9),
                     createdAt: new Date().toISOString(),
                 } as OrganigramSnapshot;
-                mockSnapshots.push(newSnapshot);
+
+                // Add to beginning (since we reverse, or actually just push and sort later?)
+                // Based on getAll logic: push to array, then it gets reversed on read.
+                // But initializeStorage reads raw array.
+                // Let's just append to array in storage.
+                const updatedSnapshots = [...snapshots, newSnapshot];
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedSnapshots));
+
                 resolve(newSnapshot);
             }, 100);
         });

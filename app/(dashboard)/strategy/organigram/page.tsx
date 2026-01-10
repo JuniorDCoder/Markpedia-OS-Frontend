@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { Employee, OrganigramSnapshot, Department, Entity, User } from '@/types';
 import OrganigramClient from "@/components/sections/organigram/OrganigramClient";
-import { employeeService, entityService, snapshotService, departmentService } from '@/services/api';
+import { employeeService, entityService, departmentService } from '@/services/api';
+import { snapshotApi } from '@/lib/api/snapshots';
 import { useAuthStore } from '@/store/auth';
 import { LoadingSpinner } from '@/components/ui/loading';
 
@@ -25,7 +26,7 @@ export default function OrganigramPage() {
                 const [employeesData, entitiesData, snapshotsData, departmentsData] = await Promise.all([
                     employeeService.getEmployees(),
                     entityService.getEntities(),
-                    snapshotService.getSnapshots(),
+                    snapshotApi.getAll(),
                     departmentService.list()
                 ]);
 

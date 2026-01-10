@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useCallback, useRef, DragEvent } from 'react';
+import { useState, useCallback, useRef, DragEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { snapshotApi } from '@/lib/api/snapshots';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -45,11 +46,11 @@ interface DraggedEmployee {
 }
 
 export default function EditOrganigramClient({
-                                                 employees,
-                                                 snapshots,
-                                                 departments,
-                                                 user
-                                             }: EditOrganigramClientProps) {
+    employees,
+    snapshots,
+    departments,
+    user
+}: EditOrganigramClientProps) {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
     const [organigramNodes, setOrganigramNodes] = useState<OrganigramNode[]>([]);
@@ -58,52 +59,90 @@ export default function EditOrganigramClient({
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const organigramRef = useRef<HTMLDivElement>(null);
 
-    // Initialize organigram from latest snapshot or create new
     const initializeOrganigram = useCallback(() => {
         if (snapshots.length > 0) {
             const latestSnapshot = snapshots[0];
             const employeeMap = new Map(employees.map(emp => [emp.id, emp]));
-            const nodeMap = new Map(latestSnapshot.nodes.map(node => [node.id, node]));
 
-            const buildTree = (nodeData: ApiOrganigramNode): OrganigramNode => ({
-                ...nodeData,
-                employee: employeeMap.get(nodeData.employeeId)!,
-                children: nodeData.children
-                    .map((childId: string) => nodeMap.get(childId))
-                    .filter(Boolean)
-                    .map(buildTree)
+            // Map snapshot nodes (from API) to local OrganigramNode format
+            const allNodes = latestSnapshot.nodes.map(nodeData => {
+                const employee = employeeMap.get(nodeData.employeeId);
+                if (!employee) return null;
+
+                // Explicitly construct the object to match OrganigramNode interface exactly
+                const node: OrganigramNode = {
+                    id: nodeData.id,
+                    employee: employee,
+                    position: nodeData.position,
+                    size: nodeData.size,
+                    children: [] // Will be populated in the second pass
+                };
+                return node;
+            }).filter((n): n is OrganigramNode => n !== null);
+
+            // Reconstruct the parent-child relationships using object references
+            const nodeMapLocal = new Map(allNodes.map(n => [n.id, n]));
+
+            latestSnapshot.nodes.forEach(data => {
+                const node = nodeMapLocal.get(data.id);
+                // ApiOrganigramNode has children as string[] (ids)
+                if (node && data.children && Array.isArray(data.children)) {
+                    node.children = data.children
+                        .map((childId: string) => nodeMapLocal.get(childId))
+                        .filter((n): n is OrganigramNode => n !== undefined);
+                }
             });
 
-            const rootNodes = latestSnapshot.nodes
-                .filter(node => {
-                    const employee = employeeMap.get(node.employeeId);
-                    return employee && !employee.reportsTo;
-                })
-                .map(buildTree);
-
-            setOrganigramNodes(rootNodes);
+            setOrganigramNodes(allNodes);
         }
     }, [employees, snapshots]);
 
+    useEffect(() => {
+        initializeOrganigram();
+    }, [initializeOrganigram]);
+
     // Drag and drop handlers
     const handleDragStart = (e: DragEvent, employee: Employee) => {
+        console.log('Drag Start:', employee.name);
+        const target = e.currentTarget as HTMLElement;
+        const rect = target.getBoundingClientRect();
+
+        // REQUIRED: Set data to allow drag
+        e.dataTransfer.setData('text/plain', employee.id);
+        e.dataTransfer.effectAllowed = 'move';
+
         setDraggedEmployee({
             employee,
-            offset: { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY }
+            offset: {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            }
         });
     };
 
     const handleDragOver = (e: DragEvent) => {
         e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        console.log('Drag Over');
     };
 
     const handleDrop = (e: DragEvent) => {
         e.preventDefault();
-        if (!draggedEmployee || !organigramRef.current) return;
+        console.log('Drop Event Triggered');
+        if (!draggedEmployee) {
+            console.log('Drop rejected: No dragged employee state');
+            return;
+        }
+        if (!organigramRef.current) {
+            console.log('Drop rejected: No ref');
+            return;
+        }
 
         const rect = organigramRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left - draggedEmployee.offset.x;
         const y = e.clientY - rect.top - draggedEmployee.offset.y;
+
+        console.log('Dropping at:', x, y);
 
         const newNode: OrganigramNode = {
             id: `node-${Date.now()}`,
@@ -158,16 +197,12 @@ export default function EditOrganigramClient({
                 nodes: organigramNodes.flatMap(node => flattenNode(node))
             };
 
-            // TODO: Implement API call
-            await fetch('/api/organigram/snapshots', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(snapshotData)
-            });
+            await snapshotApi.create(snapshotData);
 
             toast.success('Snapshot saved successfully');
             router.push('/strategy/organigram');
         } catch (error) {
+            console.error(error);
             toast.error('Failed to save snapshot');
         } finally {
             setIsLoading(false);
@@ -296,8 +331,8 @@ export default function EditOrganigramClient({
         );
     };
 
-    // Sidebar content component to avoid duplication
-    const SidebarContent = () => (
+    // Sidebar content render function (not a component) to avoid re-mounting issues
+    const renderSidebarContent = () => (
         <>
             {/* Available Employees */}
             <Card>
@@ -410,7 +445,7 @@ export default function EditOrganigramClient({
                         </SheetTrigger>
                         <SheetContent side="left" className="w-[300px] sm:w-[350px] overflow-y-auto">
                             <div className="space-y-4 mt-4">
-                                <SidebarContent />
+                                {renderSidebarContent()}
                             </div>
                         </SheetContent>
                     </Sheet>
@@ -451,7 +486,7 @@ export default function EditOrganigramClient({
             <div className="grid gap-4 md:gap-6 lg:grid-cols-4">
                 {/* Desktop Sidebar */}
                 <div className="hidden lg:block space-y-4 md:space-y-6">
-                    <SidebarContent />
+                    {renderSidebarContent()}
                 </div>
 
                 {/* Main Canvas */}
@@ -475,12 +510,13 @@ export default function EditOrganigramClient({
                                 ref={organigramRef}
                                 className="relative min-h-[400px] md:min-h-[500px] lg:min-h-[600px] border-2 border-dashed border-gray-300 rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 overflow-auto"
                                 onDragOver={handleDragOver}
+                                onDragEnter={() => console.log('Drag Enter')}
                                 onDrop={handleDrop}
                             >
                                 {organigramNodes.map(node => renderOrganigramNode(node))}
 
                                 {organigramNodes.length === 0 && (
-                                    <div className="absolute inset-0 flex items-center justify-center p-4">
+                                    <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
                                         <div className="text-center">
                                             <Building className="h-12 w-12 md:h-16 md:w-16 mx-auto text-muted-foreground mb-3" />
                                             <h3 className="text-base md:text-lg font-medium text-muted-foreground mb-2">
