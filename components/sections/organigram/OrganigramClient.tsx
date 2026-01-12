@@ -183,10 +183,7 @@ export default function OrganigramClient({
     };
 
     const renderCanvasNode = (node: OrganigramNode) => {
-        const { employee, position, children } = node;
-        // In canvas view, we rely entirely on absolute positions
-        // If position is missing/invalid, we might need a fallback or it will be at 0,0
-        // The snapshot data is expected to have valid positions from the editor.
+        const { employee, position, size } = node;
 
         const employeeLevel = getEmployeeLevel(employee);
         const levelColor = getLevelColor(employeeLevel);
@@ -207,8 +204,8 @@ export default function OrganigramClient({
                 style={{
                     left: position.x,
                     top: position.y,
-                    // Canvas view nodes need width/height if we want to draw lines precisely
-                    // For now we just position the box
+                    width: size.width,
+                    height: size.height
                 }}
             >
                 {/* Level color indicator */}
@@ -245,7 +242,6 @@ export default function OrganigramClient({
 
                     <h3 className="font-semibold text-sm mb-1 line-clamp-1">{employee.name}</h3>
                     <p className="text-xs text-muted-foreground mb-2 line-clamp-1">{employee.title}</p>
-                    <p className="text-xs text-muted-foreground line-clamp-1">{employee.email}</p>
 
                     {employee.role === 'CEO' && (
                         <Badge variant="default" className="mt-2 bg-purple-500 text-xs">CEO</Badge>
@@ -254,12 +250,6 @@ export default function OrganigramClient({
                         <Badge variant="default" className="mt-2 bg-blue-500 text-xs">CXO</Badge>
                     )}
                 </div>
-
-                {/* Lines to children rendered separately or SVG overlay? 
-                         For simplicity in this step, we render the box. 
-                         Lines are tricky in canvas view without an SVG layer. 
-                         The Edit component likely has logic for this.
-                     */}
             </div>
         );
     }
@@ -268,33 +258,32 @@ export default function OrganigramClient({
     const renderConnections = () => {
         if (!selectedSnapshot) return null;
 
-        // We need to find nodes by ID easily
-        const nodeMap = new Map(canvasNodes.map(n => [n.id, n]));
-
         return (
             <svg className="absolute inset-0 pointer-events-none w-full h-full overflow-visible">
                 {canvasNodes.map(node => {
                     if (!node.children || node.children.length === 0) return null;
                     return node.children.map(child => {
-                        // The child object in 'node.children' is the recursive object,
-                        // so it has the position data we need.
-                        // Wait, 'children' in OrganigramNode is OrganigramNode[], so yes.
+                        // Coordinates based on center-bottom of parent to center-top of child
+                        const startX = node.position.x + (node.size.width / 2);
+                        const startY = node.position.y + node.size.height;
 
-                        const startX = node.position.x + 100; // approx center (width 200/2)
-                        const startY = node.position.y + 100; // approx bottom (height ~100) - adjust as needed
-                        const endX = child.position.x + 100;
+                        // We target the top center of the child
+                        const endX = child.position.x + (child.size.width / 2);
                         const endY = child.position.y;
 
+                        // Orthogonal Path: Down 20px -> Across -> Down
+                        // This logic needs to match what we have in RenderConnections or similar
+                        const midY = startY + (endY - startY) / 2;
+
+                        const path = `M ${startX} ${startY} V ${midY} H ${endX} V ${endY}`;
+
                         return (
-                            <line
+                            <path
                                 key={`${node.id}-${child.id}`}
-                                x1={startX}
-                                y1={startY}
-                                x2={endX}
-                                y2={endY}
+                                d={path}
                                 stroke="#9CA3AF"
                                 strokeWidth="2"
-                                strokeDasharray="4"
+                                fill="none"
                             />
                         );
                     });
@@ -353,7 +342,6 @@ export default function OrganigramClient({
 
                         <h3 className="font-semibold text-sm mb-1 line-clamp-1">{employee.name}</h3>
                         <p className="text-xs text-muted-foreground mb-2 line-clamp-1">{employee.title}</p>
-                        <p className="text-xs text-muted-foreground line-clamp-1">{employee.email}</p>
                     </div>
 
                     {/* Connection line to children */}

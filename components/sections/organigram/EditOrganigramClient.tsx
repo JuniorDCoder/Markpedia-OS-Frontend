@@ -59,7 +59,68 @@ export default function EditOrganigramClient({
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const organigramRef = useRef<HTMLDivElement>(null);
 
+    // Connection state                                                                                             
+    const [connectionStart, setConnectionStart] = useState<{ nodeId: string; x: number; y: number; isReverse?: boolean } | null>(null);
+    const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
+    const [selectedConnection, setSelectedConnection] = useState<{ from: string; to: string } | null>(null);
+    const [editingConnection, setEditingConnection] = useState<{ from: string; to: string } | null>(null);
+
+    // ... (keep lines 68-300 unchanged)
+    // Note: I will need to verify if I can just update the state definition and usages in later chunks or if I need to update the whole file. 
+    // The previous replace_file_content logic implies I should target specific blocks. 
+    // Let's do the State definition first (lines 63-65).
+
+    // ACTUALLY, I will use multiple replace chunks in one go if possible, or sequential. 
+    // Since I can't use multi_replace here (invalid tool?), I will do one replacing the state, then one for the render.
+    // Wait, the tool definition allows multi_replace_file_content.
+    // But I will stick to replace_file_content for safety as directed by previous context usage.
+
+    // Changing strategy: I will modify the connectionStart state hook first.
+
+
+    // LocalStorage key for draft organigram
+    const STORAGE_KEY = 'organigram-draft';
+
+    // Initial load hook - prioritize localStorage over snapshot
     const initializeOrganigram = useCallback(() => {
+        // Try to load from localStorage first
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                const employeeMap = new Map(employees.map(emp => [emp.id, emp]));
+
+                // Reconstruct nodes with employee objects
+                const reconstructNodes = (nodeData: any): OrganigramNode | null => {
+                    const employee = employeeMap.get(nodeData.employeeId);
+                    if (!employee) return null;
+
+                    return {
+                        id: nodeData.id,
+                        employee: employee,
+                        position: nodeData.position,
+                        size: nodeData.size,
+                        children: nodeData.children
+                            .map((child: any) => reconstructNodes(child))
+                            .filter((n: any): n is OrganigramNode => n !== null)
+                    };
+                };
+
+                const restoredNodes = parsed
+                    .map((nodeData: any) => reconstructNodes(nodeData))
+                    .filter((n: any): n is OrganigramNode => n !== null);
+
+                if (restoredNodes.length > 0) {
+                    setOrganigramNodes(restoredNodes);
+                    console.log('Loaded organigram from localStorage');
+                    return;
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load from localStorage:', error);
+        }
+
+        // Fallback to snapshot if no localStorage data
         if (snapshots.length > 0) {
             const latestSnapshot = snapshots[0];
             const employeeMap = new Map(employees.map(emp => [emp.id, emp]));
@@ -101,7 +162,29 @@ export default function EditOrganigramClient({
         initializeOrganigram();
     }, [initializeOrganigram]);
 
-    // Drag and drop handlers
+    // Auto-save to localStorage whenever organigramNodes changes
+    useEffect(() => {
+        if (organigramNodes.length === 0) return; // Don't save empty state on initial render
+
+        try {
+            // Serialize nodes for storage (convert to plain objects)
+            const serializeNode = (node: OrganigramNode): any => ({
+                id: node.id,
+                employeeId: node.employee.id,
+                position: node.position,
+                size: node.size,
+                children: node.children.map(child => serializeNode(child))
+            });
+
+            const serialized = organigramNodes.map(node => serializeNode(node));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(serialized));
+            console.log('Auto-saved to localStorage');
+        } catch (error) {
+            console.error('Failed to save to localStorage:', error);
+        }
+    }, [organigramNodes]);
+
+    // Drag and drop handlers (Node moving)
     const handleDragStart = (e: DragEvent, employee: Employee) => {
         console.log('Drag Start:', employee.name);
         const target = e.currentTarget as HTMLElement;
@@ -123,7 +206,7 @@ export default function EditOrganigramClient({
     const handleDragOver = (e: DragEvent) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
-        console.log('Drag Over');
+        // console.log('Drag Over');
     };
 
     const handleDrop = (e: DragEvent) => {
@@ -139,8 +222,11 @@ export default function EditOrganigramClient({
         }
 
         const rect = organigramRef.current.getBoundingClientRect();
-        const x = e.clientX - rect.left - draggedEmployee.offset.x;
-        const y = e.clientY - rect.top - draggedEmployee.offset.y;
+        const scrollLeft = organigramRef.current.scrollLeft;
+        const scrollTop = organigramRef.current.scrollTop;
+
+        const x = e.clientX - rect.left + scrollLeft - draggedEmployee.offset.x;
+        const y = e.clientY - rect.top + scrollTop - draggedEmployee.offset.y;
 
         console.log('Dropping at:', x, y);
 
@@ -167,25 +253,52 @@ export default function EditOrganigramClient({
     };
 
     const handleAddConnection = (fromNodeId: string, toNodeId: string) => {
-        setOrganigramNodes(prev =>
-            prev.map(node =>
+        if (fromNodeId === toNodeId) return;
+
+        setOrganigramNodes(prev => {
+            const fromNode = prev.find(n => n.id === fromNodeId);
+            const toNode = prev.find(n => n.id === toNodeId);
+
+            if (!fromNode || !toNode) return prev;
+
+            // Avoid validation duplicates
+            if (fromNode.children.some(child => child.id === toNodeId)) return prev;
+
+            return prev.map(node =>
                 node.id === fromNodeId
-                    ? { ...node, children: [...node.children, organigramNodes.find(n => n.id === toNodeId)!] }
+                    ? { ...node, children: [...node.children, toNode] }
                     : node
-            )
-        );
+            );
+        });
     };
 
     const handleRemoveNode = (nodeId: string) => {
-        setOrganigramNodes(prev =>
-            prev.filter(node => node.id !== nodeId)
-                .map(node => ({
+        setOrganigramNodes(prev => {
+            // First, remove the node itself from the top level
+            const filtered = prev.filter(node => node.id !== nodeId);
+
+            // Then, recursively remove this node from all children arrays
+            const cleanChildren = (nodes: OrganigramNode[]): OrganigramNode[] => {
+                return nodes.map(node => ({
                     ...node,
-                    children: node.children.filter(child => child.id !== nodeId)
-                }))
-        );
+                    children: cleanChildren(node.children.filter(child => child.id !== nodeId))
+                }));
+            };
+
+            return cleanChildren(filtered);
+        });
         setSelectedNode(null);
+        setSelectedConnection(null);
         setIsSidebarOpen(false);
+    };
+
+    const handleRemoveConnection = (fromId: string, toId: string) => {
+        setOrganigramNodes(prev => prev.map(node =>
+            node.id === fromId
+                ? { ...node, children: node.children.filter(c => c.id !== toId) }
+                : node
+        ));
+        setSelectedConnection(null);
     };
 
     const handleSaveSnapshot = async (name: string, description?: string) => {
@@ -198,6 +311,9 @@ export default function EditOrganigramClient({
             };
 
             await snapshotApi.create(snapshotData);
+
+            // Clear localStorage draft after successful save
+            localStorage.removeItem(STORAGE_KEY);
 
             toast.success('Snapshot saved successfully');
             router.push('/strategy/organigram');
@@ -224,16 +340,153 @@ export default function EditOrganigramClient({
         ];
     };
 
-    const availableEmployees = employees.filter(emp =>
-        !organigramNodes.some(node => node.employee.id === emp.id)
-    );
+    const availableEmployees = employees.filter(emp => {
+        // Check if employee exists in any node (including nested children)
+        const getAllEmployeeIds = (nodes: OrganigramNode[]): Set<string> => {
+            const ids = new Set<string>();
+            const traverse = (node: OrganigramNode) => {
+                ids.add(node.employee.id);
+                node.children.forEach(child => traverse(child));
+            };
+            nodes.forEach(node => traverse(node));
+            return ids;
+        };
+
+        const usedEmployeeIds = getAllEmployeeIds(organigramNodes);
+        return !usedEmployeeIds.has(emp.id);
+    });
+
+    // Mouse handlers for connections - Need to account for scroll
+    const handleCanvasMouseMove = (e: React.MouseEvent) => {
+        if (connectionStart && organigramRef.current) {
+            const rect = organigramRef.current.getBoundingClientRect();
+            const scrollLeft = organigramRef.current.scrollLeft;
+            const scrollTop = organigramRef.current.scrollTop;
+
+            setMousePos({
+                x: e.clientX - rect.left + scrollLeft,
+                y: e.clientY - rect.top + scrollTop
+            });
+        }
+    };
+    // ...
+
+    // Update renderOrganigramNode's onDragEnd to use scroll
+    // Inside renderOrganigramNode:
+    /*
+                onDragEnd={(e) => {
+                    if (!organigramRef.current) return;
+                    const rect = organigramRef.current.getBoundingClientRect();
+                    const scrollLeft = organigramRef.current.scrollLeft;
+                    const scrollTop = organigramRef.current.scrollTop;
+                    const x = e.clientX - rect.left + scrollLeft - (node.size.width / 2);
+                    const y = e.clientY - rect.top + scrollTop - (node.size.height / 2);
+                    handleNodeDrag(node.id, { x, y });
+                }}
+    */
+
+    const handleCanvasMouseUp = () => {
+        if (connectionStart) {
+            setConnectionStart(null);
+            setMousePos(null);
+            // If dragging handle but dropped on canvas, cancel edit
+            setEditingConnection(null);
+        }
+    };
+
+    const renderConnections = () => {
+        // Create a Set of valid node IDs for O(1) lookup
+        const validNodeIds = new Set(organigramNodes.map(n => n.id));
+
+        return (
+            <svg className="absolute inset-0 pointer-events-none w-full h-full overflow-visible" style={{ zIndex: 0 }}>
+                {organigramNodes.map(node => {
+                    if (!node.children || node.children.length === 0) return null;
+
+                    // Filter out any children that don't exist in the main nodes array
+                    const validChildren = node.children.filter(child => validNodeIds.has(child.id));
+
+                    return validChildren.map(child => {
+                        const startX = node.position.x + (node.size.width / 2);
+                        const startY = node.position.y + node.size.height;
+                        const endX = child.position.x + (child.size.width / 2);
+                        const endY = child.position.y;
+
+                        const midY = startY + (endY - startY) / 2;
+                        const path = `M ${startX} ${startY} V ${midY} H ${endX} V ${endY}`;
+
+                        const isSelected = selectedConnection?.from === node.id && selectedConnection?.to === child.id;
+
+                        return (
+                            <g key={`${node.id}-${child.id}`} className="overflow-visible">
+                                {/* Hitbox */}
+                                <path
+                                    d={path}
+                                    stroke="transparent"
+                                    strokeWidth="20"
+                                    fill="none"
+                                    className="cursor-pointer pointer-events-auto"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedConnection({ from: node.id, to: child.id });
+                                        setSelectedNode(null);
+                                        setIsSidebarOpen(true);
+                                    }}
+                                />
+                                {/* Visible Line */}
+                                <path
+                                    d={path}
+                                    stroke={isSelected ? "#3B82F6" : "#9CA3AF"}
+                                    strokeWidth={isSelected ? "3" : "2"}
+                                    fill="none"
+                                    className="pointer-events-none transition-colors"
+                                />
+                                {/* Handle */}
+                                {isSelected && (
+                                    <g>
+                                        <circle
+                                            cx={endX}
+                                            cy={endY}
+                                            r="12"
+                                            fill="transparent"
+                                            className="cursor-crosshair pointer-events-auto"
+                                            onMouseDown={(e) => {
+                                                e.stopPropagation();
+                                                e.preventDefault();
+                                                const absStartX = node.position.x + node.size.width / 2;
+                                                const absStartY = node.position.y + node.size.height;
+                                                const absEndX = child.position.x + child.size.width / 2;
+                                                const absEndY = child.position.y;
+                                                setConnectionStart({ nodeId: node.id, x: absStartX, y: absStartY });
+                                                setMousePos({ x: absEndX, y: absEndY });
+                                                setEditingConnection({ from: node.id, to: child.id });
+                                            }}
+                                        />
+                                        <circle
+                                            cx={endX}
+                                            cy={endY}
+                                            r="6"
+                                            fill="#3B82F6"
+                                            stroke="white"
+                                            strokeWidth="2"
+                                            className="pointer-events-none"
+                                        />
+                                    </g>
+                                )}
+                            </g>
+                        );
+                    });
+                })}
+            </svg>
+        );
+    };
 
     const renderOrganigramNode = (node: OrganigramNode) => {
         return (
             <div
                 key={node.id}
                 className={`
-          absolute bg-white border-2 rounded-lg p-3 shadow-sm cursor-move 
+          absolute bg-white border-2 rounded-lg p-3 shadow-sm cursor-move z-20 select-none
           transition-all duration-200 hover:shadow-md
           ${selectedNode?.id === node.id ? 'border-blue-500 shadow-md ring-2 ring-blue-200' : 'border-gray-200'}
           ${node.employee.department === 'Executive' ? 'border-purple-300 bg-purple-50' : ''}
@@ -247,9 +500,33 @@ export default function EditOrganigramClient({
                     width: node.size.width,
                     height: node.size.height
                 }}
-                onClick={() => {
+                onClick={(e) => {
+                    e.stopPropagation();
                     setSelectedNode(node);
+                    setSelectedConnection(null);
                     setIsSidebarOpen(true);
+                }}
+                onMouseUp={(e) => {
+                    if (connectionStart && connectionStart.nodeId !== node.id) {
+                        e.stopPropagation();
+                        // Add new connection based on direction
+                        if (connectionStart.isReverse) {
+                            // Dragged from Top Dot (Child) -> Dropped on This Node (Parent)
+                            handleAddConnection(node.id, connectionStart.nodeId);
+                        } else {
+                            // Dragged from Bottom Dot (Parent) -> Dropped on This Node (Child)
+                            handleAddConnection(connectionStart.nodeId, node.id);
+                        }
+
+                        // If we are editing, remove the old connection
+                        if (editingConnection) {
+                            handleRemoveConnection(editingConnection.from, editingConnection.to);
+                            setEditingConnection(null);
+                        }
+
+                        setConnectionStart(null);
+                        setMousePos(null);
+                    }
                 }}
                 draggable
                 onDragStart={(e) => {
@@ -258,8 +535,10 @@ export default function EditOrganigramClient({
                 onDragEnd={(e) => {
                     if (!organigramRef.current) return;
                     const rect = organigramRef.current.getBoundingClientRect();
-                    const x = e.clientX - rect.left - (node.size.width / 2);
-                    const y = e.clientY - rect.top - (node.size.height / 2);
+                    const scrollLeft = organigramRef.current.scrollLeft;
+                    const scrollTop = organigramRef.current.scrollTop;
+                    const x = e.clientX - rect.left + scrollLeft - (node.size.width / 2);
+                    const y = e.clientY - rect.top + scrollTop - (node.size.height / 2);
                     handleNodeDrag(node.id, { x, y });
                 }}
             >
@@ -303,30 +582,31 @@ export default function EditOrganigramClient({
                     </div>
                 </div>
 
-                {/* Connection points */}
-                <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-blue-500 rounded-full cursor-crosshair" />
-                {node.children.length > 0 && node.children.map(child => (
-                    <svg
-                        key={child.id}
-                        className="absolute pointer-events-none"
-                        style={{
-                            left: node.position.x + node.size.width / 2,
-                            top: node.position.y + node.size.height,
-                            width: Math.abs(child.position.x - node.position.x),
-                            height: Math.abs(child.position.y - node.position.y - node.size.height)
-                        }}
-                    >
-                        <line
-                            x1="0"
-                            y1="0"
-                            x2="100%"
-                            y2="100%"
-                            stroke="#3B82F6"
-                            strokeWidth="2"
-                            strokeDasharray="5,5"
-                        />
-                    </svg>
-                ))}
+                {/* Top Connection Point (Target/End) */}
+                <div
+                    className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-blue-500 rounded-full cursor-crosshair hover:scale-125 transition-transform border-2 border-white shadow-sm z-30"
+                    onMouseDown={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        const startX = node.position.x + node.size.width / 2;
+                        const startY = node.position.y; // Top of node
+                        setConnectionStart({ nodeId: node.id, x: startX, y: startY, isReverse: true });
+                        setMousePos({ x: startX, y: startY });
+                    }}
+                />
+
+                {/* Bottom Connection Point (Source/Start) */}
+                <div
+                    className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-blue-500 rounded-full cursor-crosshair hover:scale-125 transition-transform border-2 border-white shadow-sm z-30"
+                    onMouseDown={(e) => {
+                        e.stopPropagation(); // Prevent drag start of the node
+                        e.preventDefault();
+                        const startX = node.position.x + node.size.width / 2;
+                        const startY = node.position.y + node.size.height; // Bottom of node
+                        setConnectionStart({ nodeId: node.id, x: startX, y: startY, isReverse: false });
+                        setMousePos({ x: startX, y: startY });
+                    }}
+                />
             </div>
         );
     };
@@ -372,6 +652,27 @@ export default function EditOrganigramClient({
                 </CardContent>
             </Card>
 
+            {/* Selected Connection Actions */}
+            {selectedConnection && (
+                <Card>
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-lg">Selected Connection</CardTitle>
+                        <CardDescription>Relationship Actions</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3 pb-3">
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => handleRemoveConnection(selectedConnection.from, selectedConnection.to)}
+                        >
+                            <Trash2 className="h-3 w-3 mr-2" />
+                            Delete Connection
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
+
             {/* Selected Node Actions */}
             {selectedNode && (
                 <Card>
@@ -385,6 +686,25 @@ export default function EditOrganigramClient({
                         </div>
 
                         <div className="space-y-2">
+                            {/* Check if node has a parent and allow disconnecting */}
+                            {organigramNodes.some(n => n.children.some(c => c.id === selectedNode.id)) && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    onClick={() => {
+                                        // Find parent and remove this child
+                                        setOrganigramNodes(prev => prev.map(node => ({
+                                            ...node,
+                                            children: node.children.filter(c => c.id !== selectedNode.id)
+                                        })));
+                                    }}
+                                >
+                                    <Trash2 className="h-3 w-3 mr-2" />
+                                    Disconnect Parent
+                                </Button>
+                            )}
+
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -406,11 +726,11 @@ export default function EditOrganigramClient({
                 </CardHeader>
                 <CardContent className="pb-3">
                     <div className="space-y-2 text-sm text-muted-foreground">
+                        <p>• Click lines to select and delete them</p>
                         <p>• Drag employees from the sidebar to the canvas</p>
                         <p>• Drag nodes to reposition them</p>
                         <p>• Click to select a node</p>
                         <p>• Drag from connection point to create relationships</p>
-                        <p>• Save snapshots to preserve structures</p>
                     </div>
                 </CardContent>
             </Card>
@@ -512,8 +832,50 @@ export default function EditOrganigramClient({
                                 onDragOver={handleDragOver}
                                 onDragEnter={() => console.log('Drag Enter')}
                                 onDrop={handleDrop}
+                                onMouseMove={handleCanvasMouseMove}
+                                onMouseUp={handleCanvasMouseUp}
+                                onClick={() => {
+                                    setSelectedNode(null);
+                                    setSelectedConnection(null);
+                                }}
                             >
+                                {/* Global SVG Defs */}
+                                <svg style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}>
+
+                                </svg>
+
+                                {/* Spacer for infinite canvas */}
+                                <div
+                                    style={{
+                                        width: Math.max(2000, ...organigramNodes.map(n => n.position.x + n.size.width + 500)),
+                                        height: Math.max(1500, ...organigramNodes.map(n => n.position.y + n.size.height + 500)),
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        pointerEvents: 'none'
+                                    }}
+                                />
+
+                                {/* Persistent Connections Layer (Behind Nodes) */}
+                                {renderConnections()}
+
                                 {organigramNodes.map(node => renderOrganigramNode(node))}
+
+                                {/* Temporary connection line */}
+                                {connectionStart && mousePos && (
+                                    <svg className="absolute inset-0 pointer-events-none w-full h-full overflow-visible">
+                                        <path
+                                            d={`M ${connectionStart.x} ${connectionStart.y} 
+                                               V ${connectionStart.y + (mousePos.y - connectionStart.y) / 2} 
+                                               H ${mousePos.x} 
+                                               V ${mousePos.y}`}
+                                            stroke="#3B82F6"
+                                            strokeWidth="2"
+                                            strokeDasharray="5,5"
+                                            fill="none"
+                                        />
+                                    </svg>
+                                )}
 
                                 {organigramNodes.length === 0 && (
                                     <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
