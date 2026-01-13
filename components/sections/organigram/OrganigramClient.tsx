@@ -35,7 +35,9 @@ import {
     MapPin,
     Flag,
     Eye,
-    Layers
+    Layers,
+    Maximize,
+    X
 } from 'lucide-react';
 
 interface OrganigramClientProps {
@@ -72,6 +74,7 @@ export default function OrganigramClient({
     const [mobileView, setMobileView] = useState<'organigram' | 'list'>('organigram');
     const [viewMode, setViewMode] = useState<'tree' | 'matrix' | 'map' | 'canvas'>('canvas');
     const [isDepartmentStatsOpen, setIsDepartmentStatsOpen] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
     const organigramRef = useRef<HTMLDivElement>(null);
 
     // Get entity level for an employee
@@ -645,9 +648,27 @@ export default function OrganigramClient({
                     </p>
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
-                    <Button variant="outline" onClick={handleTakeSnapshot} size="sm" className="flex-1 sm:flex-none text-xs">
+                    <Button
+                        variant="outline"
+                        onClick={() => setIsFullscreen(true)}
+                        size="sm"
+                        className="flex-1 sm:flex-none text-xs"
+                    >
+                        <Maximize className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                        Fullscreen
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 sm:flex-none text-xs"
+                        onClick={() => {
+                            // Clear localStorage draft to ensure blank canvas
+                            localStorage.removeItem('organigram-draft');
+                            window.location.href = '/strategy/organigram/edit';
+                        }}
+                    >
                         <Camera className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                        Snapshot
+                        Create Structure
                     </Button>
                     {/* Only CEO can add employees */}
                     {user?.role === 'CEO' && (
@@ -655,14 +676,6 @@ export default function OrganigramClient({
                             <Link href="/strategy/organigram/employees/new">
                                 <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                                 Add Employee
-                            </Link>
-                        </Button>
-                    )}
-                    {canManage && (
-                        <Button asChild size="sm" className="flex-1 sm:flex-none text-xs">
-                            <Link href="/strategy/organigram/edit">
-                                <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                                Edit
                             </Link>
                         </Button>
                     )}
@@ -695,26 +708,42 @@ export default function OrganigramClient({
                                 {snapshots.map(snapshot => (
                                     <div
                                         key={snapshot.id}
-                                        className={`p-2 sm:p-3 border rounded-lg cursor-pointer transition-colors ${selectedSnapshot?.id === snapshot.id
+                                        className={`p-2 sm:p-3 border rounded-lg transition-colors ${selectedSnapshot?.id === snapshot.id
                                             ? 'border-blue-500 bg-blue-50'
                                             : 'border-gray-200 hover:bg-gray-50'
                                             }`}
-                                        onClick={() => setSelectedSnapshot(snapshot)}
                                     >
                                         <div className="flex items-center justify-between">
-                                            <div className="min-w-0 flex-1">
+                                            <div
+                                                className="min-w-0 flex-1 cursor-pointer"
+                                                onClick={() => setSelectedSnapshot(snapshot)}
+                                            >
                                                 <h4 className="font-medium text-sm truncate">{snapshot.name}</h4>
                                                 <p className="text-xs text-muted-foreground">
                                                     {new Date(snapshot.createdAt).toLocaleDateString()}
                                                 </p>
                                             </div>
+                                            {canManage && (
+                                                <Button
+                                                    asChild
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0 ml-1"
+                                                >
+                                                    <Link href={`/strategy/organigram/edit/${snapshot.id}`}>
+                                                        <Edit className="h-3 w-3" />
+                                                    </Link>
+                                                </Button>
+                                            )}
                                             <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0">
                                                 <Download className="h-3 w-3" />
                                             </Button>
                                         </div>
-                                        {snapshot.description && (
-                                            <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{snapshot.description}</p>
-                                        )}
+                                        {
+                                            snapshot.description && (
+                                                <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{snapshot.description}</p>
+                                            )
+                                        }
                                     </div>
                                 ))}
                             </div>
@@ -736,9 +765,9 @@ export default function OrganigramClient({
                                                 className="w-3 h-3 rounded-full flex-shrink-0"
                                                 style={{ backgroundColor: dept.color }}
                                             />
-                                            <span className="text-sm truncate">{dept.name}</span>
+                                            <span className="text-xs">{dept.name}</span>
                                         </div>
-                                        <Badge variant="secondary" className="text-xs">{dept.memberCount}</Badge>
+                                        <Badge variant="secondary" className="text-xs">{dept.member_count || 0}</Badge>
                                     </div>
                                 ))}
                             </div>
@@ -788,6 +817,7 @@ export default function OrganigramClient({
                                 <EmployeeListView />
                             ) : (
                                 <div
+                                    key={selectedSnapshot?.id || 'no-snapshot'}
                                     ref={organigramRef}
                                     className="relative min-h-[400px] sm:min-h-[500px] lg:min-h-[600px] border-2 border-dashed border-gray-200 rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 overflow-auto"
                                     onDragOver={handleDragOver}
@@ -832,6 +862,68 @@ export default function OrganigramClient({
                     </Card>
                 </div>
             </div>
-        </div>
+
+            {/* Fullscreen Dialog */}
+            <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
+                <DialogContent className="max-w-[100vw] max-h-[100vh] w-full h-full p-0 gap-0">
+                    <div className="relative w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
+                        {/* Header with Close Button */}
+                        <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setIsFullscreen(false)}
+                                className="bg-white shadow-lg hover:bg-gray-100"
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </div>
+
+                        {/* Fullscreen Canvas */}
+                        <div className="w-full h-full overflow-auto p-8" key={selectedSnapshot?.id || 'no-snapshot-fullscreen'}>
+                            <div className="relative min-h-full">
+                                {/* Spacer for scrollable canvas */}
+                                {canvasNodes.length > 0 && (
+                                    <div
+                                        style={{
+                                            width: Math.max(2000, ...canvasNodes.map(n => n.position.x + n.size.width + 500)),
+                                            height: Math.max(1500, ...canvasNodes.map(n => n.position.y + n.size.height + 500)),
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            pointerEvents: 'none'
+                                        }}
+                                    />
+                                )}
+
+                                {/* Render Connections */}
+                                {viewMode === 'canvas' && renderConnections()}
+
+                                {/* Render Nodes */}
+                                {(viewMode === 'canvas' ? canvasNodes : organigramTree).length > 0 ? (
+                                    viewMode === 'canvas' ? (
+                                        canvasNodes.map(node => renderCanvasNode(node))
+                                    ) : (
+                                        organigramTree.map(node => renderOrganigramNode(node))
+                                    )
+                                ) : (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="text-center">
+                                            <Building className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                                            <h3 className="text-xl font-medium text-muted-foreground mb-2">
+                                                No organization structure
+                                            </h3>
+                                            <p className="text-sm text-muted-foreground">
+                                                Organization structure will be available soon
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </div >
     );
 }

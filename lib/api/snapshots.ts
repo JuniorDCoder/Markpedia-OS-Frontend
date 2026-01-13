@@ -82,14 +82,54 @@ export const snapshotApi = {
                     createdAt: new Date().toISOString(),
                 } as OrganigramSnapshot;
 
-                // Add to beginning (since we reverse, or actually just push and sort later?)
-                // Based on getAll logic: push to array, then it gets reversed on read.
-                // But initializeStorage reads raw array.
-                // Let's just append to array in storage.
                 const updatedSnapshots = [...snapshots, newSnapshot];
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedSnapshots));
 
                 resolve(newSnapshot);
+            }, 100);
+        });
+    },
+
+    async update(id: string, data: Partial<OrganigramSnapshot>): Promise<OrganigramSnapshot> {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                const snapshots = initializeStorage();
+                const index = snapshots.findIndex(s => s.id === id);
+
+                if (index === -1) {
+                    reject(new Error('Snapshot not found'));
+                    return;
+                }
+
+                const updatedSnapshot = {
+                    ...snapshots[index],
+                    ...data,
+                    id, // Preserve original ID
+                    createdAt: snapshots[index].createdAt, // Preserve creation date
+                    updatedAt: new Date().toISOString()
+                };
+
+                snapshots[index] = updatedSnapshot;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshots));
+
+                resolve(updatedSnapshot);
+            }, 100);
+        });
+    },
+
+    async delete(id: string): Promise<void> {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                const snapshots = initializeStorage();
+                const filtered = snapshots.filter(s => s.id !== id);
+
+                if (filtered.length === snapshots.length) {
+                    reject(new Error('Snapshot not found'));
+                    return;
+                }
+
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+                resolve();
             }, 100);
         });
     }

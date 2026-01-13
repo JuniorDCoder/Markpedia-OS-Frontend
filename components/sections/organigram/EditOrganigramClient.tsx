@@ -11,6 +11,15 @@ import { snapshotApi } from '@/lib/api/snapshots';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { Employee, OrganigramSnapshot, Department, User, OrganigramNode as ApiOrganigramNode } from '@/types';
 import {
     ArrowLeft,
@@ -49,7 +58,8 @@ export default function EditOrganigramClient({
     employees,
     snapshots,
     departments,
-    user
+    user,
+    initialSnapshotId
 }: EditOrganigramClientProps) {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
@@ -65,8 +75,12 @@ export default function EditOrganigramClient({
     const [selectedConnection, setSelectedConnection] = useState<{ from: string; to: string } | null>(null);
     const [editingConnection, setEditingConnection] = useState<{ from: string; to: string } | null>(null);
 
-    // ... (keep lines 68-300 unchanged)
-    // Note: I will need to verify if I can just update the state definition and usages in later chunks or if I need to update the whole file. 
+    // Snapshot management state
+    // Initialize currentSnapshotId with initialSnapshotId if provided
+    const [currentSnapshotId, setCurrentSnapshotId] = useState<string | null>(initialSnapshotId || null);
+    const [isSaveAsNewDialogOpen, setIsSaveAsNewDialogOpen] = useState(false);
+    const [newSnapshotName, setNewSnapshotName] = useState('');
+
     // The previous replace_file_content logic implies I should target specific blocks. 
     // Let's do the State definition first (lines 63-65).
 
@@ -83,80 +97,94 @@ export default function EditOrganigramClient({
 
     // Initial load hook - prioritize localStorage over snapshot
     const initializeOrganigram = useCallback(() => {
-        // Try to load from localStorage first
-        try {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                const employeeMap = new Map(employees.map(emp => [emp.id, emp]));
+        // 1. If editing a specific snapshot (initialSnapshotId provided)
+        if (initialSnapshotId) {
+            const targetSnapshot = snapshots.find(s => s.id === initialSnapshotId);
+            if (targetSnapshot) {
+                const employeeMap = new Map(employees.map(emp => [emp.id, emp])); // Use Map for O(1) lookup
 
-                // Reconstruct nodes with employee objects
-                const reconstructNodes = (nodeData: any): OrganigramNode | null => {
+                // Map snapshot nodes (from API) to local OrganigramNode format
+                const allNodes = targetSnapshot.nodes.map(nodeData => {
                     const employee = employeeMap.get(nodeData.employeeId);
                     if (!employee) return null;
 
-                    return {
+                    // Explicitly construct the object to match OrganigramNode interface exactly
+                    const node: OrganigramNode = {
                         id: nodeData.id,
                         employee: employee,
                         position: nodeData.position,
                         size: nodeData.size,
-                        children: nodeData.children
-                            .map((child: any) => reconstructNodes(child))
-                            .filter((n: any): n is OrganigramNode => n !== null)
+                        children: [] // Will be populated in the second pass
                     };
-                };
+                    return node;
+                }).filter((n): n is OrganigramNode => n !== null);
 
-                const restoredNodes = parsed
-                    .map((nodeData: any) => reconstructNodes(nodeData))
-                    .filter((n: any): n is OrganigramNode => n !== null);
+                // Reconstruct the parent-child relationships using object references
+                const nodeMapLocal = new Map(allNodes.map(n => [n.id, n]));
 
-                if (restoredNodes.length > 0) {
-                    setOrganigramNodes(restoredNodes);
-                    console.log('Loaded organigram from localStorage');
-                    return;
-                }
+                targetSnapshot.nodes.forEach(data => {
+                    const node = nodeMapLocal.get(data.id);
+                    // ApiOrganigramNode has children as string[] (ids)
+                    if (node && data.children && Array.isArray(data.children)) {
+                        node.children = data.children
+                            .map((childId: string) => nodeMapLocal.get(childId))
+                            .filter((n): n is OrganigramNode => n !== undefined);
+                    }
+                });
+
+                setOrganigramNodes(allNodes);
+                console.log(`Loaded snapshot: ${targetSnapshot.name}`);
+                return;
             }
-        } catch (error) {
-            console.error('Failed to load from localStorage:', error);
         }
 
-        // Fallback to snapshot if no localStorage data
-        if (snapshots.length > 0) {
-            const latestSnapshot = snapshots[0];
-            const employeeMap = new Map(employees.map(emp => [emp.id, emp]));
+        // 2. If creating new (no initialSnapshotId)
+        if (!initialSnapshotId) {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                if (stored) {
+                    const parsed = JSON.parse(stored);
 
-            // Map snapshot nodes (from API) to local OrganigramNode format
-            const allNodes = latestSnapshot.nodes.map(nodeData => {
-                const employee = employeeMap.get(nodeData.employeeId);
-                if (!employee) return null;
+                    // Only restore draft if it is also for a NEW snapshot (null ID)
+                    // If the draft has a snapshotId, it belongs to an edit session, so ignore it for "Create New"
+                    if (!parsed.snapshotId) {
+                        const employeeMap = new Map(employees.map(emp => [emp.id, emp]));
 
-                // Explicitly construct the object to match OrganigramNode interface exactly
-                const node: OrganigramNode = {
-                    id: nodeData.id,
-                    employee: employee,
-                    position: nodeData.position,
-                    size: nodeData.size,
-                    children: [] // Will be populated in the second pass
-                };
-                return node;
-            }).filter((n): n is OrganigramNode => n !== null);
+                        // Handle both old array format and new object format
+                        const nodesSource = Array.isArray(parsed) ? parsed : (parsed.nodes || []);
 
-            // Reconstruct the parent-child relationships using object references
-            const nodeMapLocal = new Map(allNodes.map(n => [n.id, n]));
+                        // Reconstruct nodes with employee objects
+                        const reconstructNodes = (nodeData: any): OrganigramNode | null => {
+                            const employee = employeeMap.get(nodeData.employeeId);
+                            if (!employee) return null;
 
-            latestSnapshot.nodes.forEach(data => {
-                const node = nodeMapLocal.get(data.id);
-                // ApiOrganigramNode has children as string[] (ids)
-                if (node && data.children && Array.isArray(data.children)) {
-                    node.children = data.children
-                        .map((childId: string) => nodeMapLocal.get(childId))
-                        .filter((n): n is OrganigramNode => n !== undefined);
+                            return {
+                                id: nodeData.id,
+                                employee: employee,
+                                position: nodeData.position,
+                                size: nodeData.size,
+                                children: (nodeData.children || [])
+                                    .map((child: any) => reconstructNodes(child))
+                                    .filter((n: any): n is OrganigramNode => n !== null)
+                            };
+                        };
+
+                        const restoredNodes = nodesSource
+                            .map((nodeData: any) => reconstructNodes(nodeData))
+                            .filter((n: any): n is OrganigramNode => n !== null);
+
+                        if (restoredNodes.length > 0) {
+                            setOrganigramNodes(restoredNodes);
+                            console.log('Loaded new structure draft from localStorage');
+                            return;
+                        }
+                    }
                 }
-            });
-
-            setOrganigramNodes(allNodes);
+            } catch (error) {
+                console.error('Failed to load from localStorage:', error);
+            }
         }
-    }, [employees, snapshots]);
+    }, [employees, snapshots, initialSnapshotId]);
 
     useEffect(() => {
         initializeOrganigram();
@@ -164,7 +192,8 @@ export default function EditOrganigramClient({
 
     // Auto-save to localStorage whenever organigramNodes changes
     useEffect(() => {
-        if (organigramNodes.length === 0) return; // Don't save empty state on initial render
+        // Don't save empty state on initial render, unless we are expliclty clearing/editing a snapshot
+        if (organigramNodes.length === 0 && !currentSnapshotId) return;
 
         try {
             // Serialize nodes for storage (convert to plain objects)
@@ -176,13 +205,21 @@ export default function EditOrganigramClient({
                 children: node.children.map(child => serializeNode(child))
             });
 
-            const serialized = organigramNodes.map(node => serializeNode(node));
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(serialized));
+            const nodesData = organigramNodes.map(node => serializeNode(node));
+
+            // Save with metadata including snapshotId to prevent cross-contamination
+            const storageData = {
+                snapshotId: currentSnapshotId,
+                nodes: nodesData,
+                timestamp: Date.now()
+            };
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(storageData));
             console.log('Auto-saved to localStorage');
         } catch (error) {
             console.error('Failed to save to localStorage:', error);
         }
-    }, [organigramNodes]);
+    }, [organigramNodes, currentSnapshotId]);
 
     // Drag and drop handlers (Node moving)
     const handleDragStart = (e: DragEvent, employee: Employee) => {
@@ -301,12 +338,44 @@ export default function EditOrganigramClient({
         setSelectedConnection(null);
     };
 
-    const handleSaveSnapshot = async (name: string, description?: string) => {
+    const handleUpdateSnapshot = async () => {
+        if (!currentSnapshotId) {
+            toast.error('No snapshot selected to update');
+            return;
+        }
+
         setIsLoading(true);
         try {
             const snapshotData = {
-                name,
-                description,
+                nodes: organigramNodes.flatMap(node => flattenNode(node))
+            };
+
+            await snapshotApi.update(currentSnapshotId, snapshotData);
+
+            // Clear localStorage draft after successful update
+            localStorage.removeItem(STORAGE_KEY);
+
+            toast.success('Snapshot updated successfully');
+            router.push('/strategy/organigram');
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to update snapshot');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleSaveAsNew = async () => {
+        if (!newSnapshotName.trim()) {
+            toast.error('Please enter a snapshot name');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const snapshotData = {
+                name: newSnapshotName,
+                description: `Created on ${new Date().toLocaleDateString()}`,
                 nodes: organigramNodes.flatMap(node => flattenNode(node))
             };
 
@@ -315,11 +384,40 @@ export default function EditOrganigramClient({
             // Clear localStorage draft after successful save
             localStorage.removeItem(STORAGE_KEY);
 
-            toast.success('Snapshot saved successfully');
+            toast.success('New snapshot created successfully');
+            setIsSaveAsNewDialogOpen(false);
+            setNewSnapshotName('');
             router.push('/strategy/organigram');
         } catch (error) {
             console.error(error);
-            toast.error('Failed to save snapshot');
+            toast.error('Failed to create snapshot');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleDeleteSnapshot = async () => {
+        if (!currentSnapshotId) {
+            toast.error('No snapshot selected to delete');
+            return;
+        }
+
+        if (!confirm('Are you sure you want to delete this snapshot? This action cannot be undone.')) {
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            await snapshotApi.delete(currentSnapshotId);
+
+            // Clear localStorage draft
+            localStorage.removeItem(STORAGE_KEY);
+
+            toast.success('Snapshot deleted successfully');
+            router.push('/strategy/organigram');
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to delete snapshot');
         } finally {
             setIsLoading(false);
         }
@@ -770,25 +868,64 @@ export default function EditOrganigramClient({
                         </SheetContent>
                     </Sheet>
 
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleSaveSnapshot(`Snapshot ${new Date().toLocaleDateString()}`)}
-                        disabled={isLoading}
-                        className="hidden sm:flex flex-shrink-0"
-                    >
-                        <Camera className="h-4 w-4 mr-2" />
-                        Save
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleSaveSnapshot(`Snapshot ${new Date().toLocaleDateString()}`)}
-                        disabled={isLoading}
-                        className="sm:hidden flex-shrink-0"
-                    >
-                        <Camera className="h-4 w-4" />
-                    </Button>
+                    {/* Delete Snapshot - Only show when editing existing */}
+                    {currentSnapshotId && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleDeleteSnapshot}
+                            disabled={isLoading}
+                            className="hidden sm:flex flex-shrink-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                        </Button>
+                    )}
+
+                    {/* Save (for new) or Update (for existing) */}
+                    {currentSnapshotId ? (
+                        <Button
+                            size="sm"
+                            onClick={handleUpdateSnapshot}
+                            disabled={isLoading}
+                            className="hidden sm:flex flex-shrink-0"
+                        >
+                            <Camera className="h-4 w-4 mr-2" />
+                            Update
+                        </Button>
+                    ) : (
+                        <Button
+                            size="sm"
+                            onClick={() => setIsSaveAsNewDialogOpen(true)}
+                            disabled={isLoading}
+                            className="hidden sm:flex flex-shrink-0"
+                        >
+                            <Save className="h-4 w-4 mr-2" />
+                            Save
+                        </Button>
+                    )}
+
+                    {/* Mobile: Same logic */}
+                    {currentSnapshotId ? (
+                        <Button
+                            size="icon"
+                            onClick={handleUpdateSnapshot}
+                            disabled={isLoading}
+                            className="sm:hidden flex-shrink-0"
+                        >
+                            <Camera className="h-4 w-4" />
+                        </Button>
+                    ) : (
+                        <Button
+                            size="icon"
+                            onClick={() => setIsSaveAsNewDialogOpen(true)}
+                            disabled={isLoading}
+                            className="sm:hidden flex-shrink-0"
+                        >
+                            <Save className="h-4 w-4" />
+                        </Button>
+                    )}
+
                     <Button asChild size="sm" className="hidden sm:flex flex-shrink-0">
                         <Link href="/strategy/organigram/employees/new">
                             <Plus className="h-4 w-4 mr-2" />
@@ -895,6 +1032,48 @@ export default function EditOrganigramClient({
                     </Card>
                 </div>
             </div>
+
+            {/* Save Dialog (for new structures) */}
+            <Dialog open={isSaveAsNewDialogOpen} onOpenChange={setIsSaveAsNewDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Save New Structure</DialogTitle>
+                        <DialogDescription>
+                            Give your new organigram structure a name to save it.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="snapshot-name">Snapshot Name</Label>
+                            <Input
+                                id="snapshot-name"
+                                placeholder="e.g., Q1 2024 Structure"
+                                value={newSnapshotName}
+                                onChange={(e) => setNewSnapshotName(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && newSnapshotName.trim()) {
+                                        handleSaveAsNew();
+                                    }
+                                }}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setIsSaveAsNewDialogOpen(false);
+                                setNewSnapshotName('');
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button onClick={handleSaveAsNew} disabled={isLoading || !newSnapshotName.trim()}>
+                            {isLoading ? 'Saving...' : 'Save Structure'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
