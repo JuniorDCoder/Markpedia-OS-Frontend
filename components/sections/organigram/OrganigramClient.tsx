@@ -45,7 +45,7 @@ interface OrganigramClientProps {
     snapshots: OrganigramSnapshot[];
     departments: Department[];
     entities: Entity[];
-    user: User;
+    user: User | null;
 }
 
 interface OrganigramNode {

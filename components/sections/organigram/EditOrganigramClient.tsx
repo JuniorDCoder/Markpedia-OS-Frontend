@@ -39,6 +39,7 @@ interface EditOrganigramClientProps {
     snapshots: OrganigramSnapshot[];
     departments: Department[];
     user: User;
+    initialSnapshotId?: string | null;
 }
 
 interface OrganigramNode {
