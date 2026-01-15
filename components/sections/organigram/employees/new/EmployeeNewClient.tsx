@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Department, User, Entity } from '@/types';
 import { ArrowLeft, Save, Upload, User as UserIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { Role, rolesApi } from '@/lib/api/roles';
 
 interface EmployeeNewClientProps {
     departments: Department[];
@@ -22,6 +23,19 @@ interface EmployeeNewClientProps {
 export default function EmployeeNewClient({ departments, entities = [], user }: EmployeeNewClientProps) {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
+    const [roles, setRoles] = useState<Role[]>([]);
+
+    useEffect(() => {
+        const loadRoles = async () => {
+            try {
+                const data = await rolesApi.getAll();
+                setRoles(data);
+            } catch (error) {
+                console.error('Failed to load roles:', error);
+            }
+        };
+        loadRoles();
+    }, []);
 
     const [formData, setFormData] = useState({
         // Account Details
@@ -39,7 +53,7 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
         joiningDate: new Date().toISOString().split('T')[0],
         reportsTo: '',
         language: 'English',
-        role: 'Employee' as 'CEO' | 'Manager' | 'Employee' | 'Admin' | 'CXO',
+        role: 'Employee' as string,
 
         // Address/About
         address: '',
@@ -217,11 +231,20 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Designation <span className="text-red-500">*</span></label>
-                            <Input
-                                placeholder="e.g. Software Engineer"
+                            <Select
                                 value={formData.designation}
-                                onChange={(e) => handleInputChange('designation', e.target.value)}
-                            />
+                                onValueChange={(v) => handleInputChange('designation', v)}
+                            >
+                                <SelectTrigger><SelectValue placeholder="Select Role" /></SelectTrigger>
+                                <SelectContent>
+                                    {roles.map(role => (
+                                        <SelectItem key={role.id} value={role.name}>{role.name}</SelectItem>
+                                    ))}
+                                    {roles.length === 0 && (
+                                        <SelectItem value="Employee" disabled>No roles available</SelectItem>
+                                    )}
+                                </SelectContent>
+                            </Select>
                         </div>
 
                         {/* Row 4 */}
@@ -310,6 +333,10 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
                                     {user.role === 'CEO' && <SelectItem value="CEO">CEO</SelectItem>}
                                     {user.role === 'CEO' && <SelectItem value="Admin">Admin</SelectItem>}
                                     {user.role === 'CEO' && <SelectItem value="CXO">CXO</SelectItem>}
+                                    {roles.length > 0 && <div className="border-t my-1" />}
+                                    {roles.map(role => (
+                                        <SelectItem key={role.id} value={role.name}>{role.name}</SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>

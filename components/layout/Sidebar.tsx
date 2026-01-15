@@ -99,6 +99,14 @@ const navigation = {
             href: '/work/departments',
             icon: Building,
             roles: ['CEO', 'Admin', 'Manager', 'Employee', 'CXO'],
+            roles: ['CEO', 'Admin', 'Manager', 'Employee', 'CXO'],
+            phase: 1,
+        },
+        {
+            name: 'Roles',
+            href: '/work/roles',
+            icon: UserCog,
+            roles: ['CEO', 'Admin', 'CXO'],
             phase: 1,
         },
     ],
@@ -265,9 +273,18 @@ export function Sidebar() {
     if (!user) return null;
 
     const filterItemsByRoleAndPhase = (items: typeof navigation.main) => {
-        return items.filter(item =>
-            item.roles.includes(user.role) && item.phase <= currentPhase
-        );
+        return items.filter(item => {
+            // Check if user has explicit role access
+            const hasExplicitAccess = item.roles.includes(user.role);
+
+            // Check if user has implicit "Employee" access (for custom roles)
+            // If the item allows "Employee" and the user's role is not a standard system role, allow access
+            const SYSTEM_ROLES = ['CEO', 'Admin', 'Manager', 'CXO', 'Employee'];
+            const isCustomRole = !SYSTEM_ROLES.includes(user.role);
+            const hasImplicitAccess = isCustomRole && item.roles.includes('Employee');
+
+            return (hasExplicitAccess || hasImplicitAccess) && item.phase <= currentPhase;
+        });
     };
 
     // Tooltip wrapper component for sidebar items

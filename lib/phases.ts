@@ -29,6 +29,7 @@ export const PHASE_ROUTES: Record<Phase, string[]> = {
         '/work/job-descriptions',
         '/work/departmental-frameworks',
         '/work/departments',
+        '/work/roles',
 
         // People
         '/people/attendance',
