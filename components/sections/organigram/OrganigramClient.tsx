@@ -175,9 +175,60 @@ export default function OrganigramClient({
         console.log('Dropped node:', nodeId);
     };
 
-    const handleExport = (format: 'png' | 'pdf' | 'json') => {
-        // Implement export logic
-        console.log('Exporting as:', format);
+    const handleExport = async (format: 'png' | 'pdf' | 'json') => {
+        if (!organigramRef.current) return;
+
+        try {
+            // Dynamically import libraries to ensure client-side execution
+            const html2canvas = (await import('html2canvas')).default;
+
+            if (format === 'json') {
+                if (!selectedSnapshot) return;
+                const data = JSON.stringify(selectedSnapshot, null, 2);
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${selectedSnapshot.name || 'organigram'}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                return;
+            }
+
+            // For visual export (PNG/PDF)
+            const canvas = await html2canvas(organigramRef.current, {
+                scale: 2, // Check for high DPI
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#ffffff'
+            });
+
+            if (format === 'png') {
+                const image = canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.href = image;
+                link.download = `${selectedSnapshot?.name || 'organigram'}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } else if (format === 'pdf') {
+                const { jsPDF } = await import('jspdf');
+
+                // Calculate PDF dimensions to fit the image
+                const imgWidth = 210; // A4 width in mm
+                const pageHeight = 297; // A4 height in mm
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, imgWidth, imgHeight);
+                pdf.save(`${selectedSnapshot?.name || 'organigram'}.pdf`);
+            }
+        } catch (error) {
+            console.error('Export failed:', error);
+            // You might want to add a toast notification here
+        }
     };
 
     const handleTakeSnapshot = () => {
@@ -792,19 +843,20 @@ export default function OrganigramClient({
                                     </CardDescription>
                                 </div>
                                 <div className="flex gap-2">
-                                    <Select defaultValue="export">
+                                    <Select 
+                                        onValueChange={(value) => handleExport(value as 'png' | 'pdf' | 'json')}
+                                    >
                                         <SelectTrigger className="w-[120px] sm:w-[130px] text-xs sm:text-sm">
                                             <SelectValue placeholder="Export" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="export" disabled>Export as...</SelectItem>
-                                            <SelectItem value="png" onSelect={() => handleExport('png')}>
+                                            <SelectItem value="png">
                                                 PNG Image
                                             </SelectItem>
-                                            <SelectItem value="pdf" onSelect={() => handleExport('pdf')}>
+                                            <SelectItem value="pdf">
                                                 PDF Document
                                             </SelectItem>
-                                            <SelectItem value="json" onSelect={() => handleExport('json')}>
+                                            <SelectItem value="json">
                                                 JSON Data
                                             </SelectItem>
                                         </SelectContent>
