@@ -74,11 +74,11 @@ export default function CashRequestFormClient({ mode, initialData }: Props) {
                 await cashManagementService.createCashRequest({
                     ...form,
                     dateOfRequest: new Date().toISOString().split('T')[0],
-                    requestedBy: "1", // TODO: Get from auth store
-                    department: "General", // TODO: Get from auth store
-                    designation: "Employee", // TODO: Get from auth store
-                    supervisor: "2", // Mock supervisor
-                    financeOfficer: "3", // Mock finance officer
+                    requestedBy: "User " + (Math.floor(Math.random() * 100)), // Mock user for now
+                    department: form.department || "General",
+                    designation: "Employee",
+                    supervisor: "Supervisor",
+                    financeOfficer: "Finance Officer",
                     status: "Pending Accountant",
                     ceoApprovalRequired: (form.amountRequested || 0) > 100000,
                     acknowledgment: false,
@@ -213,10 +213,42 @@ export default function CashRequestFormClient({ mode, initialData }: Props) {
                         </div>
 
                         <div className="space-y-2">
+                            <Label htmlFor="department">Department *</Label>
+                            <Input
+                                id="department"
+                                placeholder="Your department"
+                                value={form.department}
+                                onChange={(e) => handleChange("department", e.target.value)}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="project">Project Allocation / Cost Center *</Label>
+                            <Input
+                                id="project"
+                                placeholder="e.g. PRJ-X-2025"
+                                value={form.projectCostCenterCode}
+                                onChange={(e) => handleChange("projectCostCenterCode", e.target.value)}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="payee">Payee Name *</Label>
+                            <Input
+                                id="payee"
+                                placeholder="Who should be paid?"
+                                value={form.payeeName}
+                                onChange={(e) => handleChange("payeeName", e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                        <div className="space-y-2">
                             <Label htmlFor="method">Preferred Payment Method</Label>
                             <Select
                                 value={form.paymentMethodPreferred}
-                                onValueChange={(val) => handleChange("paymentMethodPreferred", val)}
+                                onValueChange={(val: any) => handleChange("paymentMethodPreferred", val)}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Method" />
@@ -229,15 +261,75 @@ export default function CashRequestFormClient({ mode, initialData }: Props) {
                             </Select>
                         </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="payee">Payee Name</Label>
-                            <Input
-                                id="payee"
-                                placeholder="Who should be paid?"
-                                value={form.payeeName}
-                                onChange={(e) => handleChange("payeeName", e.target.value)}
-                            />
-                        </div>
+                        {form.paymentMethodPreferred === 'Bank Transfer' && (
+                            <>
+                                <div className="space-y-2">
+                                    <Label htmlFor="bankName">Bank Name *</Label>
+                                    <Input
+                                        id="bankName"
+                                        placeholder="e.g. ECOBANK"
+                                        value={form.bankName}
+                                        onChange={(e) => handleChange("bankName", e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="accountNumber">Account Number *</Label>
+                                    <Input
+                                        id="accountNumber"
+                                        placeholder="Full RIB or Account Number"
+                                        value={form.accountNumber}
+                                        onChange={(e) => handleChange("accountNumber", e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="accountName">Account Name *</Label>
+                                    <Input
+                                        id="accountName"
+                                        placeholder="Name on account"
+                                        value={form.accountName}
+                                        onChange={(e) => handleChange("accountName", e.target.value)}
+                                    />
+                                </div>
+                            </>
+                        )}
+
+                        {form.paymentMethodPreferred === 'Mobile Money' && (
+                            <>
+                                <div className="space-y-2">
+                                    <Label htmlFor="momoProvider">Provider *</Label>
+                                    <Select
+                                        value={form.momoProvider}
+                                        onValueChange={(val) => handleChange("momoProvider", val)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select Provider" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="MTN Momo">MTN Momo</SelectItem>
+                                            <SelectItem value="Orange Money">Orange Money</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="momoNumber">Momo Number *</Label>
+                                    <Input
+                                        id="momoNumber"
+                                        placeholder="6XXXXXXXX"
+                                        value={form.momoNumber}
+                                        onChange={(e) => handleChange("momoNumber", e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="momoName">Registered Name *</Label>
+                                    <Input
+                                        id="momoName"
+                                        placeholder="Name registered on MoMo"
+                                        value={form.momoName}
+                                        onChange={(e) => handleChange("momoName", e.target.value)}
+                                    />
+                                </div>
+                            </>
+                        )}
                     </div>
 
                     <div className="space-y-2 mt-4">

@@ -67,7 +67,17 @@ export default function CashRequestsPage() {
         }
     };
 
+    const canApprove = user?.role === 'Manager' || user?.role === 'CEO' || user?.role === 'Finance' || user?.role === 'CFO';
+    const canManage = user?.role === 'CEO' || user?.role === 'Admin' || user?.role === 'Finance' || user?.role === 'Accountant' || user?.role === 'Cashier' || user?.role === 'CFO';
+    const canViewAll = canManage || user?.role === 'Manager';
+    const isCashier = user?.role === 'Cashier';
+
     const filteredRequests = requests.filter(request => {
+        // Restriction check
+        if (!canViewAll && user && request.requestedBy !== user.id) {
+            return false;
+        }
+
         const matchesSearch = request.purposeOfRequest.toLowerCase().includes(searchTerm.toLowerCase()) ||
             request.requestId.toLowerCase().includes(searchTerm.toLowerCase()) ||
             request.requestedBy.toLowerCase().includes(searchTerm.toLowerCase());
@@ -125,21 +135,55 @@ export default function CashRequestsPage() {
         }
     };
 
+    useEffect(() => {
+        if (!user) return;
+        if (user.role === 'Accountant') setStatusFilter('Pending Accountant');
+        if (user.role === 'CFO') setStatusFilter('Pending CFO');
+        if (user.role === 'CEO') setStatusFilter('Pending CEO');
+        if (user.role === 'Cashier') setStatusFilter('Approved');
+    }, [user?.role]);
+
     const getRequestStats = () => {
-        const totalRequests = requests.length;
-        const pendingRequests = requests.filter(r => r.status.startsWith('Pending')).length;
-        const approvedRequests = requests.filter(r => r.status === 'Approved').length;
-        const totalAmount = requests.reduce((sum, r) => sum + r.amountRequested, 0);
-        const pendingAmount = requests
-            .filter(r => r.status.startsWith('Pending'))
-            .reduce((sum, r) => sum + r.amountRequested, 0);
+        // First, determine the set of requests the user is allowed to see stats for
+        let relevantRequests = requests;
+        if (!canViewAll && user) {
+            relevantRequests = requests.filter(r => r.requestedBy === user.id);
+        }
+
+        const totalRequests = relevantRequests.length;
+        const approvedRequests = relevantRequests.filter(r => r.status === 'Approved').length;
+        const totalAmount = relevantRequests.reduce((sum, r) => sum + r.amountRequested, 0);
+
+        let pendingRequests = 0;
+        let pendingAmount = 0;
+
+        // Calculate "Pending" based on user role (ACTION ITEMS)
+        if (user?.role === 'Accountant') {
+            const relevant = requests.filter(r => r.status === 'Pending Accountant');
+            pendingRequests = relevant.length;
+            pendingAmount = relevant.reduce((sum, r) => sum + r.amountRequested, 0);
+        } else if (user?.role === 'CFO') {
+            const relevant = requests.filter(r => r.status === 'Pending CFO');
+            pendingRequests = relevant.length;
+            pendingAmount = relevant.reduce((sum, r) => sum + r.amountRequested, 0);
+        } else if (user?.role === 'CEO') {
+            const relevant = requests.filter(r => r.status === 'Pending CEO');
+            pendingRequests = relevant.length;
+            pendingAmount = relevant.reduce((sum, r) => sum + r.amountRequested, 0);
+        } else if (user?.role === 'Cashier') {
+            // For Cashier, "Pending" action items are Approved requests waiting for disbursement
+            const relevant = requests.filter(r => r.status === 'Approved');
+            pendingRequests = relevant.length;
+            pendingAmount = relevant.reduce((sum, r) => sum + r.amountRequested, 0);
+        } else {
+            // Default view (Employee or Manager seeing their team's/own pipeline)
+            const relevant = relevantRequests.filter(r => r.status.startsWith('Pending'));
+            pendingRequests = relevant.length;
+            pendingAmount = relevant.reduce((sum, r) => sum + r.amountRequested, 0);
+        }
 
         return { totalRequests, pendingRequests, approvedRequests, totalAmount, pendingAmount };
     };
-
-    const canApprove = user?.role === 'Manager' || user?.role === 'CEO' || user?.role === 'Finance';
-    const canManage = user?.role === 'CEO' || user?.role === 'Admin' || user?.role === 'Finance' || user?.role === 'Accountant' || user?.role === 'Cashier';
-    const isCashier = user?.role === 'Cashier';
 
     const stats = getRequestStats();
 

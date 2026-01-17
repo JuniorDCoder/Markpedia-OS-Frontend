@@ -17,6 +17,12 @@ export interface CashRequest {
     urgencyLevel: 'Low' | 'Medium' | 'High' | 'Critical';
     advanceOrReimbursement: 'Advance' | 'Reimbursement';
     projectCostCenterCode: string;
+    bankName?: string;
+    accountNumber?: string;
+    accountName?: string;
+    momoProvider?: string;
+    momoNumber?: string;
+    momoName?: string;
     supervisor: string;
     financeOfficer: string;
     ceoApprovalRequired: boolean;
