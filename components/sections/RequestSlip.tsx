@@ -14,10 +14,20 @@ export const RequestSlip = ({ request }: Props) => {
         return new Intl.NumberFormat('en-US').format(val) + " XAF";
     };
 
-    // Simple number to words (basic implementation for requested requirement)
-    const amountToWords = (num: number) => {
-        // This is a placeholder for a proper library if needed
-        return "AMOUNT IN WORDS: __________________________________________________________________________";
+    // Helper to find approval entry for a specific status transition
+    const getApproval = (status: string) => {
+        return request.auditTrail?.find(entry => entry.action.includes(status));
+    };
+
+    const approvalSteps = {
+        accountant: getApproval('Pending CFO') || getApproval('Approved'),
+        cfo: getApproval('Pending CEO') || (request.ceoApprovalRequired ? null : getApproval('Approved')),
+        ceo: getApproval('Approved')
+    };
+
+    const amountToWords = (amount: number) => {
+        // Basic placeholder for "Amount in words" as requested by design
+        return `Amount in words: __________________________________________________________________________`;
     };
 
     return (
@@ -116,41 +126,60 @@ export const RequestSlip = ({ request }: Props) => {
 
             {/* Approval Chain / Signature Block */}
             <div className="mt-12">
-                <h3 className="text-xs font-bold uppercase mb-4 border-b border-black w-fit">Approval & Authorization Chain</h3>
+                <h3 className="text-xs font-bold uppercase mb-4 border-b border-black w-fit">Digital Approval & Authorization Records</h3>
                 <div className="grid grid-cols-2 gap-10">
                     <div className="space-y-10">
                         {/* Requester */}
                         <div className="border-t border-black pt-2">
-                            <p className="text-xs font-bold uppercase">Requester Signature</p>
-                            <p className="text-[10px] text-gray-500 mt-1">{request.requestedByName} • {new Date(request.createdAt).toLocaleDateString()}</p>
+                            <p className="text-xs font-bold uppercase">Requester Submission</p>
+                            <p className="text-[10px] text-gray-700 mt-1 font-mono uppercase bg-gray-50 p-1 border border-dashed border-gray-300">
+                                Verified: {request.requestedByName} • {new Date(request.createdAt).toLocaleDateString()}
+                            </p>
                         </div>
                         {/* Accountant */}
-                        <div className={`border-t border-black pt-2 ${request.status === 'Pending Accountant' ? 'opacity-30' : ''}`}>
-                            <p className="text-xs font-bold uppercase">Accountant Approval</p>
-                            <p className="text-[10px] text-gray-500 mt-1">Sign & Date</p>
+                        <div className={`border-t border-black pt-2 ${!approvalSteps.accountant ? 'opacity-30' : ''}`}>
+                            <p className="text-xs font-bold uppercase">Accountant Validation</p>
+                            {approvalSteps.accountant ? (
+                                <p className="text-[10px] text-green-700 mt-1 font-mono uppercase bg-green-50 p-1 border border-dashed border-green-300">
+                                    Approved by Accountant on {new Date(approvalSteps.accountant.timestamp).toLocaleString()}
+                                </p>
+                            ) : (
+                                <p className="text-[10px] text-red-400 mt-1 font-mono uppercase">Not Approved by Accountant</p>
+                            )}
                         </div>
                     </div>
                     <div className="space-y-10">
                         {/* CFO */}
-                        <div className={`border-t border-black pt-2 ${['Pending Accountant', 'Pending CFO'].includes(request.status) ? 'opacity-30' : ''}`}>
+                        <div className={`border-t border-black pt-2 ${!approvalSteps.cfo ? 'opacity-30' : ''}`}>
                             <p className="text-xs font-bold uppercase">CFO Review</p>
-                            <p className="text-[10px] text-gray-500 mt-1">Sign & Date</p>
+                            {approvalSteps.cfo ? (
+                                <p className="text-[10px] text-blue-700 mt-1 font-mono uppercase bg-blue-50 p-1 border border-dashed border-blue-300">
+                                    Approved by CFO on {new Date(approvalSteps.cfo.timestamp).toLocaleString()}
+                                </p>
+                            ) : (
+                                <p className="text-[10px] text-red-400 mt-1 font-mono uppercase">Not Approved by CFO</p>
+                            )}
                         </div>
                         {/* CEO */}
-                        <div className={`border-t border-black pt-2 ${['Pending Accountant', 'Pending CFO', 'Pending CEO'].includes(request.status) ? 'opacity-30' : ''}`}>
+                        <div className={`border-t border-black pt-2 ${!approvalSteps.ceo ? 'opacity-30' : ''}`}>
                             <p className="text-xs font-bold uppercase">CEO Final Authorization</p>
-                            <p className="text-[10px] text-gray-500 mt-1">Sign & Date</p>
+                            {approvalSteps.ceo ? (
+                                <p className="text-[10px] text-purple-700 mt-1 font-mono uppercase bg-purple-50 p-1 border border-dashed border-purple-300">
+                                    Approved by CEO on {new Date(approvalSteps.ceo.timestamp).toLocaleString()}
+                                </p>
+                            ) : (
+                                <p className="text-[10px] text-red-400 mt-1 font-mono uppercase">Not Approved by CEO</p>
+                            )}
                         </div>
                     </div>
                 </div>
-            </div>
-
-            {/* Footer */}
-            <div className="mt-20 pt-4 border-t border-gray-200 text-center">
-                <p className="text-[10px] text-gray-400 uppercase tracking-widest">
-                    This document is an official record generated by Markpedia OS. Valid only with required physical signatures for auditing.
-                </p>
-                <p className="text-[9px] text-gray-400 mt-1">Printed on {new Date().toLocaleString()}</p>
+                {/* Footer */}
+                <div className="mt-20 pt-4 border-t border-gray-200 text-center">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-widest">
+                        This document is an official record generated by Markpedia OS. Valid only with required physical signatures for auditing.
+                    </p>
+                    <p className="text-[9px] text-gray-400 mt-1">Printed on {new Date().toLocaleString()}</p>
+                </div>
             </div>
         </div>
     );

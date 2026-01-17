@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
 import { TableSkeleton } from '@/components/ui/loading';
 import { useAppStore } from '@/store/app';
 import { useAuthStore } from '@/store/auth';
@@ -34,6 +35,7 @@ export default function CashRequestsPage() {
     // Filter "Paid" requests into a separate view option or keep them in the main list?
     // User asked for "View Paid Requests" button.
     const [viewMode, setViewMode] = useState<'pending' | 'paid'>('pending');
+    const [showOnlyMine, setShowOnlyMine] = useState(false);
 
     useEffect(() => {
         setCurrentModule('money');
@@ -74,7 +76,11 @@ export default function CashRequestsPage() {
 
     const filteredRequests = requests.filter(request => {
         // Restriction check
-        if (!canViewAll && user && request.requestedBy !== user.id) {
+        if (showOnlyMine && user && request.requestedBy !== user.id) {
+            return false;
+        }
+
+        if (!showOnlyMine && !canViewAll && user && request.requestedBy !== user.id) {
             return false;
         }
 
@@ -464,6 +470,16 @@ export default function CashRequestsPage() {
                             />
                         </div>
                         <div className="flex gap-2">
+                            <Button
+                                variant={showOnlyMine ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setShowOnlyMine(!showOnlyMine)}
+                                className={showOnlyMine ? "bg-indigo-600 hover:bg-indigo-700" : ""}
+                            >
+                                <User className="h-4 w-4 mr-2" />
+                                {showOnlyMine ? "Showing My Requests" : "View My Requests"}
+                            </Button>
+                            <Separator orientation="vertical" className="h-8 mx-1 hidden sm:block" />
                             <Select value={statusFilter} onValueChange={setStatusFilter}>
                                 <SelectTrigger className="w-[150px]">
                                     <SelectValue placeholder="Status" />
