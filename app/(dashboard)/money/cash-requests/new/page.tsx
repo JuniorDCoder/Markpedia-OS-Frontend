@@ -1,5 +1,6 @@
-import CashbookFormClient from "@/components/sections/CashbookFormClient";
+import CashRequestFormClient from "@/components/sections/CashRequestFormClient";
 
-export default function NewCashbookPage() {
-    return <CashbookFormClient mode="create" />;
+export default function NewCashRequestPage() {
+    return <CashRequestFormClient mode="create" />;
 }
+

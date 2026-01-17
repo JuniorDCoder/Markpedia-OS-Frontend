@@ -156,10 +156,10 @@ const navigation = {
             phase: 1,
         },
         {
-            name: 'Requests & Money Flow',
-            href: '/money/requests',
+            name: 'Cash Requests',
+            href: '/money/cash-requests',
             icon: DollarSign,
-            roles: ['CEO', 'Admin', 'Manager', 'CXO'],
+            roles: ['CEO', 'Admin', 'Manager', 'Employee', 'CXO'],
             phase: 1,
         },
     ],

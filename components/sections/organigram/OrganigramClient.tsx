@@ -78,7 +78,8 @@ export default function OrganigramClient({
     const organigramRef = useRef<HTMLDivElement>(null);
 
     // Get entity level for an employee
-    const getEmployeeLevel = (employee: Employee): 'Global' | 'Regional' | 'Country' => {
+    const getEmployeeLevel = (employee: Employee | undefined): 'Global' | 'Regional' | 'Country' => {
+        if (!employee) return 'Global';
         const entity = entities.find(e => e.id === employee.entityId);
         return entity?.level || 'Global';
     };
@@ -113,14 +114,52 @@ export default function OrganigramClient({
             return employee && !employee.reportsTo;
         });
 
-        const buildTree = (nodeData: any): OrganigramNode => ({
-            ...nodeData,
-            employee: employeeMap.get(nodeData.employeeId)!,
-            children: nodeData.children
-                .map((childId: string) => nodeMap.get(childId))
-                .filter(Boolean)
-                .map(buildTree)
-        });
+        const buildTree = (nodeData: any): OrganigramNode => {
+            const emp = employeeMap.get(nodeData.employeeId);
+            const fallbackEmployee: Employee = {
+                id: nodeData.employeeId || 'unknown',
+                name: 'Unknown (Deleted)',
+                email: 'N/A',
+                title: 'Position Vacant',
+                role: 'Employee',
+                department: 'Unassigned',
+                avatar: undefined,
+                startDate: new Date().toISOString(),
+                isActive: false,
+                status: 'INACTIVE',
+                entityId: '',
+                reportsTo: '',
+                employmentType: 'Full-time',
+                salutation: '',
+                dateOfBirth: '',
+                mobile: '',
+                gender: '',
+                country: '',
+                address: '',
+                about: '',
+                joiningDate: '',
+                loginAllowed: false,
+                emailNotifications: false,
+                hourlyRate: 0,
+                slackMemberId: '',
+                skills: [],
+                probationEndDate: '',
+                noticePeriodStartDate: '',
+                noticePeriodEndDate: '',
+                maritalStatus: '',
+                language: '',
+                businessAddress: ''
+            };
+
+            return {
+                ...nodeData,
+                employee: emp || fallbackEmployee,
+                children: nodeData.children
+                    .map((childId: string) => nodeMap.get(childId))
+                    .filter(Boolean)
+                    .map(buildTree)
+            };
+        };
 
         return rootNodes.map(buildTree);
     }, [employees]);

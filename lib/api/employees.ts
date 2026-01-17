@@ -219,5 +219,11 @@ export const employeeApi = {
             reportsTo: res.reportsTo || res.report_to || '',
             employmentType: res.employmentType || res.employment_type || 'Full-time'
         } as Employee;
+    },
+
+    async delete(id: string): Promise<void> {
+        await apiRequest(`/admin/employees/${id}`, {
+            method: 'DELETE'
+        });
     }
 };

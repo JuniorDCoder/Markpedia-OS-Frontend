@@ -7,7 +7,7 @@ import {
 } from '@/types/cash-management';
 
 // Mock data matching the client requirements
-let mockCashRequests: CashRequest[] = [
+const defaultMockCashRequests: CashRequest[] = [
     {
         id: "1",
         requestId: "CRF-2025-00123",
@@ -24,12 +24,13 @@ let mockCashRequests: CashRequest[] = [
         paymentMethodPreferred: "Bank Transfer",
         payeeName: "Cloud Hosting Inc.",
         supportingDocuments: ["quotation.pdf"],
+        urgencyLevel: "Medium",
         advanceOrReimbursement: "Advance",
         projectCostCenterCode: "TECH-001",
         supervisor: "2",
         financeOfficer: "3",
         ceoApprovalRequired: true,
-        status: "Pending",
+        status: "Pending Accountant",
         approvalNotes: "",
         acknowledgment: false,
         auditTrail: [
@@ -44,7 +45,7 @@ let mockCashRequests: CashRequest[] = [
     }
 ];
 
-let mockCashReceives: CashReceive[] = [
+const defaultMockCashReceives: CashReceive[] = [
     {
         id: "1",
         receiptId: "CRV-2025-00089",
@@ -75,7 +76,7 @@ let mockCashReceives: CashReceive[] = [
     }
 ];
 
-let mockCashbook: CashbookEntry[] = [
+const defaultMockCashbook: CashbookEntry[] = [
     {
         id: "1",
         date: "2024-01-15",
@@ -106,21 +107,69 @@ let mockCashbook: CashbookEntry[] = [
     }
 ];
 
+const STORAGE_KEY = 'mock_cash_requests';
+const RECEIVES_STORAGE_KEY = 'mock_cash_receives';
+const CASHBOOK_STORAGE_KEY = 'mock_cashbook';
+
+// Helper to load requests
+const loadRequests = (): CashRequest[] => {
+    if (typeof window === 'undefined') return defaultMockCashRequests;
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : defaultMockCashRequests;
+};
+
+// Helper to save requests
+const saveRequests = (requests: CashRequest[]) => {
+    if (typeof window !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(requests));
+    }
+};
+
+// Helper to load receives
+const loadReceives = (): CashReceive[] => {
+    if (typeof window === 'undefined') return defaultMockCashReceives;
+    const stored = localStorage.getItem(RECEIVES_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : defaultMockCashReceives;
+};
+
+// Helper to save receives
+const saveReceives = (receives: CashReceive[]) => {
+    if (typeof window !== 'undefined') {
+        localStorage.setItem(RECEIVES_STORAGE_KEY, JSON.stringify(receives));
+    }
+};
+
+// Helper to load cashbook
+const loadCashbook = (): CashbookEntry[] => {
+    if (typeof window === 'undefined') return defaultMockCashbook;
+    const stored = localStorage.getItem(CASHBOOK_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : defaultMockCashbook;
+};
+
+// Helper to save cashbook
+const saveCashbook = (cashbook: CashbookEntry[]) => {
+    if (typeof window !== 'undefined') {
+        localStorage.setItem(CASHBOOK_STORAGE_KEY, JSON.stringify(cashbook));
+    }
+};
+
 export const cashManagementService = {
     // Cash Requests
     async listCashRequests(): Promise<CashRequest[]> {
-        return Promise.resolve(mockCashRequests);
+        return Promise.resolve(loadRequests());
     },
 
     async getCashRequest(id: string): Promise<CashRequest | undefined> {
-        return Promise.resolve(mockCashRequests.find(req => req.id === id));
+        const requests = loadRequests();
+        return Promise.resolve(requests.find(req => req.id === id));
     },
-
     async createCashRequest(request: Omit<CashRequest, 'id' | 'requestId' | 'auditTrail' | 'createdAt' | 'updatedAt'>): Promise<CashRequest> {
+        const requests = loadRequests();
         const newRequest: CashRequest = {
             ...request,
             id: Date.now().toString(),
-            requestId: `CRF-${new Date().getFullYear()}-${String(mockCashRequests.length + 1).padStart(5, '0')}`,
+            requestId: `CRF-${new Date().getFullYear()}-${String(requests.length + 1).padStart(5, '0')}`,
+            status: 'Pending Accountant', // Force initial status
             auditTrail: [{
                 timestamp: new Date().toISOString(),
                 action: "Request Submitted",
@@ -129,14 +178,18 @@ export const cashManagementService = {
             createdAt: new Date().toISOString().split('T')[0],
             updatedAt: new Date().toISOString().split('T')[0]
         };
-        mockCashRequests.push(newRequest);
+        requests.push(newRequest);
+        saveRequests(requests);
         return Promise.resolve(newRequest);
     },
+    // ...
 
     async updateCashRequestStatus(id: string, status: CashRequest['status'], notes: string, performedBy: string): Promise<CashRequest> {
-        const request = mockCashRequests.find(req => req.id === id);
-        if (!request) throw new Error('Request not found');
+        const requests = loadRequests();
+        const requestIndex = requests.findIndex(req => req.id === id);
+        if (requestIndex === -1) throw new Error('Request not found');
 
+        const request = requests[requestIndex];
         request.status = status;
         request.approvalNotes = notes;
         request.auditTrail.push({
@@ -147,19 +200,25 @@ export const cashManagementService = {
         });
         request.updatedAt = new Date().toISOString().split('T')[0];
 
+        requests[requestIndex] = request;
+        saveRequests(requests);
+
         return Promise.resolve(request);
     },
 
     // Cash Receives
     async listCashReceives(): Promise<CashReceive[]> {
-        return Promise.resolve(mockCashReceives);
+        return Promise.resolve(loadReceives());
     },
 
     async createCashReceive(receive: Omit<CashReceive, 'id' | 'receiptId' | 'auditTrail' | 'createdAt' | 'updatedAt'>): Promise<CashReceive> {
+        const receives = loadReceives();
+        const cashbook = loadCashbook();
+
         const newReceive: CashReceive = {
             ...receive,
             id: Date.now().toString(),
-            receiptId: `CRV-${new Date().getFullYear()}-${String(mockCashReceives.length + 1).padStart(5, '0')}`,
+            receiptId: `CRV-${new Date().getFullYear()}-${String(receives.length + 1).padStart(5, '0')}`,
             auditTrail: [{
                 timestamp: new Date().toISOString(),
                 action: "Receipt Created",
@@ -168,7 +227,8 @@ export const cashManagementService = {
             createdAt: new Date().toISOString().split('T')[0],
             updatedAt: new Date().toISOString().split('T')[0]
         };
-        mockCashReceives.push(newReceive);
+        receives.push(newReceive);
+        saveReceives(receives);
 
         // Auto-create cashbook entry
         const cashbookEntry: CashbookEntry = {
@@ -186,16 +246,18 @@ export const cashManagementService = {
             linkedReceiptId: newReceive.receiptId,
             createdAt: new Date().toISOString().split('T')[0]
         };
-        mockCashbook.push(cashbookEntry);
+        cashbook.push(cashbookEntry);
+        saveCashbook(cashbook);
 
         return Promise.resolve(newReceive);
     },
 
     // Cashbook
     async listCashbookEntries(): Promise<CashbookEntry[]> {
+        const cashbook = loadCashbook();
         // Calculate running balance
         let balance = 0;
-        const entriesWithBalance = mockCashbook.map(entry => {
+        const entriesWithBalance = cashbook.map(entry => {
             balance += entry.amountIn - entry.amountOut;
             return { ...entry, runningBalance: balance };
         });
@@ -223,7 +285,7 @@ export const cashManagementService = {
         const cashBurnRate = recentExpenses.reduce((sum, entry) => sum + entry.amountOut, 0) / 30;
 
         const runwayMonths = cashBurnRate > 0 ? currentBalance / cashBurnRate : 0;
-        const pendingApprovals = mockCashRequests.filter(req => req.status === 'Pending').length;
+        const pendingApprovals = loadRequests().filter(req => req.status.startsWith('Pending')).length;
 
         return {
             totalIncome,

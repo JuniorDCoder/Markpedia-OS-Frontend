@@ -202,8 +202,8 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
 
         setIsLoading(true);
         try {
-            const { adminApi } = await import('@/lib/api/admin');
-            await adminApi.deleteUser(employeeId);
+            const { employeeApi } = await import('@/lib/api/employees');
+            await employeeApi.delete(employeeId);
             toast.success('Employee deleted successfully');
             router.push('/people/employees');
             router.refresh();

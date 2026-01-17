@@ -14,12 +14,13 @@ export interface CashRequest {
     paymentMethodPreferred: 'Cash' | 'Bank Transfer' | 'Mobile Money';
     payeeName: string;
     supportingDocuments?: string[];
+    urgencyLevel: 'Low' | 'Medium' | 'High' | 'Critical';
     advanceOrReimbursement: 'Advance' | 'Reimbursement';
     projectCostCenterCode: string;
     supervisor: string;
     financeOfficer: string;
     ceoApprovalRequired: boolean;
-    status: 'Pending' | 'Approved' | 'Declined' | 'Paid';
+    status: 'Pending Accountant' | 'Pending CFO' | 'Pending CEO' | 'Approved' | 'Declined' | 'Paid';
     approvalNotes: string;
     proofOfPayment?: string;
     acknowledgment: boolean;

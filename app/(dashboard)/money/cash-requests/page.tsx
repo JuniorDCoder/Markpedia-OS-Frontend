@@ -16,9 +16,10 @@ import { cashManagementService } from '@/lib/api/cash-management';
 import {
     Plus, Search, Filter, DollarSign, Clock, Check, X, Eye,
     FileText, User, Calendar, TrendingUp, AlertTriangle,
-    ArrowUpRight, ArrowDownLeft
+    ArrowUpRight, ArrowDownLeft, FileCheck
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { PaymentDialog } from '@/components/sections/PaymentDialog';
 
 export default function CashRequestsPage() {
     const { setCurrentModule } = useAppStore();
@@ -28,6 +29,11 @@ export default function CashRequestsPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [typeFilter, setTypeFilter] = useState('all');
+    const [selectedRequestForPayment, setSelectedRequestForPayment] = useState<CashRequest | null>(null);
+
+    // Filter "Paid" requests into a separate view option or keep them in the main list?
+    // User asked for "View Paid Requests" button.
+    const [viewMode, setViewMode] = useState<'pending' | 'paid'>('pending');
 
     useEffect(() => {
         setCurrentModule('money');
@@ -65,7 +71,20 @@ export default function CashRequestsPage() {
         const matchesSearch = request.purposeOfRequest.toLowerCase().includes(searchTerm.toLowerCase()) ||
             request.requestId.toLowerCase().includes(searchTerm.toLowerCase()) ||
             request.requestedBy.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
+
+        let matchesStatus = statusFilter === 'all' || request.status === statusFilter;
+
+        if (viewMode === 'pending') {
+            // In pending mode, show everything EXCEPT Paid (unless specifically filtered?)
+            // Actually, management wants to see 'Paid' separately. 
+            if (statusFilter === 'all') {
+                matchesStatus = request.status !== 'Paid';
+            }
+        } else {
+            // viewMode === 'paid'
+            matchesStatus = request.status === 'Paid';
+        }
+
         const matchesType = typeFilter === 'all' || request.typeOfRequest === typeFilter;
         return matchesSearch && matchesStatus && matchesType;
     });
@@ -74,12 +93,16 @@ export default function CashRequestsPage() {
         switch (status) {
             case 'Approved':
                 return 'bg-green-100 text-green-800 border-green-200';
-            case 'Pending':
+            case 'Pending Accountant':
                 return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            case 'Pending CFO':
+                return 'bg-blue-100 text-blue-800 border-blue-200';
+            case 'Pending CEO':
+                return 'bg-purple-100 text-purple-800 border-purple-200';
             case 'Declined':
                 return 'bg-red-100 text-red-800 border-red-200';
             case 'Paid':
-                return 'bg-blue-100 text-blue-800 border-blue-200';
+                return 'bg-emerald-100 text-emerald-800 border-emerald-200';
             default:
                 return 'bg-gray-100 text-gray-800 border-gray-200';
         }
@@ -104,18 +127,19 @@ export default function CashRequestsPage() {
 
     const getRequestStats = () => {
         const totalRequests = requests.length;
-        const pendingRequests = requests.filter(r => r.status === 'Pending').length;
+        const pendingRequests = requests.filter(r => r.status.startsWith('Pending')).length;
         const approvedRequests = requests.filter(r => r.status === 'Approved').length;
         const totalAmount = requests.reduce((sum, r) => sum + r.amountRequested, 0);
         const pendingAmount = requests
-            .filter(r => r.status === 'Pending')
+            .filter(r => r.status.startsWith('Pending'))
             .reduce((sum, r) => sum + r.amountRequested, 0);
 
         return { totalRequests, pendingRequests, approvedRequests, totalAmount, pendingAmount };
     };
 
     const canApprove = user?.role === 'Manager' || user?.role === 'CEO' || user?.role === 'Finance';
-    const canManage = user?.role === 'CEO' || user?.role === 'Admin' || user?.role === 'Finance';
+    const canManage = user?.role === 'CEO' || user?.role === 'Admin' || user?.role === 'Finance' || user?.role === 'Accountant' || user?.role === 'Cashier';
+    const isCashier = user?.role === 'Cashier';
 
     const stats = getRequestStats();
 
@@ -135,6 +159,14 @@ export default function CashRequestsPage() {
                             <Badge variant="outline" className={`${getTypeColor(request.typeOfRequest)} text-xs`}>
                                 {request.typeOfRequest}
                             </Badge>
+                            {request.urgencyLevel && (
+                                <Badge variant="outline" className={`text-xs ${request.urgencyLevel === 'Critical' ? 'bg-red-100 text-red-800 border-red-200 font-medium' :
+                                    request.urgencyLevel === 'High' ? 'bg-orange-100 text-orange-800 border-orange-200' :
+                                        'bg-gray-100 text-gray-800 border-gray-200'
+                                    }`}>
+                                    {request.urgencyLevel}
+                                </Badge>
+                            )}
                             <Badge variant="outline" className="text-xs">
                                 {request.expenseCategory}
                             </Badge>
@@ -150,18 +182,18 @@ export default function CashRequestsPage() {
                             {request.description}
                         </CardDescription>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-              <span className="flex items-center">
-                <User className="h-3 w-3 mr-1" />
-                  {request.requestedBy}
-              </span>
                             <span className="flex items-center">
-                <Calendar className="h-3 w-3 mr-1" />
+                                <User className="h-3 w-3 mr-1" />
+                                {request.requestedBy}
+                            </span>
+                            <span className="flex items-center">
+                                <Calendar className="h-3 w-3 mr-1" />
                                 {new Date(request.dateOfRequest).toLocaleDateString()}
-              </span>
+                            </span>
                             <span className="flex items-center">
-                <FileText className="h-3 w-3 mr-1" />
+                                <FileText className="h-3 w-3 mr-1" />
                                 {request.requestId}
-              </span>
+                            </span>
                         </div>
                     </div>
                     <div className="text-right flex-shrink-0">
@@ -173,23 +205,21 @@ export default function CashRequestsPage() {
                         </div>
 
                         {/* Action Buttons */}
-                        {canApprove && request.status === 'Pending' && (
+                        {/* Accountant Approval */}
+                        {user?.role === 'Accountant' && request.status === 'Pending Accountant' && (
                             <div className="flex gap-2 mt-3 justify-end">
                                 <Button
                                     size="sm"
-                                    onClick={() => handleStatusUpdate(request.id, 'Approved', 'Request approved')}
-                                    className="text-green-600 hover:text-green-700 text-xs"
+                                    onClick={() => handleStatusUpdate(request.id, 'Pending CFO', 'Approved by Accountant')}
+                                    className="text-blue-600 hover:text-blue-700 text-xs"
                                 >
                                     <Check className="h-3 w-3 mr-1" />
-                                    Approve
+                                    Approve to CFO
                                 </Button>
                                 <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => {
-                                        const reason = prompt('Enter rejection reason:');
-                                        if (reason) handleStatusUpdate(request.id, 'Declined', reason);
-                                    }}
+                                    onClick={() => handleStatusUpdate(request.id, 'Declined', prompt('Reason:') || 'Declined')}
                                     className="text-red-600 hover:text-red-700 text-xs"
                                 >
                                     <X className="h-3 w-3 mr-1" />
@@ -198,14 +228,60 @@ export default function CashRequestsPage() {
                             </div>
                         )}
 
-                        {request.status === 'Approved' && user?.role === 'Finance' && (
+                        {/* CFO Approval */}
+                        {user?.role === 'CFO' && request.status === 'Pending CFO' && (
+                            <div className="flex gap-2 mt-3 justify-end">
+                                <Button
+                                    size="sm"
+                                    onClick={() => handleStatusUpdate(request.id, 'Pending CEO', 'Approved by CFO')}
+                                    className="text-purple-600 hover:text-purple-700 text-xs"
+                                >
+                                    <Check className="h-3 w-3 mr-1" />
+                                    Approve to CEO
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleStatusUpdate(request.id, 'Declined', prompt('Reason:') || 'Declined')}
+                                    className="text-red-600 hover:text-red-700 text-xs"
+                                >
+                                    <X className="h-3 w-3 mr-1" />
+                                    Reject
+                                </Button>
+                            </div>
+                        )}
+
+                        {/* CEO Approval */}
+                        {user?.role === 'CEO' && request.status === 'Pending CEO' && (
+                            <div className="flex gap-2 mt-3 justify-end">
+                                <Button
+                                    size="sm"
+                                    onClick={() => handleStatusUpdate(request.id, 'Approved', 'Approved by CEO')}
+                                    className="text-green-600 hover:text-green-700 text-xs"
+                                >
+                                    <Check className="h-3 w-3 mr-1" />
+                                    Final Approve
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleStatusUpdate(request.id, 'Declined', prompt('Reason:') || 'Declined')}
+                                    className="text-red-600 hover:text-red-700 text-xs"
+                                >
+                                    <X className="h-3 w-3 mr-1" />
+                                    Reject
+                                </Button>
+                            </div>
+                        )}
+
+                        {request.status === 'Approved' && isCashier && (
                             <Button
                                 size="sm"
-                                onClick={() => handleStatusUpdate(request.id, 'Paid', 'Funds disbursed')}
-                                className="mt-2 text-xs"
+                                onClick={() => setSelectedRequestForPayment(request)}
+                                className="mt-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
                             >
                                 <DollarSign className="h-3 w-3 mr-1" />
-                                Mark as Paid
+                                Disburse Funds
                             </Button>
                         )}
                     </div>
@@ -265,12 +341,25 @@ export default function CashRequestsPage() {
                         Employee → Manager → Finance → CEO (threshold) → Disburse
                     </p>
                 </div>
-                <Button asChild size="sm" className="flex-shrink-0">
-                    <Link href="/money/cash-request/new">
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Request
-                    </Link>
-                </Button>
+                <div className="flex gap-2">
+                    {(canManage || isCashier) && (
+                        <Button
+                            variant={viewMode === 'paid' ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setViewMode(viewMode === 'pending' ? 'paid' : 'pending')}
+                            className="flex-shrink-0"
+                        >
+                            <FileCheck className="h-4 w-4 mr-2" />
+                            {viewMode === 'pending' ? 'View Paid Requests' : 'View Pending Requests'}
+                        </Button>
+                    )}
+                    <Button asChild size="sm" className="flex-shrink-0">
+                        <Link href="/money/cash-requests/new">
+                            <Plus className="h-4 w-4 mr-2" />
+                            New Request
+                        </Link>
+                    </Button>
+                </div>
             </div>
 
             {/* Stats Cards */}
@@ -337,10 +426,12 @@ export default function CashRequestsPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">All Status</SelectItem>
-                                    <SelectItem value="Pending">Pending</SelectItem>
+                                    <SelectItem value="Pending Accountant">Pending Accountant</SelectItem>
+                                    <SelectItem value="Pending CFO">Pending CFO</SelectItem>
+                                    <SelectItem value="Pending CEO">Pending CEO</SelectItem>
                                     <SelectItem value="Approved">Approved</SelectItem>
                                     <SelectItem value="Declined">Declined</SelectItem>
-                                    <SelectItem value="Paid">Paid</SelectItem>
+                                    {/* <SelectItem value="Paid">Paid</SelectItem> Handled by View Mode */}
                                 </SelectContent>
                             </Select>
                             <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -377,12 +468,13 @@ export default function CashRequestsPage() {
                             </p>
                             {!searchTerm && statusFilter === 'all' && typeFilter === 'all' && (
                                 <Button asChild size="sm">
-                                    <Link href="/money/cash-request/new">
+                                    <Link href="/money/cash-requests/new">
                                         <Plus className="h-4 w-4 mr-2" />
                                         Create Request
                                     </Link>
                                 </Button>
                             )}
+
                         </div>
                     </CardContent>
                 </Card>
@@ -392,6 +484,16 @@ export default function CashRequestsPage() {
                         <RequestCard key={request.id} request={request} />
                     ))}
                 </div>
+            )}
+
+            {selectedRequestForPayment && user && (
+                <PaymentDialog
+                    open={!!selectedRequestForPayment}
+                    onOpenChange={(open) => !open && setSelectedRequestForPayment(null)}
+                    request={selectedRequestForPayment}
+                    onSuccess={loadRequests}
+                    currentUser={{ id: user.id, name: user.firstName, role: user.role }}
+                />
             )}
         </div>
     );
