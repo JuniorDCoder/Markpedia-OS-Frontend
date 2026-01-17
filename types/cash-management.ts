@@ -3,6 +3,7 @@ export interface CashRequest {
     requestId: string; // CRF-2025-00123
     dateOfRequest: string;
     requestedBy: string;
+    requestedByName: string;
     department: string;
     designation: string;
     typeOfRequest: 'Operations' | 'Project' | 'Travel' | 'Logistics' | 'Purchase' | 'Other';

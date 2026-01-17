@@ -13,6 +13,7 @@ const defaultMockCashRequests: CashRequest[] = [
         requestId: "CRF-2025-00123",
         dateOfRequest: "2024-01-15",
         requestedBy: "1",
+        requestedByName: "Mock Employee",
         department: "Tech",
         designation: "Developer",
         typeOfRequest: "Project",

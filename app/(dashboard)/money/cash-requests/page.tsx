@@ -80,7 +80,7 @@ export default function CashRequestsPage() {
 
         const matchesSearch = request.purposeOfRequest.toLowerCase().includes(searchTerm.toLowerCase()) ||
             request.requestId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            request.requestedBy.toLowerCase().includes(searchTerm.toLowerCase());
+            request.requestedByName.toLowerCase().includes(searchTerm.toLowerCase());
 
         let matchesStatus = statusFilter === 'all' || request.status === statusFilter;
 
@@ -228,7 +228,7 @@ export default function CashRequestsPage() {
                         <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                             <span className="flex items-center">
                                 <User className="h-3 w-3 mr-1" />
-                                {request.requestedBy}
+                                {request.requestedByName}
                             </span>
                             <span className="flex items-center">
                                 <Calendar className="h-3 w-3 mr-1" />

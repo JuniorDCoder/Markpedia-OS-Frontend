@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Loader2, Save, FileText, AlertTriangle } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { useAuthStore } from "@/store/auth";
 
 interface Props {
     mode: "create" | "edit";
@@ -46,6 +47,7 @@ export default function CashRequestFormClient({ mode, initialData }: Props) {
     );
     const [saving, setSaving] = useState(false);
     const router = useRouter();
+    const { user } = useAuthStore();
 
     const handleChange = (key: keyof CashRequest, value: any) => {
         setForm((prev) => ({ ...prev, [key]: value }));
@@ -74,9 +76,10 @@ export default function CashRequestFormClient({ mode, initialData }: Props) {
                 await cashManagementService.createCashRequest({
                     ...form,
                     dateOfRequest: new Date().toISOString().split('T')[0],
-                    requestedBy: "User " + (Math.floor(Math.random() * 100)), // Mock user for now
-                    department: form.department || "General",
-                    designation: "Employee",
+                    requestedBy: user?.id || "unknown",
+                    requestedByName: user ? `${user.firstName} ${user.lastName}` : "Unknown User",
+                    department: user?.department || form.department || "General",
+                    designation: user?.role || "Employee",
                     supervisor: "Supervisor",
                     financeOfficer: "Finance Officer",
                     status: "Pending Accountant",
