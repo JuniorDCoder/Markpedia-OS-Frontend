@@ -162,6 +162,13 @@ const navigation = {
             roles: ['CEO', 'Admin', 'Manager', 'Employee', 'CXO'],
             phase: 1,
         },
+        {
+            name: 'Revenue',
+            href: '/money/revenue',
+            icon: TrendingUp,
+            roles: ['CEO', 'Admin', 'CXO', 'Accountant', 'Manager'],
+            phase: 1,
+        },
     ],
     strategy: [
         {

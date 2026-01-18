@@ -105,3 +105,20 @@ export interface DashboardMetrics {
     departmentalSpend: Record<string, number>;
     topExpenseCategories: Record<string, number>;
 }
+
+export interface RevenueTransaction {
+    id: string;
+    clientName: string;
+    project: string;
+    amount: number;
+    paymentMethod: 'Cash' | 'Bank Transfer' | 'Cheque' | 'Mobile Money';
+    dateReceived: string;
+    referenceNo: string;
+    receiptNumber: string; // Auto-generated: RCP-YYYY-XXXXX
+    category: 'Sales' | 'Services' | 'Investments' | 'Consulting' | 'Other';
+    supportingDocuments?: string[]; // filenames
+    description?: string;
+    recordedBy: string; // user id
+    createdAt: string;
+    updatedAt: string;
+}
