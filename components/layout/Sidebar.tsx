@@ -152,7 +152,7 @@ const navigation = {
             name: 'Cashbook',
             href: '/money/cashbook',
             icon: Wallet,
-            roles: ['CEO', 'Admin', 'CXO'],
+            roles: ['CEO', 'Admin', 'CXO', 'CFO', 'Accountant', 'Cashier'],
             phase: 1,
         },
         {
@@ -163,10 +163,17 @@ const navigation = {
             phase: 1,
         },
         {
+            name: 'Invoices',
+            href: '/money/invoices',
+            icon: FileText,
+            roles: ['CEO', 'Admin', 'CXO', 'CFO', 'Accountant', 'Manager'],
+            phase: 1,
+        },
+        {
             name: 'Revenue',
             href: '/money/revenue',
             icon: TrendingUp,
-            roles: ['CEO', 'Admin', 'CXO', 'Accountant', 'Manager'],
+            roles: ['CEO', 'Admin', 'CXO', 'CFO', 'Accountant', 'Manager', 'Cashier'],
             phase: 1,
         },
     ],

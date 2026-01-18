@@ -77,10 +77,19 @@ const defaultMockCashReceives: CashReceive[] = [
     }
 ];
 
+// Helper to generate dynamic dates
+const getCurrentYear = () => new Date().getFullYear();
+const getDynamicDate = (month: number, day: number) => {
+    const year = getCurrentYear();
+    // Month is 0-indexed in JS Date, but input usually 1-indexed or string?
+    // Let's return YYYY-MM-DD string
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+};
+
 const defaultMockCashbook: CashbookEntry[] = [
     {
         id: "1",
-        date: "2024-01-15",
+        date: getDynamicDate(1, 15),
         refId: "MKP-CASH-013",
         type: "Income",
         description: "Seller subscription payment",
@@ -90,11 +99,11 @@ const defaultMockCashbook: CashbookEntry[] = [
         enteredBy: "3",
         approvedBy: "4",
         runningBalance: 150000,
-        createdAt: "2024-01-15"
+        createdAt: getDynamicDate(1, 15)
     },
     {
         id: "2",
-        date: "2024-01-15",
+        date: getDynamicDate(1, 15),
         refId: "MKP-CASH-014",
         type: "Expense",
         description: "Internet bill payment",
@@ -104,7 +113,78 @@ const defaultMockCashbook: CashbookEntry[] = [
         enteredBy: "3",
         approvedBy: "4",
         runningBalance: 105000,
-        createdAt: "2024-01-15"
+        createdAt: getDynamicDate(1, 15)
+    },
+    // Syncing with Revenue Mock Data
+    {
+        id: "3",
+        date: getDynamicDate(1, 10),
+        refId: "REV-2024-001",
+        type: "Income",
+        description: "Client A - Project Alpha",
+        amountIn: 5000000,
+        amountOut: 0,
+        method: "Bank",
+        enteredBy: "1",
+        approvedBy: "1",
+        runningBalance: 0, // Calculated at runtime
+        createdAt: getDynamicDate(1, 10)
+    },
+    {
+        id: "4",
+        date: getDynamicDate(1, 12),
+        refId: "REV-2024-002",
+        type: "Income",
+        description: "Tech Consulting Ltd - Consultation Services",
+        amountIn: 150000,
+        amountOut: 0,
+        method: "Bank",
+        enteredBy: "1",
+        approvedBy: "1",
+        runningBalance: 0,
+        createdAt: getDynamicDate(1, 12)
+    },
+    {
+        id: "5",
+        date: getDynamicDate(1, 15),
+        refId: "REV-2024-003",
+        type: "Income",
+        description: "Retail Customer - Store Purchase",
+        amountIn: 2500000,
+        amountOut: 0,
+        method: "Cash",
+        enteredBy: "1",
+        approvedBy: "1",
+        runningBalance: 0,
+        createdAt: getDynamicDate(1, 15)
+    },
+    {
+        id: "6",
+        date: getDynamicDate(1, 20),
+        refId: "REV-2024-004",
+        type: "Income",
+        description: "Investment Group - Q1 Returns",
+        amountIn: 800000,
+        amountOut: 0,
+        method: "Bank",
+        enteredBy: "1",
+        approvedBy: "1",
+        runningBalance: 0,
+        createdAt: getDynamicDate(1, 20)
+    },
+    {
+        id: "7",
+        date: getDynamicDate(1, 25),
+        refId: "REV-2024-005",
+        type: "Income",
+        description: "Client B - Maintenance Contract",
+        amountIn: 1200000,
+        amountOut: 0,
+        method: "Mobile Money",
+        enteredBy: "1",
+        approvedBy: "1",
+        runningBalance: 0,
+        createdAt: getDynamicDate(1, 25)
     }
 ];
 
@@ -153,6 +233,14 @@ const saveCashbook = (cashbook: CashbookEntry[]) => {
         localStorage.setItem(CASHBOOK_STORAGE_KEY, JSON.stringify(cashbook));
     }
 };
+
+const generateId = (prefix: string, count: number): string => {
+    const year = new Date().getFullYear();
+    const sequence = String(count + 1).padStart(5, '0');
+    return `${prefix}-${year}-${sequence}`;
+};
+
+
 
 export const cashManagementService = {
     // Cash Requests
@@ -287,11 +375,14 @@ export const cashManagementService = {
 
         const runwayMonths = cashBurnRate > 0 ? currentBalance / cashBurnRate : 0;
         const pendingApprovals = loadRequests().filter(req => req.status.startsWith('Pending')).length;
+        const netCashFlow = totalIncome - totalExpenses;
+        const openingBalance = currentBalance - netCashFlow;
 
         return {
+            openingBalance,
             totalIncome,
             totalExpenses,
-            netCashFlow: totalIncome - totalExpenses,
+            netCashFlow,
             currentBalance,
             cashBurnRate,
             runwayMonths,
@@ -332,5 +423,149 @@ export const cashManagementService = {
             departmentalSpend,
             topExpenseCategories
         };
+    },
+
+    async recordExpense(data: import('@/types/cash-management').CashExpense): Promise<void> {
+        const requests = loadRequests();
+        const cashbook = loadCashbook();
+
+        // 1. Handle Request Update or Creation
+        let targetRequestId = data.linkedRequestId || '';
+        if (data.linkedRequestId) {
+            const index = requests.findIndex(r => r.id === data.linkedRequestId);
+            if (index !== -1) {
+                const req = requests[index];
+                req.status = 'Paid';
+                req.amountRequested = data.amount; // Update actual amount if different? Or keep requested and add actual? Assuming exact match for now or update.
+                req.updatedAt = new Date().toISOString();
+                // Add note about payment
+                req.auditTrail.push({
+                    timestamp: new Date().toISOString(),
+                    action: 'Marked as Paid',
+                    performedBy: data.recordedBy,
+                    notes: `Disbursed via ${data.paymentMethod}. Ref: ${data.reference}`
+                });
+                requests[index] = req;
+            }
+        } else {
+            // Create a new "Paid" request to represent this ad-hoc expense
+            const newRequest: CashRequest = {
+                id: Date.now().toString(),
+                requestId: generateId('EXP', requests.length),
+                dateOfRequest: data.date,
+                requestedBy: data.recordedBy,
+                requestedByName: 'Direct Expense', // Or look up user
+                department: 'General', // Default or need input
+                designation: 'Staff',
+                typeOfRequest: 'Operations',
+                purposeOfRequest: data.description || 'Direct Expense',
+                description: data.description || '',
+                amountRequested: data.amount, // This is the amount paid
+                expectedDateOfUse: data.date,
+                expenseCategory: data.category,
+                paymentMethodPreferred: data.paymentMethod as any,
+                payeeName: data.payee,
+                supportingDocuments: data.supportingDocuments,
+                urgencyLevel: 'Medium',
+                advanceOrReimbursement: 'Reimbursement',
+                projectCostCenterCode: 'GEN-001',
+                supervisor: data.recordedBy,
+                financeOfficer: data.recordedBy,
+                ceoApprovalRequired: false,
+                status: 'Paid',
+                approvalNotes: 'Directly recorded expense',
+                acknowledgment: true,
+                auditTrail: [{
+                    timestamp: new Date().toISOString(),
+                    action: 'Direct Expense Recorded',
+                    performedBy: data.recordedBy
+                }],
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+            requests.push(newRequest);
+            targetRequestId = newRequest.id;
+        }
+        saveRequests(requests);
+
+        // 2. Create Cashbook Entry
+        const entry: CashbookEntry = {
+            id: Date.now().toString(),
+            date: data.date,
+            refId: data.reference || generateId('TRX', cashbook.length),
+            type: 'Expense',
+            description: data.description || `Payment to ${data.payee}`,
+            amountIn: 0,
+            amountOut: data.amount,
+            method: data.paymentMethod as any,
+            enteredBy: data.recordedBy,
+            approvedBy: data.recordedBy, // Auto-approved
+            runningBalance: 0, // Recalc later
+            linkedRequestId: targetRequestId,
+            proof: data.supportingDocuments?.[0],
+            createdAt: new Date().toISOString()
+        };
+        cashbook.push(entry);
+        saveCashbook(cashbook);
+    },
+
+    async recordIncome(data: {
+        date: string;
+        amount: number;
+        description: string;
+        reference: string;
+        method: string;
+        recordedBy: string;
+        category: string;
+    }): Promise<void> {
+        const cashbook = loadCashbook();
+
+        const entry: CashbookEntry = {
+            id: Date.now().toString(),
+            date: data.date,
+            refId: data.reference || generateId('TRX', cashbook.length),
+            type: 'Income',
+            description: data.description,
+            amountIn: data.amount,
+            amountOut: 0,
+            method: data.method as any,
+            enteredBy: data.recordedBy,
+            approvedBy: data.recordedBy, // Auto-approved
+            runningBalance: 0, // Recalc later in listCashbookEntries
+            createdAt: new Date().toISOString()
+        };
+
+        cashbook.push(entry);
+        saveCashbook(cashbook);
+    },
+
+    async recordAdjustment(data: {
+        date: string;
+        type: 'Positive' | 'Negative';
+        amount: number;
+        description: string;
+        notes?: string;
+        recordedBy: string;
+    }): Promise<void> {
+        const cashbook = loadCashbook();
+
+        const entry: CashbookEntry = {
+            id: Date.now().toString(),
+            date: data.date,
+            refId: generateId('ADJ', cashbook.length),
+            type: 'Adjustment',
+            description: data.description,
+            amountIn: data.type === 'Positive' ? data.amount : 0,
+            amountOut: data.type === 'Negative' ? data.amount : 0,
+            method: 'Cash', // Default to Cash for adjustments
+            enteredBy: data.recordedBy,
+            approvedBy: data.recordedBy,
+            runningBalance: 0,
+            notes: data.notes,
+            createdAt: new Date().toISOString()
+        };
+
+        cashbook.push(entry);
+        saveCashbook(cashbook);
     }
 };

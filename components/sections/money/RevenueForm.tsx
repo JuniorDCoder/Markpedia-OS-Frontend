@@ -70,7 +70,7 @@ export function RevenueForm({ onSuccess, onCancel }: RevenueFormProps) {
         try {
             await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
 
-            revenueService.addRevenue({
+            await revenueService.addRevenue({
                 ...data,
                 recordedBy: user.id,
                 supportingDocuments: fileName ? [fileName] : [],

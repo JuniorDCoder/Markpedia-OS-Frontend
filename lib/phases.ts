@@ -45,7 +45,9 @@ export const PHASE_ROUTES: Record<Phase, string[]> = {
         '/money/cashbook',
         '/money/requests',
         '/money/cash-requests',
+        '/money/cash-requests',
         '/money/revenue',
+        '/money/invoices',
 
         // Strategy
         '/strategy/goals',

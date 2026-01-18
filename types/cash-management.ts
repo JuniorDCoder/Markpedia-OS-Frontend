@@ -66,7 +66,7 @@ export interface CashbookEntry {
     id: string;
     date: string;
     refId: string;
-    type: 'Income' | 'Expense';
+    type: 'Income' | 'Expense' | 'Adjustment';
     description: string;
     amountIn: number;
     amountOut: number;
@@ -77,6 +77,7 @@ export interface CashbookEntry {
     runningBalance: number;
     linkedRequestId?: string;
     linkedReceiptId?: string;
+    notes?: string;
     createdAt: string;
 }
 
@@ -88,6 +89,7 @@ export interface AuditTrailEntry {
 }
 
 export interface FinancialStats {
+    openingBalance: number;
     totalIncome: number;
     totalExpenses: number;
     netCashFlow: number;
@@ -121,4 +123,17 @@ export interface RevenueTransaction {
     recordedBy: string; // user id
     createdAt: string;
     updatedAt: string;
+}
+
+export interface CashExpense {
+    linkedRequestId?: string;
+    amount: number;
+    payee: string;
+    paymentMethod: 'Cash' | 'Bank Transfer' | 'Mobile Money' | 'Cheque';
+    date: string;
+    category: string;
+    description?: string;
+    supportingDocuments?: string[];
+    reference?: string;
+    recordedBy: string;
 }

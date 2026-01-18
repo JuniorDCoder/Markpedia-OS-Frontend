@@ -1,4 +1,12 @@
 import { RevenueTransaction } from '@/types/cash-management';
+import { cashManagementService } from './cash-management';
+
+// Helper to generate dynamic dates
+const getCurrentYear = () => new Date().getFullYear();
+const getDynamicDate = (month: number, day: number) => {
+    const year = getCurrentYear();
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+};
 
 const defaultMockRevenue: RevenueTransaction[] = [
     {
@@ -7,14 +15,14 @@ const defaultMockRevenue: RevenueTransaction[] = [
         project: "Project Alpha",
         amount: 5000000,
         paymentMethod: "Bank Transfer",
-        dateReceived: "2024-01-10",
+        dateReceived: getDynamicDate(1, 10),
         referenceNo: "REV-2024-001",
         receiptNumber: "RCP-2024-00001",
         category: "Services",
         description: "Initial deposit for software development project",
         recordedBy: "1",
-        createdAt: "2024-01-10T09:00:00Z",
-        updatedAt: "2024-01-10T09:00:00Z"
+        createdAt: getDynamicDate(1, 10) + "T09:00:00Z",
+        updatedAt: getDynamicDate(1, 10) + "T09:00:00Z"
     },
     {
         id: "2",
@@ -22,14 +30,14 @@ const defaultMockRevenue: RevenueTransaction[] = [
         project: "Consultation Services",
         amount: 150000,
         paymentMethod: "Cheque",
-        dateReceived: "2024-01-12",
+        dateReceived: getDynamicDate(1, 12),
         referenceNo: "REV-2024-002",
         receiptNumber: "RCP-2024-00002",
         category: "Consulting",
         description: "Consultation fees",
         recordedBy: "1",
-        createdAt: "2024-01-12T14:30:00Z",
-        updatedAt: "2024-01-12T14:30:00Z"
+        createdAt: getDynamicDate(1, 12) + "T14:30:00Z",
+        updatedAt: getDynamicDate(1, 12) + "T14:30:00Z"
     },
     {
         id: "3",
@@ -37,14 +45,14 @@ const defaultMockRevenue: RevenueTransaction[] = [
         project: "Store Purchase",
         amount: 2500000,
         paymentMethod: "Cash",
-        dateReceived: "2024-01-15",
+        dateReceived: getDynamicDate(1, 15),
         referenceNo: "REV-2024-003",
         receiptNumber: "RCP-2024-00003",
         category: "Sales",
         description: "Monthly retail sales",
         recordedBy: "1",
-        createdAt: "2024-01-15T10:00:00Z",
-        updatedAt: "2024-01-15T10:00:00Z"
+        createdAt: getDynamicDate(1, 15) + "T10:00:00Z",
+        updatedAt: getDynamicDate(1, 15) + "T10:00:00Z"
     },
     {
         id: "4",
@@ -52,14 +60,14 @@ const defaultMockRevenue: RevenueTransaction[] = [
         project: "Q1 Returns",
         amount: 800000,
         paymentMethod: "Bank Transfer",
-        dateReceived: "2024-01-20",
+        dateReceived: getDynamicDate(1, 20),
         referenceNo: "REV-2024-004",
         receiptNumber: "RCP-2024-00004",
         category: "Investments",
         description: "Quarterly investment dividends",
         recordedBy: "1",
-        createdAt: "2024-01-20T14:00:00Z",
-        updatedAt: "2024-01-20T14:00:00Z"
+        createdAt: getDynamicDate(1, 20) + "T14:00:00Z",
+        updatedAt: getDynamicDate(1, 20) + "T14:00:00Z"
     },
     {
         id: "5",
@@ -67,14 +75,14 @@ const defaultMockRevenue: RevenueTransaction[] = [
         project: "Maintenance Contract",
         amount: 1200000,
         paymentMethod: "Mobile Money",
-        dateReceived: "2024-01-25",
+        dateReceived: getDynamicDate(1, 25),
         referenceNo: "REV-2024-005",
         receiptNumber: "RCP-2024-00005",
         category: "Services",
         description: "Monthly maintenance contract",
         recordedBy: "1",
-        createdAt: "2024-01-25T09:30:00Z",
-        updatedAt: "2024-01-25T09:30:00Z"
+        createdAt: getDynamicDate(1, 25) + "T09:30:00Z",
+        updatedAt: getDynamicDate(1, 25) + "T09:30:00Z"
     }
 ];
 
@@ -145,7 +153,7 @@ class RevenueService {
         return `RCP-${year}-${sequence}`;
     }
 
-    addRevenue(transaction: Omit<RevenueTransaction, 'id' | 'createdAt' | 'updatedAt' | 'receiptNumber'>): RevenueTransaction {
+    async addRevenue(transaction: Omit<RevenueTransaction, 'id' | 'createdAt' | 'updatedAt' | 'receiptNumber'>): Promise<RevenueTransaction> {
         const revenue = this.getStoredRevenue();
         const receiptNumber = this.generateReceiptNumber(revenue);
 
@@ -158,6 +166,23 @@ class RevenueService {
         };
         revenue.unshift(newTransaction);
         this.setStoredRevenue(revenue);
+
+        const mapToCashbookMethod = (method: string): 'Cash' | 'Bank' | 'Mobile Money' => {
+            if (method === 'Bank Transfer' || method === 'Cheque') return 'Bank';
+            return method as 'Cash' | 'Mobile Money';
+        };
+
+        // Update Cashbook automatically
+        await cashManagementService.recordIncome({
+            date: newTransaction.dateReceived,
+            amount: newTransaction.amount,
+            description: `${newTransaction.clientName} - ${newTransaction.project}`,
+            reference: newTransaction.referenceNo,
+            method: mapToCashbookMethod(newTransaction.paymentMethod),
+            recordedBy: newTransaction.recordedBy,
+            category: newTransaction.category
+        });
+
         return newTransaction;
     }
 
