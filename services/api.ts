@@ -1638,112 +1638,80 @@ export const meetingService = {
 
 export const problemService = {
     // Get all problems with optional filtering
-    getProblems: async (filters?: { status?: string; department?: string; severity?: string }): Promise<Problem[]> => {
-        await new Promise(resolve => setTimeout(resolve, 500));
+    getProblems: async (filters?: {
+        skip?: number;
+        limit?: number;
+        status?: string;
+        department?: string;
+        severity?: string;
+        owner?: string;
+        search?: string;
+    }): Promise<Problem[]> => {
+        const { problemsApi } = await import('@/lib/api/problems');
+        const response = await problemsApi.list(filters || {});
+        return response.problems as any;
+    },
 
-        let filteredProblems = mockProblems;
-        if (filters?.status && filters.status !== 'all') {
-            filteredProblems = filteredProblems.filter(p => p.status === filters.status);
-        }
-        if (filters?.department && filters.department !== 'all') {
-            filteredProblems = filteredProblems.filter(p => p.department === filters.department);
-        }
-        if (filters?.severity && filters.severity !== 'all') {
-            filteredProblems = filteredProblems.filter(p => p.severity === filters.severity);
-        }
-
-        return filteredProblems;
+    listProblems: async (params?: any): Promise<{ problems: Problem[]; total: number }> => {
+        const { problemsApi } = await import('@/lib/api/problems');
+        const response = await problemsApi.list(params || {});
+        return { problems: response.problems as any, total: response.total };
     },
 
     // Get single problem by ID
     getProblem: async (id: string): Promise<Problem> => {
-        await new Promise(resolve => setTimeout(resolve, 300));
-        const problem = mockProblems.find(p => p.id === id);
-        if (!problem) throw new Error('Problem not found');
-        return problem;
+        const { problemsApi } = await import('@/lib/api/problems');
+        return problemsApi.getById(id) as any;
     },
 
     // Create new problem
-    createProblem: async (problemData: Omit<Problem, 'id' | 'createdAt' | 'updatedAt'>): Promise<Problem> => {
-        await new Promise(resolve => setTimeout(resolve, 400));
-        const newProblem: Problem = {
-            ...problemData,
-            id: `PRB-2025-${String(mockProblems.length + 1).padStart(3, '0')}`,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-        mockProblems.unshift(newProblem);
-        return newProblem;
+    createProblem: async (problemData: any): Promise<Problem> => {
+        const { problemsApi } = await import('@/lib/api/problems');
+        return problemsApi.create(problemData) as any;
     },
 
     // Update problem
     updateProblem: async (id: string, updates: Partial<Problem>): Promise<Problem> => {
-        await new Promise(resolve => setTimeout(resolve, 300));
-        const index = mockProblems.findIndex(p => p.id === id);
-        if (index === -1) throw new Error('Problem not found');
-
-        const updatedProblem = {
-            ...mockProblems[index],
-            ...updates,
-            updatedAt: new Date().toISOString()
-        };
-        mockProblems[index] = updatedProblem;
-        return updatedProblem;
+        const { problemsApi } = await import('@/lib/api/problems');
+        return problemsApi.update(id, updates as any) as any;
     },
 
     // Update action status
-    updateActionStatus: async (problemId: string, actionId: string, type: 'corrective' | 'preventive', status: 'Planned' | 'In Progress' | 'Done'): Promise<Problem> => {
-        const problem = await problemService.getProblem(problemId);
-
-        if (type === 'corrective') {
-            const updatedActions = problem.correctiveActions.map(action =>
-                action.id === actionId ? { ...action, status } : action
-            );
-            return problemService.updateProblem(problemId, { correctiveActions: updatedActions });
-        } else {
-            const updatedActions = problem.preventiveActions.map(action =>
-                action.id === actionId ? { ...action, status } : action
-            );
-            return problemService.updateProblem(problemId, { preventiveActions: updatedActions });
-        }
+    updateActionStatus: async (problemId: string, actionId: string, type: 'corrective' | 'preventive', status: string): Promise<Problem> => {
+        const { problemsApi } = await import('@/lib/api/problems');
+        return problemsApi.updateActionStatus(problemId, actionId, type, status) as any;
     },
 
     // Close problem
     closeProblem: async (id: string, verifiedBy: string, lessonLearned: string): Promise<Problem> => {
-        return problemService.updateProblem(id, {
-            status: 'Closed',
-            closureDate: new Date().toISOString().split('T')[0],
-            verifiedBy,
-            lessonLearned
-        });
+        const { problemsApi } = await import('@/lib/api/problems');
+        return problemsApi.closeProblem(id, lessonLearned) as any;
     },
 
     // Reopen problem
     reopenProblem: async (id: string): Promise<Problem> => {
-        return problemService.updateProblem(id, {
-            status: 'Under Analysis',
-            closureDate: undefined,
-            verifiedBy: undefined
-        });
+        const { problemsApi } = await import('@/lib/api/problems');
+        return problemsApi.update(id, { status: 'Under Analysis' }) as any;
     },
 
     // Get KPIs
     getKPIs: async (): Promise<ProblemKPI> => {
-        await new Promise(resolve => setTimeout(resolve, 200));
-        return mockKPIs;
+        const { problemsApi } = await import('@/lib/api/problems');
+        return problemsApi.getKPIs();
     },
 
-    // Get analytics
+    // Get Analytics
     getAnalytics: async (): Promise<ProblemAnalytics> => {
-        await new Promise(resolve => setTimeout(resolve, 300));
-        return mockAnalytics;
-    }
+        const { problemsApi } = await import('@/lib/api/problems');
+        return problemsApi.getAnalytics();
+    },
 };
 
 export const jobDescriptionService = {
+    // Get all job descriptions
     getJobDescriptions: async (): Promise<JobDescription[]> => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        return mockJobDescriptions;
+        const { jobDescriptionService: api } = await import('@/services/jobDescriptionService');
+        return api.getJobDescriptions();
     },
 
     getJobDescription: async (id: string): Promise<JobDescription> => {

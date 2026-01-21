@@ -8,7 +8,15 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useAuthStore } from '@/store/auth';
 import { useAppStore } from '@/store/app';
-import { KPI, Task, Project, Department, Risk, Decision } from '@/types';
+import {
+    KPI,
+    Task,
+    Project,
+    DepartmentPerformance,
+    RiskIndicator,
+    ExecutiveDecision,
+    AIInsight
+} from '@/types';
 import { PageSkeleton } from '@/components/ui/loading';
 import {
     Users,
@@ -35,10 +43,11 @@ import {
     Clock4,
 } from 'lucide-react';
 import Link from 'next/link';
-import { taskService, projectService } from '@/services/api';
+import { taskService, projectService, employeeService } from '@/services/api';
+import { moneyService } from '@/lib/api/money';
 
-// Mock data - you can move this to lib/mock-data.ts
-const mockDepartments: Department[] = [
+// Mock data cast to correct types or handled as any for the view
+const mockDepartments: any[] = [
     {
         id: '1',
         name: 'Sales & BD',
@@ -89,7 +98,7 @@ const mockDepartments: Department[] = [
     }
 ];
 
-const mockRisks: Risk[] = [
+const mockRisks: any[] = [
     {
         id: '1',
         category: 'Financial',
@@ -108,12 +117,12 @@ const mockRisks: Risk[] = [
         id: '3',
         category: 'Data Security',
         indicator: 'Failed login attempts',
-        level: '12',
+        level: 'Critical',
         status: '⚠️ Alerted'
     }
 ];
 
-const mockDecisions: Decision[] = [
+const mockDecisions: any[] = [
     {
         id: '1',
         type: 'Decision',
@@ -159,6 +168,8 @@ export default function DashboardPage() {
     const [kpis, setKpis] = useState<KPI[]>([]);
     const [recentTasks, setRecentTasks] = useState<Task[]>([]);
     const [activeProjects, setActiveProjects] = useState<Project[]>([]);
+    const [employees, setEmployees] = useState<any[]>([]);
+    const [financeStats, setFinanceStats] = useState<any>(null);
 
     useEffect(() => {
         setCurrentModule('dashboard');
@@ -169,18 +180,22 @@ export default function DashboardPage() {
         try {
             setLoading(true);
 
-            // Load KPIs based on role
-            const roleKpis = getRoleBasedKpis();
-            setKpis(roleKpis);
-
-            // Load recent tasks and projects
-            const [tasks, projects] = await Promise.all([
+            // Load all necessary data
+            const [tasks, projects, employeesData, stats] = await Promise.all([
                 taskService.getTasks(),
                 projectService.getProjects(),
+                employeeService.getEmployees(),
+                moneyService.getCashFlowStats()
             ]);
 
             setRecentTasks(tasks.slice(0, 5));
-            setActiveProjects(projects.filter(p => p.status === 'In Progress'));
+            setActiveProjects(projects.filter(p => p.status === 'Active' || p.status === 'Planned'));
+            setEmployees(employeesData);
+            setFinanceStats(stats);
+
+            // Load KPIs based on role and real data
+            const roleKpis = getRoleBasedKpis(stats, employeesData, tasks, projects);
+            setKpis(roleKpis);
 
             // Add welcome notification for first-time users
             addNotification({
@@ -200,13 +215,21 @@ export default function DashboardPage() {
         }
     };
 
-    const getRoleBasedKpis = (): KPI[] => {
+    const formatCurrency = (val: number) => {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'XAF',
+            maximumFractionDigits: 0
+        }).format(val);
+    };
+
+    const getRoleBasedKpis = (stats: any, emps: any[], tasks: any[], projects: any[]): KPI[] => {
         if (user?.role === 'CEO' || user?.role === 'Admin') {
             return [
                 {
                     id: '1',
-                    title: 'Monthly Revenue',
-                    value: '$1.25M',
+                    title: 'Current Balance',
+                    value: formatCurrency(stats?.currentBalance || 0),
                     change: 12.7,
                     changeType: 'increase' as const,
                     icon: '💰',
@@ -215,7 +238,7 @@ export default function DashboardPage() {
                 {
                     id: '2',
                     title: 'Total Employees',
-                    value: '145',
+                    value: emps.length.toString(),
                     change: 5.1,
                     changeType: 'increase' as const,
                     icon: '👥',
@@ -223,8 +246,8 @@ export default function DashboardPage() {
                 },
                 {
                     id: '3',
-                    title: 'Transactions',
-                    value: '3,870',
+                    title: 'Revenue (Today)',
+                    value: formatCurrency(stats?.totalIncome || 0),
                     change: 8.2,
                     changeType: 'increase' as const,
                     icon: '📊',
@@ -232,8 +255,8 @@ export default function DashboardPage() {
                 },
                 {
                     id: '4',
-                    title: 'System Uptime',
-                    value: '99.96%',
+                    title: 'Runway',
+                    value: `${stats?.runwayMonths || 0} Months`,
                     change: 0.1,
                     changeType: 'increase' as const,
                     icon: '⚙️',
@@ -243,6 +266,8 @@ export default function DashboardPage() {
         }
 
         if (user?.role === 'Manager') {
+            const teamTasks = tasks.filter(t => t.manager_id === user.id);
+            const teamProjects = projects.filter(p => p.manager_id === user.id);
             return [
                 {
                     id: '1',
@@ -255,8 +280,8 @@ export default function DashboardPage() {
                 },
                 {
                     id: '2',
-                    title: 'Team Size',
-                    value: '8',
+                    title: 'Active Tasks',
+                    value: teamTasks.filter(t => t.status !== 'Done').length.toString(),
                     change: 0,
                     changeType: 'increase' as const,
                     icon: '👥',
@@ -265,7 +290,7 @@ export default function DashboardPage() {
                 {
                     id: '3',
                     title: 'Active Projects',
-                    value: '12',
+                    value: teamProjects.length.toString(),
                     change: 2,
                     changeType: 'increase' as const,
                     icon: '📊',
@@ -274,7 +299,7 @@ export default function DashboardPage() {
                 {
                     id: '4',
                     title: 'Tasks Completed',
-                    value: '24',
+                    value: teamTasks.filter(t => t.status === 'Done').length.toString(),
                     change: 8.2,
                     changeType: 'increase' as const,
                     icon: '✅',
@@ -284,11 +309,13 @@ export default function DashboardPage() {
         }
 
         // Employee view
+        const myTasks = tasks.filter(t => t.owner_id === user?.id);
+        const myProjects = projects.filter(p => p.owner_id === user?.id);
         return [
             {
                 id: '1',
                 title: 'Tasks Completed',
-                value: '12',
+                value: myTasks.filter(t => t.status === 'Done').length.toString(),
                 change: 2,
                 changeType: 'increase' as const,
                 icon: '✅',
@@ -296,8 +323,8 @@ export default function DashboardPage() {
             },
             {
                 id: '2',
-                title: 'Hours This Week',
-                value: '38.5',
+                title: 'Pending Tasks',
+                value: myTasks.filter(t => t.status !== 'Done').length.toString(),
                 change: -2.1,
                 changeType: 'decrease' as const,
                 icon: '⏰',
@@ -306,7 +333,7 @@ export default function DashboardPage() {
             {
                 id: '3',
                 title: 'Active Projects',
-                value: '3',
+                value: myProjects.length.toString(),
                 change: 0,
                 changeType: 'increase' as const,
                 icon: '📊',
@@ -314,8 +341,8 @@ export default function DashboardPage() {
             },
             {
                 id: '4',
-                title: 'Leave Days Left',
-                value: '12',
+                title: 'Latest Score',
+                value: '8.5',
                 change: 0,
                 changeType: 'increase' as const,
                 icon: '🏖️',
@@ -407,6 +434,110 @@ export default function DashboardPage() {
             {/* CEO/Admin Specific Dashboard */}
             {(user?.role === 'CEO' || user?.role === 'Admin') && (
                 <>
+                    {/* Strategic Financial Overview */}
+                    <div className="grid gap-6 md:grid-cols-2">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center">
+                                    <DollarSign className="h-5 w-5 mr-2" />
+                                    Strategic Financial Overview
+                                </CardTitle>
+                                <CardDescription>Key profitability and liquidity metrics</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-4 border rounded-lg bg-emerald-50/50">
+                                        <p className="text-sm text-emerald-600 font-medium">Gross Profit</p>
+                                        <p className="text-2xl font-bold">{formatCurrency(financeStats?.grossProfit || 0)}</p>
+                                        <p className="text-xs text-muted-foreground mt-1">Total Rev - COGS</p>
+                                    </div>
+                                    <div className="p-4 border rounded-lg bg-blue-50/50">
+                                        <p className="text-sm text-blue-600 font-medium">Available Cash</p>
+                                        <p className="text-2xl font-bold">{formatCurrency(financeStats?.availableCash || 0)}</p>
+                                        <p className="text-xs text-muted-foreground mt-1">Manually set liquid funds</p>
+                                    </div>
+                                </div>
+
+                                {/* Company Runway Section */}
+                                <div className="p-4 border rounded-lg bg-gradient-to-br from-purple-50 to-indigo-50">
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div>
+                                            <p className="text-sm text-purple-600 font-medium">Annual Operational Budget</p>
+                                            <p className="text-2xl font-bold text-purple-900">
+                                                {formatCurrency((financeStats as any)?.companyRunway || 0)}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                Monthly: {formatCurrency(((financeStats as any)?.companyRunway || 0) / 12)}
+                                            </p>
+                                        </div>
+                                        {user?.role === 'CEO' || user?.role === 'Admin' ? (
+                                            <Link href="/settings">
+                                                <Button variant="outline" size="sm" className="text-xs">
+                                                    Update
+                                                </Button>
+                                            </Link>
+                                        ) : null}
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="font-medium">Monthly Burn Rate</span>
+                                            <span>{formatCurrency(financeStats?.burnRate || 0)}</span>
+                                        </div>
+                                        <Progress value={Math.min((financeStats?.runwayMonths || 0) * 10, 100)} className="h-2" />
+                                        <div className="flex justify-between items-center">
+                                            <p className="text-xs text-muted-foreground">
+                                                Runway: <span className="font-semibold text-purple-700">{financeStats?.runwayMonths || 0} months</span> remaining
+                                            </p>
+                                            {(financeStats?.runwayMonths || 0) < 3 && (
+                                                <span className="text-xs text-red-600 font-medium">⚠️ Low runway</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center">
+                                    <Target className="h-5 w-5 mr-2" />
+                                    Strategic Employee Summary
+                                </CardTitle>
+                                <CardDescription>High-level overview of key talent</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
+                                    {employees.slice(0, 5).map((emp) => (
+                                        <div key={emp.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/5 transition-colors">
+                                            <div className="flex items-center space-x-3">
+                                                <div className="h-10 w-10 rounded-full overflow-hidden bg-muted border-2 border-primary/10">
+                                                    {emp.image ? (
+                                                        <img src={emp.image} alt={emp.name} className="h-full w-full object-cover" />
+                                                    ) : (
+                                                        <div className="h-full w-full flex items-center justify-center bg-primary/5 text-primary text-xs font-bold">
+                                                            {emp.name.split(' ').map((n: string) => n[0]).join('')}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-semibold">{emp.name}</p>
+                                                    <p className="text-xs text-muted-foreground">{emp.title} • {emp.department}</p>
+                                                </div>
+                                            </div>
+                                            <Badge variant="outline" className="text-[10px] uppercase tracking-wider">
+                                                {emp.is_active ? 'Active' : 'Inactive'}
+                                            </Badge>
+                                        </div>
+                                    ))}
+                                    <Button variant="ghost" size="sm" className="w-full text-xs" asChild>
+                                        <Link href="/people/employees">View All Employees</Link>
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
                     {/* Department Performance */}
                     <Card>
                         <CardHeader>
@@ -506,8 +637,8 @@ export default function DashboardPage() {
                                         <div className="flex items-center space-x-2">
                                             <Brain className="h-4 w-4 text-blue-600" />
                                             <span className="text-sm font-medium text-blue-800">
-                        Overall Organizational Health: Strong (Score: 91/100)
-                      </span>
+                                                Overall Organizational Health: Strong (Score: 91/100)
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -529,11 +660,10 @@ export default function DashboardPage() {
                                 {mockDecisions.map(decision => (
                                     <div key={decision.id} className="flex items-center justify-between p-3 border rounded-lg">
                                         <div className="flex items-center space-x-3">
-                                            <div className={`p-2 rounded-full ${
-                                                decision.status.includes('✅') ? 'bg-green-100 text-green-600' :
-                                                    decision.status.includes('⚠️') ? 'bg-yellow-100 text-yellow-600' :
-                                                        'bg-blue-100 text-blue-600'
-                                            }`}>
+                                            <div className={`p-2 rounded-full ${decision.status.includes('✅') ? 'bg-green-100 text-green-600' :
+                                                decision.status.includes('⚠️') ? 'bg-yellow-100 text-yellow-600' :
+                                                    'bg-blue-100 text-blue-600'
+                                                }`}>
                                                 {decision.status.includes('✅') ? <CheckCircle2 className="h-4 w-4" /> :
                                                     decision.status.includes('⚠️') ? <AlertTriangle className="h-4 w-4" /> :
                                                         <Clock4 className="h-4 w-4" />}
@@ -598,7 +728,7 @@ export default function DashboardPage() {
                                             </div>
                                         </div>
                                         <div className="text-xs text-muted-foreground">
-                                            Due {new Date(task.dueDate).toLocaleDateString()}
+                                            Due {new Date(task.due_date).toLocaleDateString()}
                                         </div>
                                     </div>
                                 ))
@@ -635,7 +765,7 @@ export default function DashboardPage() {
                                 activeProjects.map(project => (
                                     <div key={project.id} className="space-y-3 p-3 border rounded-lg">
                                         <div className="flex items-center justify-between">
-                                            <h4 className="font-medium">{project.name}</h4>
+                                            <h4 className="font-medium">{project.title}</h4>
                                             <Badge variant="secondary" className={getStatusColor(project.status)}>
                                                 {project.status}
                                             </Badge>

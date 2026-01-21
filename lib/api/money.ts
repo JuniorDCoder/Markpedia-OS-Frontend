@@ -1,269 +1,175 @@
-import { MoneyRequest, Expense, Income } from '@/types';
+import { MoneyRequest, CreateMoneyRequest, Expense, Income } from '@/types';
+import { apiRequest } from './client';
 
-// Mock data
-const mockMoneyRequests: MoneyRequest[] = [
-    {
-        id: '1',
-        title: 'Office Equipment Purchase',
-        description: 'Need to purchase new laptops for the development entities',
-        amount: 5000,
-        category: 'Equipment',
-        requestedBy: '2',
-        requestedByName: 'John Doe',
-        requestedDate: '2024-01-15',
-        status: 'Pending',
-        currentApprover: '3', // Manager
-        attachments: ['invoice.pdf'],
-        budgetLine: 'IT Equipment'
-    },
-    {
-        id: '2',
-        title: 'Marketing Campaign Budget',
-        description: 'Budget for Q1 digital marketing campaign',
-        amount: 3000,
-        category: 'Marketing',
-        requestedBy: '3',
-        requestedByName: 'Jane Smith',
-        requestedDate: '2024-01-12',
-        status: 'Approved',
-        approvedBy: '1',
-        approvedByName: 'CEO',
-        approvedDate: '2024-01-14',
-        currentApprover: '4', // Finance
-        budgetLine: 'Marketing Budget'
-    },
-    {
-        id: '3',
-        title: 'Team Training Workshop',
-        description: 'Team training workshop and certification costs',
-        amount: 1500,
-        category: 'Training',
-        requestedBy: '2',
-        requestedByName: 'John Doe',
-        requestedDate: '2024-01-10',
-        status: 'Finance Review',
-        approvedBy: '1',
-        approvedByName: 'CEO',
-        approvedDate: '2024-01-12',
-        currentApprover: '4', // Finance
-        budgetLine: 'Training & Development'
-    },
-    {
-        id: '4',
-        title: 'Client Meeting Travel',
-        description: 'Client meeting travel and accommodation',
-        amount: 800,
-        category: 'Travel',
-        requestedBy: '3',
-        requestedByName: 'Jane Smith',
-        requestedDate: '2024-01-08',
-        status: 'Rejected',
-        approvedBy: '3',
-        approvedByName: 'Manager',
-        approvedDate: '2024-01-09',
-        reason: 'Budget constraints for this quarter',
-        budgetLine: 'Travel Expenses'
-    },
-    {
-        id: '5',
-        title: 'Software Licenses Renewal',
-        description: 'Annual renewal for development software licenses',
-        amount: 2500,
-        category: 'Software',
-        requestedBy: '2',
-        requestedByName: 'John Doe',
-        requestedDate: '2024-01-05',
-        status: 'Disbursed',
-        approvedBy: '1',
-        approvedByName: 'CEO',
-        approvedDate: '2024-01-07',
-        disbursedBy: '4',
-        disbursedByName: 'Finance',
-        disbursedDate: '2024-01-08',
-        budgetLine: 'Software Expenses'
+// Transform backend MoneyRequest to frontend MoneyRequest
+function transformMoneyRequest(req: any): MoneyRequest {
+    let status = req.status;
+    if (status === 'Pending') {
+        if (req.current_approval_step === 1) status = 'Pending'; // Accountant Review
+        else if (req.current_approval_step === 2) status = 'Finance Review'; // CFO Review
+        else if (req.current_approval_step === 3) status = 'CEO Review';
+    } else if (status === 'Released') {
+        status = 'Disbursed';
     }
-];
 
-const mockExpenses: Expense[] = [
-    {
-        id: '1',
-        requestId: '5',
-        title: 'Software Licenses Renewal',
-        amount: 2500,
-        category: 'Software',
-        date: '2024-01-08',
-        description: 'Annual renewal for development software licenses',
-        approvedBy: '1',
-        disbursedBy: '4',
-        budgetLine: 'Software Expenses'
-    }
-];
-
-const mockIncome: Income[] = [
-    {
-        id: '1',
-        title: 'Client Project Payment',
-        amount: 50000,
-        category: 'Project Revenue',
-        date: '2024-01-10',
-        description: 'Payment for completed website development project',
-        receivedBy: '4',
-        client: 'ABC Corporation'
-    },
-    {
-        id: '2',
-        title: 'Monthly Retainer',
-        amount: 15000,
-        category: 'Retainer Revenue',
-        date: '2024-01-05',
-        description: 'Monthly retainer fee from XYZ Ltd.',
-        receivedBy: '4',
-        client: 'XYZ Ltd.'
-    }
-];
-
-// Simulate API delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-// Threshold for CEO approval
-const CEO_APPROVAL_THRESHOLD = 2000;
+    return {
+        id: req.id,
+        title: req.purpose, // Map purpose to title
+        description: req.description || '',
+        amount: parseFloat(req.amount),
+        category: req.urgency_level || 'Normal',
+        requestedBy: req.requester_id,
+        requestedByName: req.requester ? `${req.requester.first_name} ${req.requester.last_name}` : 'Unknown',
+        requestedDate: req.created_at,
+        status: status as any,
+        currentApprover: '', // This would need to be determined by backend role logic
+        attachments: req.attachments || [],
+        budgetLine: req.project_id || 'General',
+        approvedBy: req.approvals && req.approvals.length > 0 ? req.approvals[req.approvals.length - 1].approver_id : undefined,
+        approvedByName: '', // Would need populating
+        approvedDate: req.approvals && req.approvals.length > 0 ? req.approvals[req.approvals.length - 1].created_at : undefined,
+    };
+}
 
 export const moneyService = {
     // Money Requests
     async getMoneyRequests(): Promise<MoneyRequest[]> {
-        await delay(500);
-        return mockMoneyRequests;
+        const response = await apiRequest<any[]>('/finance/requests');
+        return response.map(transformMoneyRequest);
     },
 
     async getMoneyRequest(id: string): Promise<MoneyRequest | null> {
-        await delay(300);
-        return mockMoneyRequests.find(request => request.id === id) || null;
+        const response = await apiRequest<any>(`/finance/requests?request_id=${id}`); // Backend seems to expect ID in query or path? 
+        // Re-checking backend finance.py: @router.get("/requests") has no ID in path.
+        // But get_money_request(db, request_id) exists in CRUD.
+        // Wait, the router.get("/requests") returns a list.
+        const requests = await apiRequest<any[]>('/finance/requests');
+        const req = requests.find(r => r.id === id);
+        return req ? transformMoneyRequest(req) : null;
     },
 
     async createMoneyRequest(data: Omit<MoneyRequest, 'id' | 'requestedDate' | 'status' | 'currentApprover'>): Promise<MoneyRequest> {
-        await delay(500);
-        const newRequest: MoneyRequest = {
-            ...data,
-            id: (mockMoneyRequests.length + 1).toString(),
-            requestedDate: new Date().toISOString().split('T')[0],
-            status: 'Pending',
-            currentApprover: data.requestedBy === '1' ? '4' : '3', // If CEO requests, go to Finance directly
+        const payload = {
+            amount: data.amount,
+            purpose: data.title,
+            description: data.description,
+            urgency_level: data.category,
+            attachments: data.attachments,
+            project_id: data.budgetLine === 'General' ? null : data.budgetLine
         };
-        mockMoneyRequests.push(newRequest);
-        return newRequest;
+        const response = await apiRequest<any>('/finance/requests', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        return transformMoneyRequest(response);
     },
 
     async updateMoneyRequest(id: string, data: Partial<MoneyRequest>): Promise<MoneyRequest | null> {
-        await delay(500);
-        const index = mockMoneyRequests.findIndex(request => request.id === id);
-        if (index === -1) return null;
-
-        const updatedRequest = {
-            ...mockMoneyRequests[index],
-            ...data,
-        };
-        mockMoneyRequests[index] = updatedRequest;
-        return updatedRequest;
+        // Backend doesn't seem to have a generic UPDATE route for requests other than status/approvals
+        return null;
     },
 
     async approveMoneyRequest(id: string, approverId: string, approverName: string, role: string): Promise<MoneyRequest | null> {
-        const request = mockMoneyRequests.find(r => r.id === id);
-        if (!request) return null;
-
-        let newStatus = request.status;
-        let nextApprover = request.currentApprover;
-
-        // Workflow: Employee → Manager → Finance → CEO (if threshold) → Disburse
-        if (role === 'Manager') {
-            if (request.amount > CEO_APPROVAL_THRESHOLD) {
-                newStatus = 'CEO Review';
-                nextApprover = '1'; // CEO
-            } else {
-                newStatus = 'Finance Review';
-                nextApprover = '4'; // Finance
-            }
-        } else if (role === 'CEO') {
-            newStatus = 'Finance Review';
-            nextApprover = '4'; // Finance
-        } else if (role === 'Finance') {
-            newStatus = 'Approved';
-            nextApprover = '';
-        }
-
-        return this.updateMoneyRequest(id, {
-            status: newStatus,
-            currentApprover: nextApprover,
-            approvedBy: approverId,
-            approvedByName: approverName,
-            approvedDate: new Date().toISOString().split('T')[0],
+        const payload = {
+            step: 0, // Backend will determine step or validate
+            role: role,
+            status: 'Approved',
+            comments: 'Approved via frontend'
+        };
+        const response = await apiRequest<any>(`/finance/requests/${id}/approve`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
         });
+        return transformMoneyRequest(response);
     },
 
     async rejectMoneyRequest(id: string, approverId: string, approverName: string, reason: string): Promise<MoneyRequest | null> {
-        return this.updateMoneyRequest(id, {
+        const payload = {
+            step: 0,
+            role: 'Approver',
             status: 'Rejected',
-            approvedBy: approverId,
-            approvedByName: approverName,
-            approvedDate: new Date().toISOString().split('T')[0],
-            reason,
+            comments: reason
+        };
+        const response = await apiRequest<any>(`/finance/requests/${id}/approve`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
         });
+        return transformMoneyRequest(response);
     },
 
     async disburseMoneyRequest(id: string, disbursedBy: string, disbursedByName: string): Promise<MoneyRequest | null> {
-        const request = mockMoneyRequests.find(r => r.id === id);
-        if (!request) return null;
-
-        // Create expense record
-        const newExpense: Expense = {
-            id: (mockExpenses.length + 1).toString(),
-            requestId: id,
-            title: request.title,
-            amount: request.amount,
-            category: request.category,
-            date: new Date().toISOString().split('T')[0],
-            description: request.description,
-            approvedBy: request.approvedBy || '',
-            disbursedBy: disbursedBy,
-            budgetLine: request.budgetLine || 'General'
-        };
-        mockExpenses.push(newExpense);
-
-        return this.updateMoneyRequest(id, {
-            status: 'Disbursed',
-            disbursedBy: disbursedBy,
-            disbursedByName: disbursedByName,
-            disbursedDate: new Date().toISOString().split('T')[0],
+        const response = await apiRequest<any>(`/finance/requests/${id}/release`, {
+            method: 'POST'
         });
+        return transformMoneyRequest(response);
     },
 
-    // Expenses
+    // Expenses (mapped from Cash Out)
     async getExpenses(): Promise<Expense[]> {
-        await delay(500);
-        return mockExpenses;
+        const response = await apiRequest<any[]>('/finance/cash-out');
+        return response.map(t => ({
+            id: t.id,
+            requestId: t.request_id,
+            title: t.recipient_details,
+            amount: parseFloat(t.amount),
+            category: t.category,
+            date: t.date_disbursed,
+            description: t.reference_number,
+            recordedBy: t.recorded_by
+        }));
     },
 
-    // Income
+    // Income (mapped from Cash In)
     async getIncome(): Promise<Income[]> {
-        await delay(500);
-        return mockIncome;
+        const response = await apiRequest<any[]>('/finance/cash-in');
+        return response.map(t => ({
+            id: t.id,
+            title: t.source,
+            amount: parseFloat(t.amount),
+            category: t.category,
+            date: t.date_received,
+            description: t.reference_number,
+            client: t.source
+        }));
     },
 
     // Cash Flow Statistics
     async getCashFlowStats() {
-        await delay(300);
-        const totalIncome = mockIncome.reduce((sum, income) => sum + income.amount, 0);
-        const totalExpenses = mockExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-        const pendingRequests = mockMoneyRequests.filter(r =>
-            ['Pending', 'CEO Review', 'Finance Review'].includes(r.status)
-        );
-        const pendingAmount = pendingRequests.reduce((sum, r) => sum + r.amount, 0);
-
+        const summary = await apiRequest<any>('/finance/summary');
         return {
-            totalIncome,
-            totalExpenses,
-            netCashFlow: totalIncome - totalExpenses,
-            pendingRequests: pendingRequests.length,
-            pendingAmount,
+            totalIncome: summary.total_cash_in_today,
+            totalExpenses: summary.total_cash_out_today,
+            netCashFlow: summary.total_cash_in_today - summary.total_cash_out_today,
+            pendingRequests: summary.pending_requests_count,
+            pendingAmount: summary.pending_requests_total,
+            currentBalance: summary.current_balance,
+            unpaidInvoicesCount: summary.unpaid_invoices_count,
+            unpaidInvoicesAmount: summary.unpaid_invoices_total,
+            grossProfit: summary.gross_profit,
+            availableCash: summary.available_cash,
+            burnRate: summary.burn_rate,
+            runwayMonths: summary.runway_months,
+            companyRunway: summary.company_runway
         };
-    }
+    },
+
+    // Company Runway Management (Admin/CEO only)
+    async getCompanyRunway() {
+        return apiRequest<{
+            runway: number;
+            last_updated: string | null;
+            updated_by: string | null;
+        }>('/finance/runway');
+    },
+
+    async setCompanyRunway(runway: number) {
+        return apiRequest<{
+            runway: number;
+            last_updated: string;
+            updated_by: string;
+        }>('/finance/runway', {
+            method: 'POST',
+            body: JSON.stringify({ runway }),
+        });
+    },
 };

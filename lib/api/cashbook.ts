@@ -1,50 +1,31 @@
 // lib/api/cashbook.ts
 import { CashbookEntry } from "@/types/cashbook";
-
-let mockCashbook: CashbookEntry[] = [
-    {
-        id: "1",
-        type: "Income",
-        amount: 50000,
-        description: "Client payment for web development",
-        category: "Services",
-        date: "2024-01-15",
-        createdBy: "1",
-        proofUrl: "/receipts/payment-001.pdf",
-    },
-    {
-        id: "2",
-        type: "Expense",
-        amount: 1200,
-        description: "Office rent for January",
-        category: "Rent",
-        date: "2024-01-01",
-        createdBy: "1",
-        proofUrl: "/receipts/rent-jan.pdf",
-    },
-];
+import { apiRequest } from "./client";
 
 export const cashbookService = {
     async list(): Promise<CashbookEntry[]> {
-        return Promise.resolve(mockCashbook);
+        const response = await apiRequest<any[]>('/finance/cashbook');
+        return response.map(e => ({
+            id: e.id,
+            type: e.transaction_type === 'Cash In' ? 'Income' : 'Expense',
+            amount: parseFloat(e.amount),
+            description: e.description,
+            category: 'Transaction', // Backend doesn't have category directly in cashbook
+            date: e.entry_date,
+            createdBy: 'System', // Would need populating if possible
+            balanceAfter: parseFloat(e.balance_after)
+        }));
     },
 
     async get(id: string): Promise<CashbookEntry | undefined> {
-        return Promise.resolve(mockCashbook.find((e) => e.id === id));
+        const entries = await this.list();
+        return entries.find((e) => e.id === id);
     },
 
-    async create(entry: CashbookEntry): Promise<CashbookEntry> {
-        mockCashbook.push(entry);
-        return Promise.resolve(entry);
-    },
-
-    async update(id: string, entry: CashbookEntry): Promise<CashbookEntry> {
-        mockCashbook = mockCashbook.map((e) => (e.id === id ? entry : e));
-        return Promise.resolve(entry);
-    },
-
-    async remove(id: string): Promise<void> {
-        mockCashbook = mockCashbook.filter((e) => e.id !== id);
-        return Promise.resolve();
-    },
+    async create(entry: any): Promise<any> {
+        // Backend handles cashbook entries via Cash In/Out transactions
+        // Should we allow direct creation? Backend doesn't have a direct POST /cashbook
+        return null;
+    }
 };
+

@@ -139,6 +139,14 @@ export const adminApi = {
     return mapBackendUser(res);
   },
 
+  async updateUserRole(id: string, role: string): Promise<User> {
+    const res = await apiRequest<BackendUser>(`/admin/users/${id}/role`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    });
+    return mapBackendUser(res);
+  },
+
   async deleteUser(id: string): Promise<void> {
     await apiRequest(`/admin/users/${id}`, {
       method: 'DELETE',
