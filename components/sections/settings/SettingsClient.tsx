@@ -21,8 +21,10 @@ import {
     Download,
     Search,
     Settings as SettingsIcon,
-    Menu
+    Menu,
+    DollarSign
 } from 'lucide-react';
+import CompanyRunwaySettings from '@/components/settings/CompanyRunwaySettings';
 
 interface SettingsClientProps {
     settings: any;
@@ -76,6 +78,15 @@ export default function SettingsClient({ settings, user }: SettingsClientProps) 
             count: 1
         },
         {
+            id: 'runway',
+            name: 'Company Runway',
+            description: 'Annual operational budget',
+            icon: DollarSign,
+            color: 'text-emerald-600',
+            count: 1,
+            adminOnly: true
+        },
+        {
             id: 'integrations',
             name: 'Integrations',
             description: 'External services and connections',
@@ -99,9 +110,8 @@ export default function SettingsClient({ settings, user }: SettingsClientProps) 
         const Icon = category.icon;
         return (
             <Card
-                className={`hover:shadow-lg transition-all duration-300 cursor-pointer group ${
-                    activeCategory === category.id ? 'ring-2 ring-blue-500' : ''
-                }`}
+                className={`hover:shadow-lg transition-all duration-300 cursor-pointer group ${activeCategory === category.id ? 'ring-2 ring-blue-500' : ''
+                    }`}
                 onClick={() => setActiveCategory(category.id)}
             >
                 <CardHeader className="pb-3">
@@ -142,9 +152,8 @@ export default function SettingsClient({ settings, user }: SettingsClientProps) 
                     {categories.map((category) => (
                         <button
                             key={category.id}
-                            className={`w-full text-left px-4 py-3 hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg ${
-                                activeCategory === category.id ? 'bg-blue-50 text-blue-600' : ''
-                            }`}
+                            className={`w-full text-left px-4 py-3 hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg ${activeCategory === category.id ? 'bg-blue-50 text-blue-600' : ''
+                                }`}
                             onClick={() => {
                                 setActiveCategory(category.id);
                                 setMobileMenuOpen(false);
@@ -365,6 +374,10 @@ export default function SettingsClient({ settings, user }: SettingsClientProps) 
                                 </Button>
                             )}
                         </div>
+                    )}
+
+                    {activeCategory === 'runway' && (
+                        <CompanyRunwaySettings />
                     )}
 
                     {activeCategory === 'integrations' && (

@@ -221,8 +221,8 @@ export default function InvoiceDetailsPage({ params }: { params: { id: string } 
                                     <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
                                         <td className="px-4 py-3 text-slate-800">{item.description}</td>
                                         <td className="px-4 py-3 text-center text-slate-800">{item.quantity}</td>
-                                        <td className="px-4 py-3 text-center text-slate-800">${item.unitPrice}</td>
-                                        <td className="px-4 py-3 text-right font-semibold text-slate-800">${item.amount.toLocaleString()}</td>
+                                        <td className="px-4 py-3 text-center text-slate-800">{item.unitPrice.toLocaleString()} XAF</td>
+                                        <td className="px-4 py-3 text-right font-semibold text-slate-800">{item.amount.toLocaleString()} XAF</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -234,23 +234,23 @@ export default function InvoiceDetailsPage({ params }: { params: { id: string } 
                         <div className="w-full md:w-1/2">
                             <div className="flex justify-between py-2 text-sm">
                                 <span className="text-slate-600">Sub Total</span>
-                                <span className="font-semibold">${invoice.subtotal.toLocaleString()}</span>
+                                <span className="font-semibold">{invoice.subtotal.toLocaleString()} XAF</span>
                             </div>
                             {invoice.taxRate > 0 && (
                                 <div className="flex justify-between py-2 text-sm">
                                     <span className="text-slate-600">Vat & Tax {invoice.taxRate}%</span>
-                                    <span className="font-semibold">{invoice.taxAmount > 0 ? `$${invoice.taxAmount.toLocaleString()}` : '-'}</span>
+                                    <span className="font-semibold">{invoice.taxAmount > 0 ? `${invoice.taxAmount.toLocaleString()} XAF` : '-'}</span>
                                 </div>
                             )}
                             {invoice.discountAmount > 0 && (
                                 <div className="flex justify-between py-2 text-sm">
                                     <span className="text-slate-600">Discount {((invoice.discountAmount / invoice.subtotal) * 100).toFixed(0)}%</span>
-                                    <span className="font-semibold">-${invoice.discountAmount.toLocaleString()}</span>
+                                    <span className="font-semibold">-{invoice.discountAmount.toLocaleString()} XAF</span>
                                 </div>
                             )}
                             <div className="bg-red-600 text-white flex justify-between px-4 py-3 mt-2" style={{ backgroundColor: '#dc2626', color: '#ffffff' }}>
                                 <span className="font-bold">Grand Total</span>
-                                <span className="font-bold text-lg">${invoice.total.toLocaleString()}</span>
+                                <span className="font-bold text-lg">{invoice.total.toLocaleString()} XAF</span>
                             </div>
                         </div>
                     </div>

@@ -65,6 +65,7 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
         businessAddress: '',
 
         entityId: '',
+        image: '',
     });
 
     useEffect(() => {
@@ -119,7 +120,11 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                     businessAddress: emp.businessAddress || '',
 
                     entityId: emp.entityId || '',
+                    image: emp.avatar || '',
                 });
+
+                // Store original role for permission checks
+                setOriginalRole((emp.role as any) || 'Employee');
             } catch (error) {
                 console.error('Error fetching employee:', error);
                 toast.error('Failed to load employee details');
@@ -133,6 +138,59 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
 
     const handleInputChange = (field: string, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const [originalRole, setOriginalRole] = useState('');
+    const [isUpdatingRole, setIsUpdatingRole] = useState(false);
+
+    // Check if current user can update the target user's role
+    const canUpdateRole = () => {
+        if (!user) return false;
+
+        // CEO can update anyone's role
+        if (user.role === 'CEO') return true;
+
+        // Top admins (Admin, CXO, HR, CFO, CTO, etc.) can only update non-top-admin roles
+        const topAdminRoles = ['Admin', 'CEO', 'CFO', 'CTO', 'COO', 'CIO', 'CMO', 'HR'];
+        const isCurrentUserTopAdmin = topAdminRoles.includes(user.role);
+        const isTargetUserTopAdmin = topAdminRoles.includes(originalRole);
+
+        if (isCurrentUserTopAdmin && !isTargetUserTopAdmin) {
+            return true;
+        }
+
+        return false;
+    };
+
+    const handleRoleUpdate = async () => {
+        if (!canUpdateRole()) {
+            toast.error('You do not have permission to update this user\'s role');
+            return;
+        }
+
+        if (formData.role === originalRole) {
+            toast.error('Role has not changed');
+            return;
+        }
+
+        setIsUpdatingRole(true);
+        try {
+            const { adminApi } = await import('@/lib/api/admin');
+            await adminApi.updateUserRole(employeeId, formData.role);
+            setOriginalRole(formData.role);
+            toast.success('Role updated successfully');
+        } catch (error: any) {
+            console.error('Error updating role:', error);
+            if (error?.message?.includes('403')) {
+                toast.error('You do not have permission to update this role');
+            } else {
+                toast.error('Failed to update role');
+            }
+            // Revert to original role
+            setFormData(prev => ({ ...prev, role: originalRole as any }));
+        } finally {
+            setIsUpdatingRole(false);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -219,8 +277,6 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
     // Cancel edit: revert to view mode
     const handleCancelEdit = () => setIsEditing(false);
 
-    // ... existing ...
-
     if (isFetching) {
         return (
             <div className="flex h-[50vh] items-center justify-center">
@@ -237,26 +293,31 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                     <CardTitle className="text-base font-semibold">Account Details</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div>
-                        <p className="text-sm font-medium text-muted-foreground">Employee ID</p>
-                        <p className="font-medium">{formData.employeeId || '--'}</p>
+                    <div className="md:col-span-1 flex justify-center md:justify-start">
+                        <div className="h-24 w-24 rounded-full overflow-hidden border-4 border-white shadow-lg bg-primary/10">
+                            {formData.image ? (
+                                <img src={formData.image} alt={formData.name} className="h-full w-full object-cover" />
+                            ) : (
+                                <div className="h-full w-full flex items-center justify-center text-primary font-bold text-2xl uppercase">
+                                    {formData.name.split(' ').map(n => n[0]).join('')}
+                                </div>
+                            )}
+                        </div>
                     </div>
-                    <div>
-                        <p className="text-sm font-medium text-muted-foreground">Name</p>
-                        <p className="font-medium">
-                            {formData.salutation} {formData.name}
-                        </p>
-                    </div>
-                    <div>
-                        <p className="text-sm font-medium text-muted-foreground">Email</p>
-                        <p className="font-medium break-all">{formData.email}</p>
-                    </div>
-                    <div>
-                        {/* Avatar Placeholder */}
-                        <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                                {formData.name.charAt(0)}
-                            </div>
+                    <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <p className="text-sm font-medium text-muted-foreground">Employee ID</p>
+                            <p className="font-medium">{formData.employeeId || '--'}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-muted-foreground">Name</p>
+                            <p className="font-medium">
+                                {formData.salutation} {formData.name}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-muted-foreground">Email</p>
+                            <p className="font-medium break-all">{formData.email}</p>
                         </div>
                     </div>
 
@@ -583,16 +644,50 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">User Role</label>
-                                    <Select value={formData.role} onValueChange={(v: any) => handleInputChange('role', v)}>
-                                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Employee">Employee</SelectItem>
-                                            <SelectItem value="Manager">Manager</SelectItem>
-                                            <SelectItem value="CEO">CEO</SelectItem>
-                                            <SelectItem value="Admin">Admin</SelectItem>
-                                            <SelectItem value="CXO">CXO</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <div className="flex gap-2">
+                                        <Select
+                                            value={formData.role}
+                                            onValueChange={(v: any) => handleInputChange('role', v)}
+                                            disabled={!canUpdateRole()}
+                                        >
+                                            <SelectTrigger className="flex-1"><SelectValue placeholder="Select" /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Employee">Employee</SelectItem>
+                                                <SelectItem value="Manager">Manager</SelectItem>
+                                                <SelectItem value="HR">HR</SelectItem>
+                                                <SelectItem value="CFO">CFO</SelectItem>
+                                                <SelectItem value="CTO">CTO</SelectItem>
+                                                <SelectItem value="COO">COO</SelectItem>
+                                                <SelectItem value="CIO">CIO</SelectItem>
+                                                <SelectItem value="CMO">CMO</SelectItem>
+                                                <SelectItem value="CEO">CEO</SelectItem>
+                                                <SelectItem value="Admin">Admin</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {canUpdateRole() && formData.role !== originalRole && (
+                                            <Button
+                                                type="button"
+                                                onClick={handleRoleUpdate}
+                                                disabled={isUpdatingRole}
+                                                size="sm"
+                                                className="whitespace-nowrap"
+                                            >
+                                                {isUpdatingRole ? 'Updating...' : 'Update Role'}
+                                            </Button>
+                                        )}
+                                    </div>
+                                    {!canUpdateRole() && (
+                                        <p className="text-xs text-muted-foreground">
+                                            {user?.role === 'CEO'
+                                                ? 'Only CEO can update top admin roles'
+                                                : 'You can only update non-admin roles'}
+                                        </p>
+                                    )}
+                                    {formData.role !== originalRole && canUpdateRole() && (
+                                        <p className="text-xs text-amber-600">
+                                            Role has been changed. Click "Update Role" to save this change.
+                                        </p>
+                                    )}
                                 </div>
 
                                 {/* Hidden Entity ID for legacy */}

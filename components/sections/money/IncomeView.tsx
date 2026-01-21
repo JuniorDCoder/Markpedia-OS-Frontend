@@ -58,19 +58,26 @@ export function IncomeView() {
         loadAnalytics();
     }, [period]);
 
-    const loadRevenue = () => {
-        setRevenue(revenueService.getRevenue());
-        setStats(revenueService.getRevenueStats());
+    const loadRevenue = async () => {
+        const revenueData = await revenueService.getRevenue();
+        const statsData = await revenueService.getRevenueStats();
+        setRevenue(revenueData);
+        setStats(statsData);
     };
 
-    const loadAnalytics = () => {
-        const analytics = revenueService.getAnalytics(period);
+    const loadAnalytics = async () => {
+        const analytics = await revenueService.getAnalytics(period);
         setPeriodAnalytics({ total: analytics.total, count: analytics.count });
 
-        setCategoryData(revenueService.getRevenueByCategory(period));
-        setSourceData(revenueService.getRevenueBySource(period));
-        setTrendData(revenueService.getTrendData(period));
-        setComparisonData(revenueService.getComparisonData(period));
+        const categoryData = await revenueService.getRevenueByCategory(period);
+        const sourceData = await revenueService.getRevenueBySource(period);
+        const trendData = await revenueService.getTrendData(period);
+        const comparisonData = await revenueService.getComparisonData(period);
+
+        setCategoryData(categoryData);
+        setSourceData(sourceData);
+        setTrendData(trendData);
+        setComparisonData(comparisonData);
     };
 
     const exportReceipt = async (transaction: RevenueTransaction) => {
