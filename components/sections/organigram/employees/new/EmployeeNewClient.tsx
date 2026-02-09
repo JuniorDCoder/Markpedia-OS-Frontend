@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Department, User, Entity } from '@/types';
 import { ArrowLeft, Save, Upload, User as UserIcon } from 'lucide-react';
+import { PasswordGenerator } from '@/components/ui/password-generator';
 import toast from 'react-hot-toast';
 import { Role, rolesApi } from '@/lib/api/roles';
 
@@ -204,12 +205,10 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
                         </div>
                         <div className="space-y-2 md:col-span-2">
                             <label className="text-sm font-medium">Password <span className="text-red-500">*</span></label>
-                            <Input
-                                type="password"
-                                placeholder="Enter initial password"
+                            <PasswordGenerator
                                 value={formData.password}
-                                onChange={(e) => handleInputChange('password', e.target.value)}
-                                required
+                                onChange={(pw) => handleInputChange('password', pw)}
+                                minLength={8}
                             />
                         </div>
                         <div className="space-y-2 md:col-span-2 row-span-2">

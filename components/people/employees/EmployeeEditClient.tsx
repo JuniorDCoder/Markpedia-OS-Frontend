@@ -9,8 +9,16 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle
+} from '@/components/ui/dialog';
 import { Department, User, Entity } from '@/types';
-import { ArrowLeft, Save, Upload, User as UserIcon, Trash } from 'lucide-react';
+import { ArrowLeft, Save, Upload, User as UserIcon, Trash2, AlertCircle, ShieldAlert } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { LoadingSpinner } from '@/components/ui/loading';
 
@@ -27,6 +35,9 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
     const [isFetching, setIsFetching] = useState(true);
 
     const canEdit = user && ['CEO', 'HR', 'Admin', 'CXO'].includes(user.role);
+    const canDelete = user && ['CEO', 'Admin'].includes(user.role);
+    const [deleteOpen, setDeleteOpen] = useState(false);
+    const [confirmText, setConfirmText] = useState('');
 
     const [formData, setFormData] = useState({
         // Account Details
@@ -254,20 +265,29 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
         }
     };
 
-    const handleDelete = async () => {
-        if (!canEdit) return;
-        if (!confirm('Are you sure you want to delete this employee? This action cannot be undone.')) return;
+    const openDeleteDialog = () => {
+        setConfirmText('');
+        setDeleteOpen(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        const expected = `DELETE ${formData.name}`;
+        if (confirmText !== expected) {
+            toast.error(`Please type "${expected}" to confirm deletion`);
+            return;
+        }
 
         setIsLoading(true);
         try {
             const { employeeApi } = await import('@/lib/api/employees');
             await employeeApi.delete(employeeId);
             toast.success('Employee deleted successfully');
+            setDeleteOpen(false);
             router.push('/people/employees');
             router.refresh();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error deleting employee:', error);
-            toast.error('Failed to delete employee');
+            toast.error(error?.message || 'Failed to delete employee');
             setIsLoading(false);
         }
     };
@@ -450,6 +470,61 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
 
     return (
         <div className="space-y-6 max-w-5xl mx-auto pb-10">
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-600">
+                            <AlertCircle className="h-5 w-5" />
+                            Delete Employee
+                        </DialogTitle>
+                        <DialogDescription>
+                            This action is <strong>permanent</strong> and cannot be undone. All data associated with this employee will be removed.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-2">
+                        <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                                    <ShieldAlert className="h-5 w-5 text-red-600" />
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-red-900">{formData.name}</p>
+                                    <p className="text-sm text-red-700">{formData.designation} &middot; {formData.department}</p>
+                                    <p className="text-xs text-red-600 mt-1">{formData.email}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium mb-2">
+                                Type <code className="bg-gray-100 px-2 py-1 rounded font-mono text-xs text-red-600">DELETE {formData.name}</code> to confirm
+                            </p>
+                            <Input
+                                value={confirmText}
+                                onChange={(e) => setConfirmText(e.target.value)}
+                                placeholder={`DELETE ${formData.name}`}
+                                className="font-mono text-sm"
+                                autoFocus
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button variant="outline" onClick={() => setDeleteOpen(false)} disabled={isLoading}>
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleDeleteConfirm}
+                            disabled={isLoading || confirmText !== `DELETE ${formData.name}`}
+                            className="gap-2"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            {isLoading ? 'Deleting...' : 'Delete Employee'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
@@ -467,10 +542,12 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                     {/* View Mode Buttons */}
                     {!isEditing && canEdit && (
                         <>
-                            <Button variant="destructive" size="sm" onClick={handleDelete} title="Delete Employee">
-                                <Trash className="w-4 h-4 mr-2" />
-                                Delete
-                            </Button>
+                            {canDelete && (
+                                <Button variant="destructive" size="sm" onClick={openDeleteDialog} title="Delete Employee">
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Delete
+                                </Button>
+                            )}
                             <Button onClick={() => setIsEditing(true)}>
                                 <UserIcon className="w-4 h-4 mr-2" />
                                 Edit Profile

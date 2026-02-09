@@ -2,12 +2,23 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Employee, User } from '@/types';
-import { ArrowLeft, Edit, Mail, Calendar, Building, User as UserIcon, Trash2 } from 'lucide-react';
+import { ArrowLeft, Edit, Mail, Calendar, Building, User as UserIcon, Trash2, AlertCircle, ShieldAlert } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
+import toast from 'react-hot-toast';
 
 interface EmployeeViewClientProps {
     employee: Employee;
@@ -16,7 +27,10 @@ interface EmployeeViewClientProps {
 
 export default function EmployeeViewClient({ employee, user }: EmployeeViewClientProps) {
     const { user: currentUser } = useAuthStore();
+    const router = useRouter();
     const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteOpen, setDeleteOpen] = useState(false);
+    const [confirmText, setConfirmText] = useState('');
 
     const canEdit = currentUser?.role === 'CEO' || currentUser?.role === 'Admin' ||
         currentUser?.role === 'CXO';
@@ -37,18 +51,29 @@ export default function EmployeeViewClient({ employee, user }: EmployeeViewClien
         return isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
     };
 
-    const handleDelete = async () => {
-        if (!confirm('Are you sure you want to delete this employee? This action cannot be undone.')) {
+    const openDeleteDialog = () => {
+        setConfirmText('');
+        setDeleteOpen(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        const expected = `DELETE ${employee.name}`;
+        if (confirmText !== expected) {
+            toast.error(`Please type "${expected}" to confirm deletion`);
             return;
         }
 
         setIsDeleting(true);
         try {
-            await fetch(`/api/organigram/employees/${employee.id}`, { method: 'DELETE' });
-            window.location.href = '/strategy/organigram';
-        } catch (error) {
+            const { employeeApi } = await import('@/lib/api/employees');
+            await employeeApi.delete(employee.id);
+            toast.success('Employee deleted successfully');
+            setDeleteOpen(false);
+            router.push('/strategy/organigram');
+            router.refresh();
+        } catch (error: any) {
             console.error('Failed to delete employee:', error);
-            alert('Failed to delete employee');
+            toast.error(error?.message || 'Failed to delete employee');
         } finally {
             setIsDeleting(false);
         }
@@ -56,7 +81,62 @@ export default function EmployeeViewClient({ employee, user }: EmployeeViewClien
 
     return (
         <div className="space-y-6">
-            {/* Header */}
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-600">
+                            <AlertCircle className="h-5 w-5" />
+                            Delete Employee
+                        </DialogTitle>
+                        <DialogDescription>
+                            This action is <strong>permanent</strong> and cannot be undone. All data associated with this employee will be removed.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-2">
+                        <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                                    <ShieldAlert className="h-5 w-5 text-red-600" />
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-red-900">{employee.name}</p>
+                                    <p className="text-sm text-red-700">{employee.title} &middot; {employee.department}</p>
+                                    <p className="text-xs text-red-600 mt-1">{employee.email}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium mb-2">
+                                Type <code className="bg-gray-100 px-2 py-1 rounded font-mono text-xs text-red-600">DELETE {employee.name}</code> to confirm
+                            </p>
+                            <Input
+                                value={confirmText}
+                                onChange={(e) => setConfirmText(e.target.value)}
+                                placeholder={`DELETE ${employee.name}`}
+                                className="font-mono text-sm"
+                                autoFocus
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button variant="outline" onClick={() => setDeleteOpen(false)} disabled={isDeleting}>
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleDeleteConfirm}
+                            disabled={isDeleting || confirmText !== `DELETE ${employee.name}`}
+                            className="gap-2"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            {isDeleting ? 'Deleting...' : 'Delete Employee'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Header */
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <Button variant="outline" size="icon" asChild>
@@ -214,12 +294,12 @@ export default function EmployeeViewClient({ employee, user }: EmployeeViewClien
                             {canDelete && (
                                 <Button
                                     variant="destructive"
-                                    className="w-full justify-start"
-                                    onClick={handleDelete}
+                                    className="w-full justify-start gap-2"
+                                    onClick={openDeleteDialog}
                                     disabled={isDeleting}
                                 >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    {isDeleting ? 'Deleting...' : 'Delete Employee'}
+                                    <Trash2 className="h-4 w-4" />
+                                    Delete Employee
                                 </Button>
                             )}
                         </CardContent>
