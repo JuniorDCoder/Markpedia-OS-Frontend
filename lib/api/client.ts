@@ -120,11 +120,59 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
 
   if (!res.ok) {
     if (res.status === 401) {
-      // Token expired or invalid
+      // Token expired — attempt to refresh before giving up
       if (typeof window !== 'undefined') {
+        const refreshToken = localStorage.getItem('refresh_token');
+        if (refreshToken) {
+          try {
+            const refreshRes = await fetch(`${getBaseUrl()}/auth/refresh`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+              body: JSON.stringify({ refresh_token: refreshToken }),
+            });
+            if (refreshRes.ok) {
+              const refreshData = await refreshRes.json();
+              localStorage.setItem('auth_token', refreshData.access_token);
+              if (refreshData.refresh_token) {
+                localStorage.setItem('refresh_token', refreshData.refresh_token);
+              }
+              // Retry the original request with the new token
+              const retryHeaders: HeadersInit = {
+                ...Object.fromEntries(new Headers(headers).entries()),
+                Authorization: `Bearer ${refreshData.access_token}`,
+              };
+              const retryRes = await fetch(url, { ...options, headers: retryHeaders });
+              if (retryRes.ok) {
+                if (retryRes.status === 204 || retryRes.headers.get('content-length') === '0') {
+                  return undefined as T;
+                }
+                const retryContentType = retryRes.headers.get('content-type');
+                if (retryContentType?.includes('application/json')) {
+                  return (await retryRes.json()) as T;
+                }
+                return undefined as T;
+              }
+              // If retry also failed with 401, fall through to logout below
+              if (retryRes.status !== 401) {
+                const retryData = retryContentType?.includes('application/json')
+                  ? await retryRes.json()
+                  : null;
+                const retryError: any = new Error(
+                  retryData?.detail?.[0]?.msg || retryData?.detail || retryRes.statusText
+                );
+                retryError.status = retryRes.status;
+                retryError.data = retryData;
+                throw retryError;
+              }
+            }
+          } catch (refreshErr) {
+            // Refresh failed — fall through to logout
+          }
+        }
+        // No refresh token or refresh failed — clear auth and redirect
         localStorage.removeItem('auth_token');
         localStorage.removeItem('auth_user');
-        // Optional: Redirect to login if not already there
+        localStorage.removeItem('refresh_token');
         if (!window.location.pathname.includes('/auth/login')) {
           window.location.href = '/auth/login?expired=true';
         }

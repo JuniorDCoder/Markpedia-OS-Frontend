@@ -88,7 +88,7 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
 
                 // Map Employee (public) response to form data
                 setFormData({
-                    employeeId: emp.id,
+                    employeeId: emp.employeeId || emp.id,
                     salutation: emp.salutation || '',
                     name: emp.name,
                     email: emp.email,

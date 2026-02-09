@@ -233,7 +233,7 @@ export default function EmployeeViewClient({ employee, user }: EmployeeViewClien
                         <CardContent className="space-y-2 text-sm">
                             <div className="flex justify-between">
                                 <span className="text-muted-foreground">Employee ID:</span>
-                                <span className="font-mono">{employee.id}</span>
+                                <span className="font-mono">{employee.employeeId || employee.id}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-muted-foreground">Last Updated:</span>

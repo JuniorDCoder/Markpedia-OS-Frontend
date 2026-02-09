@@ -62,7 +62,8 @@ export default function EmployeesClient({ initialEmployees }: EmployeesClientPro
     const filteredEmployees = employees.filter(employee => {
         const matchesSearch =
             employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            employee.email.toLowerCase().includes(searchTerm.toLowerCase());
+            employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (employee.employeeId && employee.employeeId.toLowerCase().includes(searchTerm.toLowerCase()));
 
         const matchesDesignation = designationFilter === 'All' || employee.title === designationFilter;
 
@@ -192,7 +193,9 @@ export default function EmployeesClient({ initialEmployees }: EmployeesClientPro
                                             onCheckedChange={() => toggleSelect(employee.id)}
                                         />
                                     </TableCell>
-                                    <TableCell className="font-mono text-xs">{employee.id}</TableCell>
+                                    <TableCell className="font-mono text-xs">
+                                        {employee.employeeId || employee.id.slice(0, 8)}
+                                    </TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-3">
                                             <Avatar className="h-9 w-9">

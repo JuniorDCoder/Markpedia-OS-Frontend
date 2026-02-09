@@ -17,14 +17,14 @@ const STORAGE_KEYS = {
 
 // Default limits for roles (fallback if not provided by backend)
 const DEFAULT_ROLE_LIMITS: Record<string, SessionLimits> = {
-    employee: { inactivity: 30, max_session: 480 },
-    manager: { inactivity: 20, max_session: 360 },
-    hr: { inactivity: 15, max_session: 240 },
-    finance: { inactivity: 15, max_session: 240 },
-    accountant: { inactivity: 15, max_session: 240 },
-    admin: { inactivity: 10, max_session: 120 },
-    ceo: { inactivity: 20, max_session: 420 },
-    default: { inactivity: 30, max_session: 480 },
+    employee: { inactivity: 60, max_session: 480 },
+    manager: { inactivity: 45, max_session: 480 },
+    hr: { inactivity: 30, max_session: 480 },
+    finance: { inactivity: 30, max_session: 480 },
+    accountant: { inactivity: 30, max_session: 480 },
+    admin: { inactivity: 30, max_session: 480 },
+    ceo: { inactivity: 45, max_session: 480 },
+    default: { inactivity: 60, max_session: 480 },
 };
 
 export function getSessionLimits(): SessionLimits | null {
@@ -107,11 +107,11 @@ export function useSessionTimeout() {
             return;
         }
 
-        // Show warning 2 minutes before inactivity logout
-        const warningThresholdMs = (limits.inactivity - 2) * 60 * 1000;
+        // Show warning 5 minutes before inactivity logout
+        const warningThresholdMs = (limits.inactivity - 5) * 60 * 1000;
         if (inactivityMs >= warningThresholdMs && !warningShownRef.current) {
             warningShownRef.current = true;
-            toast('Your session will expire in 2 minutes due to inactivity.', {
+            toast('Your session will expire in 5 minutes due to inactivity.', {
                 duration: 10000,
                 icon: '⏱️',
             });
@@ -159,8 +159,8 @@ export function useSessionTimeout() {
             return;
         }
 
-        // Check session every 30 seconds
-        logoutTimerRef.current = setInterval(checkSession, 30000);
+        // Check session every 60 seconds
+        logoutTimerRef.current = setInterval(checkSession, 60000);
         
         // Initial check
         checkSession();

@@ -19,6 +19,7 @@ export const employeeApi = {
 
             return employeesList.map((e: any) => ({
                 id: e.id,
+                employeeId: e.employee_id || e.employeeId || null,
                 name: e.name || `${e.first_name || ''} ${e.last_name || ''}`.trim(),
                 email: e.email,
                 title: e.title || e.position || 'Employee',
@@ -45,9 +46,10 @@ export const employeeApi = {
             const e = await apiRequest<any>(`/admin/employees/${id}`);
             return {
                 id: e.id,
+                employeeId: e.employee_id || e.employeeId || null,
                 name: e.name || `${e.first_name || ''} ${e.last_name || ''}`.trim(),
                 email: e.email,
-                title: e.position || 'Employee',
+                title: e.position || e.title || 'Employee',
                 role: e.role,
                 department: e.department || 'Unassigned',
                 avatar: e.avatar,
@@ -137,6 +139,7 @@ export const employeeApi = {
         // Return as Employee
         return {
             id: newUser.id,
+            employeeId: newUser.employee_id || newUser.employeeId || null,
             name: `${newUser.firstName} ${newUser.lastName}`.trim(),
             email: newUser.email,
             title: newUser.position || 'Employee',
@@ -205,6 +208,7 @@ export const employeeApi = {
         // Map response back to Employee
         return {
             id: res.id,
+            employeeId: res.employee_id || res.employeeId || null,
             name: res.name || `${res.first_name || ''} ${res.last_name || ''}`.trim(),
             email: res.email,
             title: res.title || res.position || '',

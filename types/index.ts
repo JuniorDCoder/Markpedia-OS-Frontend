@@ -42,6 +42,7 @@ export interface User {
 
 export interface Employee {
     id: string;
+    employeeId?: string;  // Formatted ID: 10-237-04-26-0142
     name: string;
     email: string;
     title: string;

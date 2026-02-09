@@ -21,7 +21,7 @@ const api = axios.create({
     baseURL: process.env.NEXT_PUBLIC_BACKEND_URL
         ? `${process.env.NEXT_PUBLIC_BACKEND_URL}`
         : '/api',
-    timeout: 10000,
+    timeout: 30000,
     headers: {
         "Accept": "application/json",
         "Content-Type": "application/json",
@@ -38,6 +38,95 @@ api.interceptors.request.use((config) => {
     }
     return config;
 });
+
+// Track whether a token refresh is already in-flight to avoid concurrent refreshes
+let isRefreshing = false;
+let failedQueue: Array<{ resolve: (token: string) => void; reject: (err: any) => void }> = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+    failedQueue.forEach((prom) => {
+        if (error) {
+            prom.reject(error);
+        } else {
+            prom.resolve(token!);
+        }
+    });
+    failedQueue = [];
+};
+
+// Response interceptor: on 401, attempt to refresh the access token before logging out
+api.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+        const originalRequest = error.config;
+
+        // Only attempt refresh on 401, if we haven't already retried, and if we have a refresh token
+        if (
+            error.response?.status === 401 &&
+            !originalRequest._retry &&
+            typeof window !== 'undefined'
+        ) {
+            const refreshToken = localStorage.getItem('refresh_token');
+
+            if (!refreshToken) {
+                // No refresh token — can't recover, let it fail naturally
+                return Promise.reject(error);
+            }
+
+            if (isRefreshing) {
+                // Another refresh is in-flight — queue this request
+                return new Promise((resolve, reject) => {
+                    failedQueue.push({ resolve, reject });
+                }).then((token) => {
+                    originalRequest.headers.Authorization = `Bearer ${token}`;
+                    return api(originalRequest);
+                }).catch((err) => Promise.reject(err));
+            }
+
+            originalRequest._retry = true;
+            isRefreshing = true;
+
+            try {
+                const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+                const res = await axios.post(`${baseURL}/auth/refresh`, {
+                    refresh_token: refreshToken,
+                });
+
+                const newAccessToken = res.data.access_token;
+                const newRefreshToken = res.data.refresh_token;
+
+                localStorage.setItem('auth_token', newAccessToken);
+                if (newRefreshToken) {
+                    localStorage.setItem('refresh_token', newRefreshToken);
+                }
+
+                // Update the default header for future requests
+                api.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
+                originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+
+                processQueue(null, newAccessToken);
+                return api(originalRequest);
+            } catch (refreshError) {
+                processQueue(refreshError, null);
+                // Refresh failed — token is truly expired, force logout
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('auth_user');
+                localStorage.removeItem('refresh_token');
+                localStorage.removeItem('session_limits');
+                localStorage.removeItem('session_start');
+                localStorage.removeItem('last_activity');
+                if (!window.location.pathname.includes('/auth/login')) {
+                    window.location.href = '/auth/login?expired=true';
+                }
+                return Promise.reject(refreshError);
+            } finally {
+                isRefreshing = false;
+            }
+        }
+
+        return Promise.reject(error);
+    }
+);
 
 // Mock data for development
 const mockUsers: User[] = [

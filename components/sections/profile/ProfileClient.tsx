@@ -348,9 +348,8 @@ export default function ProfileClient({ currentUser, profile }: ProfileClientPro
                             <Input
                                 id="employeeId"
                                 value={data.employeeId}
-                                onChange={(e) => handleInputChange('professionalInfo', 'employeeId', e.target.value)}
-                                readOnly={editingSection !== 'professionalInfo'}
-                                className="text-sm sm:text-base"
+                                readOnly
+                                className="text-sm sm:text-base font-mono bg-gray-50"
                             />
                         </div>
                         <div className="space-y-2">

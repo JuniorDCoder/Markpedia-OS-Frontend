@@ -40,6 +40,7 @@ function mapBackendUser(u: any): User {
 const STORAGE_KEYS = {
     token: 'auth_token',
     user: 'auth_user',
+    refreshToken: 'refresh_token',
 };
 
 const MFA_SESSION_KEYS = {
@@ -111,6 +112,9 @@ export const useAuthStore = create<AuthStore>((set, get) => {
                 if (typeof window !== 'undefined') {
                     localStorage.setItem(STORAGE_KEYS.token, res.access_token);
                     localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(res.user));
+                    if (res.refresh_token) {
+                        localStorage.setItem(STORAGE_KEYS.refreshToken, res.refresh_token);
+                    }
                     
                     // Save session limits for auto-logout tracking
                     const sessionLimits = res.session_limits || getSessionLimitsForRole(user.role);
@@ -141,6 +145,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
             if (typeof window !== 'undefined') {
                 localStorage.removeItem(STORAGE_KEYS.token);
                 localStorage.removeItem(STORAGE_KEYS.user);
+                localStorage.removeItem(STORAGE_KEYS.refreshToken);
                 // Clear session timeout data
                 clearSessionData();
             }
