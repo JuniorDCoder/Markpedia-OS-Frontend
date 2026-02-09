@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { AuthState, User } from '@/types';
 import { loginApi, verifyMfaApi, MfaVerifyRequest } from '@/lib/api/client';
+import { setSessionLimits, clearSessionData, getSessionLimitsForRole } from '@/hooks/use-session-timeout';
+import { attendanceService } from '@/services/attendanceService';
+import api from '@/services/api';
 
 interface AuthStore extends AuthState {
     login: (email: string, password: string) => Promise<{ mfaRequired: boolean }>;
@@ -11,6 +14,7 @@ interface AuthStore extends AuthState {
     hasPermission: (permission: string) => boolean;
     getMfaSession: () => { email: string; preAuthToken: string } | null;
     clearMfaSession: () => void;
+    checkAuth: () => Promise<void>;
     isAuthenticated: boolean;
     isLoading: boolean;
     isInitialized: boolean;
@@ -107,9 +111,26 @@ export const useAuthStore = create<AuthStore>((set, get) => {
                 if (typeof window !== 'undefined') {
                     localStorage.setItem(STORAGE_KEYS.token, res.access_token);
                     localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(res.user));
+                    
+                    // Save session limits for auto-logout tracking
+                    const sessionLimits = res.session_limits || getSessionLimitsForRole(user.role);
+                    setSessionLimits(sessionLimits);
                 }
 
                 set({ user, isAuthenticated: true, isLoading: false, isInitialized: true });
+                
+                // Auto clock-in on successful login
+                if (user.id) {
+                    try {
+                        const clockInResult = await attendanceService.autoClockIn(user.id);
+                        if (clockInResult.success && clockInResult.message === 'Automatically clocked in') {
+                            console.log('Auto clock-in successful');
+                        }
+                    } catch (clockInError) {
+                        console.warn('Auto clock-in failed:', clockInError);
+                        // Don't throw - login was still successful
+                    }
+                }
             } catch (error) {
                 set({ isLoading: false });
                 throw error;
@@ -120,6 +141,8 @@ export const useAuthStore = create<AuthStore>((set, get) => {
             if (typeof window !== 'undefined') {
                 localStorage.removeItem(STORAGE_KEYS.token);
                 localStorage.removeItem(STORAGE_KEYS.user);
+                // Clear session timeout data
+                clearSessionData();
             }
             get().clearMfaSession();
             set({ user: null, isAuthenticated: false, isInitialized: true });
@@ -155,6 +178,21 @@ export const useAuthStore = create<AuthStore>((set, get) => {
 
         setLoading: (loading: boolean) => {
             set({ isLoading: loading });
+        },
+
+        checkAuth: async () => {
+            // Refresh user data from the server
+            try {
+                const response = await api.get('/profile/me');
+                const user = mapBackendUser(response.data);
+                if (typeof window !== 'undefined') {
+                    localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(response.data));
+                }
+                set({ user, isAuthenticated: true, isInitialized: true });
+            } catch (error) {
+                console.error('Failed to check auth:', error);
+                // Don't logout on error, just keep current state
+            }
         },
 
         // Add an initialize function to be called on client side

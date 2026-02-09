@@ -76,6 +76,10 @@ export default function ProjectsPage() {
     const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
     const [deleting, setDeleting] = useState(false);
 
+    // Role-based access control
+    const isViewOnly = user?.role === 'Employee' || user?.role === 'Cashier';
+    const canManageProjects = user?.role && ['CEO', 'Admin', 'Manager', 'CXO', 'HR', 'Team Lead'].includes(user.role);
+
     useEffect(() => {
         setCurrentModule('work');
     }, [setCurrentModule]);
@@ -289,12 +293,14 @@ export default function ProjectsPage() {
                         Centralized system to plan, track, and report all projects aligned with strategic objectives
                     </p>
                 </div>
-                <Button asChild size="lg" className="w-full sm:w-auto shadow-sm">
-                    <Link href="/work/projects/new">
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Project
-                    </Link>
-                </Button>
+                {canManageProjects && (
+                    <Button asChild size="lg" className="w-full sm:w-auto shadow-sm">
+                        <Link href="/work/projects/new">
+                            <Plus className="h-4 w-4 mr-2" />
+                            New Project
+                        </Link>
+                    </Button>
+                )}
             </div>
 
             {/* Stats Grid - Updated to match MARKPEDIA OS */}
@@ -424,7 +430,7 @@ export default function ProjectsPage() {
                                         ? 'Try adjusting your search or filter criteria'
                                         : 'Get started by creating your first project'}
                                 </p>
-                                {!searchTerm && statusFilter === 'all' && priorityFilter === 'all' && (
+                                {!searchTerm && statusFilter === 'all' && priorityFilter === 'all' && canManageProjects && (
                                     <Button asChild>
                                         <Link href="/work/projects/new">
                                             <Plus className="h-4 w-4 mr-2" />
@@ -481,20 +487,24 @@ export default function ProjectsPage() {
                                                             View Details
                                                         </Link>
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem asChild>
-                                                        <Link href={`/work/projects/${project.id}/edit`}>
-                                                            <Edit className="h-4 w-4 mr-2" />
-                                                            Edit
-                                                        </Link>
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem
-                                                        onClick={() => handleDeleteClick(project)}
-                                                        className="text-red-600"
-                                                    >
-                                                        <Trash2 className="h-4 w-4 mr-2" />
-                                                        Delete
-                                                    </DropdownMenuItem>
+                                                    {canManageProjects && (
+                                                        <>
+                                                            <DropdownMenuItem asChild>
+                                                                <Link href={`/work/projects/${project.id}/edit`}>
+                                                                    <Edit className="h-4 w-4 mr-2" />
+                                                                    Edit
+                                                                </Link>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                onClick={() => handleDeleteClick(project)}
+                                                                className="text-red-600"
+                                                            >
+                                                                <Trash2 className="h-4 w-4 mr-2" />
+                                                                Delete
+                                                            </DropdownMenuItem>
+                                                        </>
+                                                    )}
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </div>

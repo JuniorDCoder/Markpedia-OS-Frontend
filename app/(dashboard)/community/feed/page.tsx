@@ -11,7 +11,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { TableSkeleton } from '@/components/ui/loading';
 import { useAppStore } from '@/store/app';
 import { useAuthStore } from '@/store/auth';
-import { feedService } from '@/services/feedService';
+import { feedService } from '@/services/feedServiceEnhanced';
+import { playPostCreated, playCommentAdded, playReactionAdded, playError } from '@/lib/sounds';
 import { FeedPost, FeedStats, TrendingTopic, FeedChannel } from '@/types/feed';
 import {
     MessageSquare,
@@ -111,8 +112,10 @@ export default function CommunityFeedPage() {
             setNewPost('');
             setShowCreatePost(false);
             await loadFeedData();
+            playPostCreated();
             toast.success('Post submitted for approval!');
         } catch (error) {
+            playError();
             toast.error('Failed to create post');
         } finally {
             setIsPosting(false);
@@ -122,8 +125,10 @@ export default function CommunityFeedPage() {
     const handleReaction = async (postId: string, reactionType: keyof FeedPost['reactions']) => {
         try {
             await feedService.addReaction(postId, reactionType, user!.id);
+            playReactionAdded();
             await loadFeedData();
         } catch (error) {
+            playError();
             toast.error('Failed to add reaction');
         }
     };
@@ -142,8 +147,10 @@ export default function CommunityFeedPage() {
                 ...prev,
                 [postId]: ''
             }));
+            playCommentAdded();
             await loadFeedData();
         } catch (error) {
+            playError();
             toast.error('Failed to add comment');
         }
     };

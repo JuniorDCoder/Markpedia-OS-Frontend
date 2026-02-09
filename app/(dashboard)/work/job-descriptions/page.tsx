@@ -44,8 +44,8 @@ export default function JobDescriptionsPage() {
     const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
 
-    // Only CEO can create, edit, or delete job descriptions
-    const isCEO = user?.role === 'CEO';
+    // Roles that can create, edit, or delete job descriptions (not Employee or Cashier)
+    const canManageJobDescriptions = user?.role && ['CEO', 'Admin', 'Manager', 'CXO', 'HR', 'Team Lead'].includes(user.role);
 
     useEffect(() => {
         loadJobDescriptions();
@@ -203,7 +203,7 @@ export default function JobDescriptionsPage() {
                         Structured and version-controlled job description system
                     </p>
                 </div>
-                {isCEO && (
+                {canManageJobDescriptions && (
                     <Button asChild className="w-full sm:w-auto">
                         <Link href="/work/job-descriptions/new">
                             <Plus className="h-4 w-4 mr-2" />
@@ -308,7 +308,7 @@ export default function JobDescriptionsPage() {
                                 ? 'Try adjusting your search or filter criteria'
                                 : 'Get started by creating your first job description'}
                         </p>
-                        {!searchTerm && statusFilter === 'all' && departmentFilter === 'all' && isCEO && (
+                        {!searchTerm && statusFilter === 'all' && departmentFilter === 'all' && canManageJobDescriptions && (
                             <Button asChild className="w-full sm:w-auto">
                                 <Link href="/work/job-descriptions/new">
                                     <Plus className="h-4 w-4 mr-2" />
@@ -443,7 +443,7 @@ export default function JobDescriptionsPage() {
                                                 View
                                             </Link>
                                         </Button>
-                                        {isCEO && (
+                                        {canManageJobDescriptions && (
                                             <Button asChild variant="ghost" size="sm" className="text-xs sm:text-sm">
                                                 <Link href={`/work/job-descriptions/${jd.id}/edit`}>
                                                     <Edit className="h-4 w-4 mr-1" />
@@ -453,7 +453,7 @@ export default function JobDescriptionsPage() {
                                         )}
                                     </div>
                                     <div className="flex items-center space-x-1">
-                                        {isCEO && jd.status === 'Approved' && (
+                                        {canManageJobDescriptions && jd.status === 'Approved' && (
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
@@ -472,7 +472,7 @@ export default function JobDescriptionsPage() {
                                         >
                                             <Download className="h-4 w-4" />
                                         </Button>
-                                        {isCEO && (
+                                        {canManageJobDescriptions && (
                                             <Button
                                                 variant="ghost"
                                                 size="sm"

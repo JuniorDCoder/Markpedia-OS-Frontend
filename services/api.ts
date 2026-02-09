@@ -28,6 +28,16 @@ const api = axios.create({
     },
 });
 
+// Add auth interceptor to attach token to requests
+api.interceptors.request.use((config) => {
+    if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+    }
+    return config;
+});
 
 // Mock data for development
 const mockUsers: User[] = [

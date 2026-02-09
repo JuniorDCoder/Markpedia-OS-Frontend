@@ -257,5 +257,45 @@ export const attendanceService = {
     // Export today
     exportToday: async (format?: 'csv' | 'pdf' | 'excel' | 'json') => {
         return attendanceApi.exportToday(format);
+    },
+
+    // Auto clock in - checks if already clocked in today, if not, clocks in
+    autoClockIn: async (userId: string): Promise<{ success: boolean; message: string; record?: FrontendAttendanceRecord }> => {
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            
+            // Check if already has an attendance record for today
+            const existingRecords = await attendanceService.getAttendanceRecords({
+                userId,
+                date: today,
+                limit: 1
+            });
+            
+            if (existingRecords.length > 0 && existingRecords[0].checkIn) {
+                // Already clocked in
+                return { 
+                    success: true, 
+                    message: 'Already clocked in today', 
+                    record: existingRecords[0] 
+                };
+            }
+            
+            // Clock in automatically
+            const now = new Date();
+            const timestamp = now.toISOString().split('T')[1].substring(0, 5);
+            const record = await attendanceService.clockIn(userId, timestamp, 'Auto - Login');
+            
+            return {
+                success: true,
+                message: 'Automatically clocked in',
+                record
+            };
+        } catch (error: any) {
+            console.error('Auto clock-in failed:', error);
+            return {
+                success: false,
+                message: error?.message || 'Auto clock-in failed'
+            };
+        }
     }
 };

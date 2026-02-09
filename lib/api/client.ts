@@ -55,6 +55,10 @@ export type MfaVerifyResponse = {
     created_at: string;
     last_login?: string;
   };
+  session_limits?: {
+    inactivity: number;
+    max_session: number;
+  };
 };
 
 function getBaseUrl() {

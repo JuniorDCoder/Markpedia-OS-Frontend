@@ -207,6 +207,15 @@ export const performanceService = {
     return this.getPerformanceRecord(id);
   },
 
+  /**
+   * Get current user's performance visibility scope.
+   * Returns access level and what data user can see.
+   */
+  async getVisibility(): Promise<PerformanceVisibility> {
+    const res: any = await apiRequest('/people/performance/visibility', { method: 'GET' });
+    return res as PerformanceVisibility;
+  },
+
   async getEmployeeSummary(employeeId: string) {
     const res: any = await apiRequest(`/people/performance/summaries/${employeeId}`, { method: 'GET' });
     return res as any;
@@ -259,5 +268,14 @@ export const performanceService = {
     return blob;
   }
 };
+
+// Visibility type for frontend
+export interface PerformanceVisibility {
+  access_level: 'self' | 'team' | 'department' | 'full';
+  is_executive: boolean;
+  can_view_all: boolean;
+  restricted_to_department: string | null;
+  restricted_to_employees: number | null;
+}
 
 export default performanceService;

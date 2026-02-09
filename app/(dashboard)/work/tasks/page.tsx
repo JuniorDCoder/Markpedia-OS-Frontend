@@ -124,7 +124,8 @@ export default function TasksPage() {
     };
 
     const currentPhase = getCurrentWeeklyRhythmPhase();
-    const canCreateTasks = isPrivilegedUser || currentPhase === 'creation';
+    // All users can create tasks (per client requirements)
+    const canCreateTasks = true;
     const canValidateTasks = isPrivilegedUser || currentPhase === 'validation';
     const shouldReport = currentPhase === 'reporting';
 

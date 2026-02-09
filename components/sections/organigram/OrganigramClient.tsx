@@ -178,7 +178,8 @@ export default function OrganigramClient({
         return matchesSearch && matchesDepartment && matchesLevel;
     });
 
-    const canManage = user?.role === 'CEO' || user?.role === 'Admin' || user?.role === 'CXO';
+    // Role-based access: CEO, Admin, CXO, HR, Manager can manage organigram
+    const canManage = user?.role && ['CEO', 'Admin', 'CXO', 'HR', 'Manager'].includes(user.role);
 
     // Flatten tree for canvas view
     const flattenNodes = (nodes: OrganigramNode[]): OrganigramNode[] => {

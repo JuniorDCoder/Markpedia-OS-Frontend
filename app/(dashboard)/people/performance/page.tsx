@@ -1,23 +1,27 @@
 "use client"
 
-import { performanceService } from '@/services/performanceService';
+import { performanceService, PerformanceVisibility } from '@/services/performanceService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TrendingUp, Plus, Search, Filter, Eye, Edit, Star, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { TrendingUp, Plus, Search, Filter, Eye, Edit, Star, AlertTriangle, CheckCircle, Clock, Lock, Users, Building, User } from 'lucide-react';
 import Link from 'next/link';
 import { TableSkeleton } from "@/components/ui/loading";
 import { useEffect, useState } from "react";
 import { useAppStore } from "@/store/app";
+import { useAuthStore } from "@/store/auth";
 import toast from 'react-hot-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function PerformanceListPage() {
+    const { user } = useAuthStore();
     const [performanceRecords, setPerformanceRecords] = useState<any[]>([]);
     const [performanceSummaries, setPerformanceSummaries] = useState<any[]>([]);
     const [performanceStats, setPerformanceStats] = useState<any>(null);
+    const [visibility, setVisibility] = useState<PerformanceVisibility | null>(null);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [departmentFilter, setDepartmentFilter] = useState('all');
@@ -64,14 +68,16 @@ export default function PerformanceListPage() {
     const loadPerformanceStats = async () => {
         setLoading(true);
         try {
-            const [records, summaries, stats] = await Promise.all([
+            const [records, summaries, stats, vis] = await Promise.all([
                 performanceService.getAllPerformanceRecords(),
                 performanceService.getPerformanceSummaries(),
-                performanceService.getPerformanceStats()
+                performanceService.getPerformanceStats(),
+                performanceService.getVisibility()
             ]);
             setPerformanceRecords(records || []);
             setPerformanceSummaries(summaries || []);
             setPerformanceStats(stats || null);
+            setVisibility(vis || null);
         } catch (error) {
             console.error("Error loading performance data:", error);
         } finally {
@@ -210,21 +216,6 @@ export default function PerformanceListPage() {
         }
     };
 
-    const handleCalculate = async () => {
-        try {
-            toast.loading('Calculating performance...');
-            const payload = { /* could include filters or date range */ };
-            await performanceService.calculatePerformance(payload);
-            await loadPerformanceStats();
-            toast.dismiss();
-            toast.success('Calculation finished');
-        } catch (err) {
-            toast.dismiss();
-            console.error('Calculation failed', err);
-            toast.error('Calculation failed');
-        }
-    };
-
     const handleValidateManager = async (id: string) => {
         try {
             toast.loading('Validating by manager...');
@@ -286,79 +277,96 @@ export default function PerformanceListPage() {
         return <TableSkeleton />;
     }
 
-    const PerformanceRecordCard = ({ record }: { record: any }) => (
-        <div
-            key={record.id}
-            className="flex flex-col lg:flex-row lg:items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors gap-4"
-        >
-            <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2">
-                    {getRatingIcon(safeStr(getField(record, 'rating')))}
-                    <span className="font-medium text-sm md:text-base">{safeStr(getField(record, 'employeeName'))}</span>
-                    <Badge variant="outline" className={`${getDepartmentColor(safeStr(getField(record, 'department')))} text-xs`}>
-                        {safeStr(getField(record, 'department'))}
-                    </Badge>
-                    <Badge variant="secondary" className={`${getRatingColor(safeStr(getField(record, 'rating')))} text-xs`}>
-                        {safeStr(getField(record, 'rating'))}
-                    </Badge>
+    const PerformanceRecordCard = ({ record }: { record: any }) => {
+        // Determine if user can edit/validate/delete based on visibility
+        const canEdit = visibility?.can_view_all || visibility?.access_level === 'team' || visibility?.access_level === 'department';
+        const canValidate = visibility?.can_view_all || visibility?.access_level === 'team';
+        const canDelete = visibility?.can_view_all;
+        
+        return (
+            <div
+                key={record.id}
+                className="flex flex-col lg:flex-row lg:items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors gap-4"
+            >
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                        {getRatingIcon(safeStr(getField(record, 'rating')))}
+                        <span className="font-medium text-sm md:text-base">{safeStr(getField(record, 'employeeName'))}</span>
+                        <Badge variant="outline" className={`${getDepartmentColor(safeStr(getField(record, 'department')))} text-xs`}>
+                            {safeStr(getField(record, 'department'))}
+                        </Badge>
+                        <Badge variant="secondary" className={`${getRatingColor(safeStr(getField(record, 'rating')))} text-xs`}>
+                            {safeStr(getField(record, 'rating'))}
+                        </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-muted-foreground">
+                        <div>
+                            <div className="font-medium">Overall Score</div>
+                            <div className="text-sm font-semibold">{safeStr(getField(record, 'weightedTotal', 'weighted_total', 'total'))}</div>
+                        </div>
+                        <div>
+                            <div className="font-medium">Tasks</div>
+                            <div>{safeStr(getField(record, 'taskScore', 'task_score'))}%</div>
+                        </div>
+                        <div>
+                            <div className="font-medium">Attendance</div>
+                            <div>{safeStr(getField(record, 'attendanceScore', 'attendance_score'))}%</div>
+                        </div>
+                        <div>
+                            <div className="font-medium">Warnings</div>
+                            <div>{safeStr(getField(record, 'warningLevel', 'warning_level'))}</div>
+                        </div>
+                    </div>
+
+                    {safeStr(getField(record, 'managerComment', 'manager_comment')) && (
+                        <div className="mt-2 text-xs text-muted-foreground">
+                            <span className="font-medium">Manager: </span>
+                            {safeStr(getField(record, 'managerComment', 'manager_comment'))}
+                        </div>
+                    )}
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-muted-foreground">
-                    <div>
-                        <div className="font-medium">Overall Score</div>
-                        <div className="text-sm font-semibold">{safeStr(getField(record, 'weightedTotal', 'weighted_total', 'total'))}</div>
+                <div className="flex items-center gap-2 lg:flex-col lg:items-end lg:gap-1">
+                    <div className="text-right">
+                        <div className="text-2xl font-bold text-primary">{safeStr(getField(record, 'weightedTotal', 'weighted_total', 'total'))}</div>
+                        <div className="text-xs text-muted-foreground">Total Score</div>
                     </div>
-                    <div>
-                        <div className="font-medium">Tasks</div>
-                        <div>{safeStr(getField(record, 'taskScore', 'task_score'))}%</div>
-                    </div>
-                    <div>
-                        <div className="font-medium">Attendance</div>
-                        <div>{safeStr(getField(record, 'attendanceScore', 'attendance_score'))}%</div>
-                    </div>
-                    <div>
-                        <div className="font-medium">Warnings</div>
-                        <div>{safeStr(getField(record, 'warningLevel', 'warning_level'))}</div>
+                    <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
+                            <Link href={`/people/performance/${safeStr(getField(record, 'id', 'record_id'))}`}>
+                                <Eye className="h-4 w-4" />
+                            </Link>
+                        </Button>
+                        {canEdit && (
+                            <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
+                                <Link href={`/people/performance/${safeStr(getField(record, 'id', 'record_id'))}/edit`}>
+                                    <Edit className="h-4 w-4" />
+                                </Link>
+                            </Button>
+                        )}
+                        {canValidate && (
+                            <>
+                                <Button variant="outline" size="sm" onClick={() => handleValidateManager(safeStr(getField(record, 'id', 'record_id')))} className="h-8">
+                                    Manager Validate
+                                </Button>
+                                {visibility?.can_view_all && (
+                                    <Button variant="outline" size="sm" onClick={() => handleValidateHR(safeStr(getField(record, 'id', 'record_id')))} className="h-8">
+                                        HR Validate
+                                    </Button>
+                                )}
+                            </>
+                        )}
+                        {canDelete && (
+                            <Button variant="destructive" size="sm" onClick={() => openDeleteDialog(record)} className="h-8">
+                                Delete
+                            </Button>
+                        )}
                     </div>
                 </div>
-
-                {safeStr(getField(record, 'managerComment', 'manager_comment')) && (
-                    <div className="mt-2 text-xs text-muted-foreground">
-                        <span className="font-medium">Manager: </span>
-                        {safeStr(getField(record, 'managerComment', 'manager_comment'))}
-                    </div>
-                )}
             </div>
-
-            <div className="flex items-center gap-2 lg:flex-col lg:items-end lg:gap-1">
-                <div className="text-right">
-                    <div className="text-2xl font-bold text-primary">{safeStr(getField(record, 'weightedTotal', 'weighted_total', 'total'))}</div>
-                    <div className="text-xs text-muted-foreground">Total Score</div>
-                </div>
-                <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
-                        <Link href={`/people/performance/${safeStr(getField(record, 'id', 'record_id'))}`}>
-                            <Eye className="h-4 w-4" />
-                        </Link>
-                    </Button>
-                    <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
-                        <Link href={`/people/performance/${safeStr(getField(record, 'id', 'record_id'))}/edit`}>
-                            <Edit className="h-4 w-4" />
-                        </Link>
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleValidateManager(safeStr(getField(record, 'id', 'record_id')))} className="h-8">
-                        Manager Validate
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleValidateHR(safeStr(getField(record, 'id', 'record_id')))} className="h-8">
-                        HR Validate
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => openDeleteDialog(record)} className="h-8">
-                        Delete
-                    </Button>
-                </div>
-            </div>
-        </div>
-    );
+        );
+    };
 
     const PerformanceSummaryCard = ({ summary }: { summary: any }) => (
         <div
@@ -429,13 +437,51 @@ export default function PerformanceListPage() {
                         Monthly performance evaluation based on task completion, attendance, and discipline
                     </p>
                 </div>
-                <Button asChild className="flex-shrink-0">
-                    <Link href="/people/performance/new">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Manually Add Evaluation
-                    </Link>
-                </Button>
+                {visibility?.can_view_all && (
+                    <Button asChild className="flex-shrink-0">
+                        <Link href="/people/performance/new">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Manually Add Evaluation
+                        </Link>
+                    </Button>
+                )}
             </div>
+
+            {/* Visibility Info Banner */}
+            {visibility && (
+                <Alert className={`${
+                    visibility.access_level === 'self' ? 'border-blue-200 bg-blue-50' :
+                    visibility.access_level === 'team' ? 'border-green-200 bg-green-50' :
+                    visibility.access_level === 'department' ? 'border-purple-200 bg-purple-50' :
+                    'border-gray-200 bg-gray-50'
+                }`}>
+                    <div className="flex items-center gap-2">
+                        {visibility.access_level === 'self' && <User className="h-4 w-4 text-blue-600" />}
+                        {visibility.access_level === 'team' && <Users className="h-4 w-4 text-green-600" />}
+                        {visibility.access_level === 'department' && <Building className="h-4 w-4 text-purple-600" />}
+                        {visibility.access_level === 'full' && <Eye className="h-4 w-4 text-gray-600" />}
+                        <AlertDescription className="text-sm">
+                            {visibility.access_level === 'self' && (
+                                <span className="text-blue-800">You can view your own performance records only.</span>
+                            )}
+                            {visibility.access_level === 'team' && (
+                                <span className="text-green-800">You can view performance records for your direct reports and yourself.</span>
+                            )}
+                            {visibility.access_level === 'department' && (
+                                <span className="text-purple-800">
+                                    You can view performance records for all employees in {visibility.restricted_to_department || 'your department'}.
+                                </span>
+                            )}
+                            {visibility.access_level === 'full' && visibility.is_executive && (
+                                <span className="text-gray-800">Executive view: Showing aggregated performance data. Click on records to see individual details.</span>
+                            )}
+                            {visibility.access_level === 'full' && !visibility.is_executive && (
+                                <span className="text-gray-800">Full access: You can view all employee performance records.</span>
+                            )}
+                        </AlertDescription>
+                    </div>
+                </Alert>
+            )}
 
             {/* Performance Stats Cards */}
             {performanceStats && (
@@ -569,15 +615,16 @@ export default function PerformanceListPage() {
                                 <Filter className="h-4 w-4 mr-2" />
                                 Refresh
                             </Button>
-                            <Button variant="secondary" onClick={handleExport}>
-                                Export CSV
-                            </Button>
-                            <Button variant="ghost" onClick={handleGenerate}>
-                                Generate
-                            </Button>
-                            <Button variant="outline" onClick={handleCalculate}>
-                                Calculate
-                            </Button>
+                            {visibility?.can_view_all && (
+                                <>
+                                    <Button variant="secondary" onClick={handleExport}>
+                                        Export CSV
+                                    </Button>
+                                    <Button variant="ghost" onClick={handleGenerate}>
+                                        Generate
+                                    </Button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </CardContent>
@@ -604,10 +651,12 @@ export default function PerformanceListPage() {
                                 <p className="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">
                                     {searchTerm || departmentFilter !== 'all' || ratingFilter !== 'all'
                                         ? 'Try adjusting your search or filter criteria'
-                                        : 'No performance records available for the selected period'
+                                        : visibility?.access_level === 'self'
+                                            ? 'No performance records available for you yet. Your manager will create one during the evaluation period.'
+                                            : 'No performance records available for the selected period'
                                     }
                                 </p>
-                                {!searchTerm && departmentFilter === 'all' && ratingFilter === 'all' && (
+                                {!searchTerm && departmentFilter === 'all' && ratingFilter === 'all' && visibility?.can_view_all && (
                                     <Button asChild>
                                         <Link href="/people/performance/new">
                                             <Plus className="h-4 w-4 mr-2" />

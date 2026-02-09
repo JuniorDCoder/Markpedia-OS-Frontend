@@ -125,7 +125,11 @@ export default function WarningsListPage() {
         );
     };
 
-    const canManageWarnings = user?.role === 'hr' || user?.role === 'manager' || user?.role === 'admin' || user?.role.toLowerCase() === 'employee';
+    // Only HR, CEO, and Admin can create warnings - Employee, Manager, Team Lead can only receive
+    const canManageWarnings = user?.role && ['HR', 'CEO', 'Admin'].includes(user.role);
+    
+    // Check if current user can view all warnings or only their own
+    const canViewAllWarnings = user?.role && ['HR', 'CEO', 'Admin', 'Manager', 'CXO'].includes(user.role);
 
     const handleDeleteWarning = (warning: Warning) => {
         setItemToDelete({ type: 'warning', id: warning.id, label: `${warning.employeeName} - ${warning.level}` });
@@ -350,10 +354,12 @@ export default function WarningsListPage() {
                         Warnings & PIP Management
                     </h1>
                     <p className="text-muted-foreground text-sm mt-1">
-                        Progressive disciplinary system following L1-L5 escalation
+                        {canManageWarnings 
+                            ? 'Progressive disciplinary system following L1-L5 escalation'
+                            : 'View your warnings and performance improvement plans'}
                     </p>
                 </div>
-                {!canManageWarnings && (
+                {canManageWarnings && (
                     <div className="flex items-center gap-2">
                         <Button asChild size="sm" className="hidden sm:flex">
                             <Link href="/people/warnings/new">
@@ -362,7 +368,7 @@ export default function WarningsListPage() {
                             </Link>
                         </Button>
                         <Button asChild size="sm" variant="outline" className="hidden sm:flex">
-                            <Link href="/people/warnings/new">
+                            <Link href="/people/warnings/new?type=pip">
                                 <Plus className="h-4 w-4 mr-2" />
                                 New PIP
                             </Link>

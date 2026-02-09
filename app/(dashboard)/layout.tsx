@@ -6,6 +6,7 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { useAuthStore, initializeAuth } from '@/store/auth';
 import { LoadingSpinner } from '@/components/ui/loading';
+import { useSessionTimeout } from '@/hooks/use-session-timeout';
 
 export default function DashboardLayout({
                                             children,
@@ -15,6 +16,9 @@ export default function DashboardLayout({
     const { isAuthenticated, isLoading, isInitialized } = useAuthStore();
     const router = useRouter();
     const [isClient, setIsClient] = useState(false);
+
+    // Initialize session timeout tracking (handles auto-logout)
+    useSessionTimeout();
 
     // Initialize auth on client side only
     useEffect(() => {

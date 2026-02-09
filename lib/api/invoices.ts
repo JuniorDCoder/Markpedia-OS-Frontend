@@ -104,6 +104,12 @@ export const invoiceService = {
             paidThisMonth: 0, // Backend doesn't provide this yet
             invoiceCount: invoices.length
         };
+    },
+
+    async deleteInvoice(id: string): Promise<void> {
+        await apiRequest<void>(`/finance/invoices/${id}`, {
+            method: 'DELETE'
+        });
     }
 };
 
