@@ -136,7 +136,7 @@ export default function EmployeeViewClient({ employee, user }: EmployeeViewClien
                 </DialogContent>
             </Dialog>
 
-            {/* Header */
+            {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <Button variant="outline" size="icon" asChild>
