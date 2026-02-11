@@ -217,7 +217,7 @@ export default function CashFlowPage() {
                                         <div className="text-sm text-muted-foreground">{transaction.client}</div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="font-bold text-green-600">+${transaction.amount.toLocaleString()}</div>
+                                        <div className="font-bold text-green-600">+{transaction.amount.toLocaleString()} XAF</div>
                                         <div className="text-xs text-muted-foreground">
                                             {new Date(transaction.date).toLocaleDateString()}
                                         </div>
@@ -245,7 +245,7 @@ export default function CashFlowPage() {
                                         <div className="text-sm text-muted-foreground">{transaction.category}</div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="font-bold text-red-600">-${transaction.amount.toLocaleString()}</div>
+                                        <div className="font-bold text-red-600">-{transaction.amount.toLocaleString()} XAF</div>
                                         <div className="text-xs text-muted-foreground">
                                             {new Date(transaction.date).toLocaleDateString()}
                                         </div>

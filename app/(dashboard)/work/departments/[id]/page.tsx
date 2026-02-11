@@ -127,7 +127,7 @@ export default function DepartmentDetailsPage({ params }: { params: { id: string
                                 </div>
                                 <p className="font-semibold text-lg">
                                     {department.budget
-                                        ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(department.budget)
+                                        ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'XAF' }).format(department.budget)
                                         : 'Not set'
                                     }
                                 </p>

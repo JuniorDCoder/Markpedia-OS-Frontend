@@ -78,7 +78,7 @@ export default function RequestDetail({ request }: RequestDetailProps) {
                                     {step.name}
                                 </div>
                                 {step.required && (
-                                    <div className="text-xs text-orange-600 mt-1">Required for amounts over $2,000</div>
+                                    <div className="text-xs text-orange-600 mt-1">Required for amounts over 2,000 XAF</div>
                                 )}
                             </div>
                         </div>
@@ -193,7 +193,7 @@ export default function RequestDetail({ request }: RequestDetailProps) {
                                     <p>
                                         <span className="font-medium text-sm">Amount:</span>{' '}
                                         <span className="text-xl md:text-2xl font-bold text-green-600 block mt-1">
-                                            ${request.amount.toLocaleString()}
+                                            {request.amount.toLocaleString()} XAF
                                         </span>
                                     </p>
                                     <p>
@@ -276,7 +276,7 @@ export default function RequestDetail({ request }: RequestDetailProps) {
                         </div>
                         <div>
                             <div className="font-medium text-muted-foreground text-xs">Amount</div>
-                            <div className="text-xs md:text-sm font-bold mt-1">${request.amount.toLocaleString()}</div>
+                            <div className="text-xs md:text-sm font-bold mt-1">{request.amount.toLocaleString()} XAF</div>
                         </div>
                     </div>
 

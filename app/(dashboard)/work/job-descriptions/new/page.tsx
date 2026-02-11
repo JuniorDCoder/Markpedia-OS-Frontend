@@ -500,7 +500,7 @@ export default function NewJobDescriptionPage() {
                                                     <Input
                                                         value={kpi}
                                                         onChange={(e) => updateField('kpis', index, e.target.value)}
-                                                        placeholder="e.g., Monthly Revenue: $200,000, Customer Satisfaction: ≥ 85%"
+                                                        placeholder="e.g., Monthly Revenue: 200,000 XAF, Customer Satisfaction: ≥ 85%"
                                                         className="flex-1 text-sm sm:text-base border-orange-200"
                                                     />
                                                     {jobDescription.kpis.length > 1 && (

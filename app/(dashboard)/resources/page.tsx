@@ -21,9 +21,10 @@ import {
     Shield,
     Eye,
     BookOpen,
+    FolderOpen,
 } from 'lucide-react';
-import { policyService, sopService, objectiveService, identityService, historyService, knowledgeBaseService } from '@/services/companyResourcesService';
-import type { Policy, SOP, CompanyObjective, CompanyIdentity, CompanyHistory } from '@/types/company-resources';
+import { policyService, sopService, objectiveService, identityService, historyService, knowledgeBaseService, customResourceService } from '@/services/companyResourcesService';
+import type { Policy, SOP, CompanyObjective, CompanyIdentity, CompanyHistory, CustomResourceFolder } from '@/types/company-resources';
 
 export default function ResourcesPage() {
     const { setCurrentModule } = useAppStore();
@@ -38,6 +39,7 @@ export default function ResourcesPage() {
     const [identity, setIdentity] = useState<CompanyIdentity | null>(null);
     const [history, setHistory] = useState<CompanyHistory[]>([]);
     const [knowledgeBase, setKnowledgeBase] = useState<any[]>([]);
+    const [customFolders, setCustomFolders] = useState<CustomResourceFolder[]>([]);
 
     useEffect(() => {
         setCurrentModule('resources');
@@ -47,13 +49,14 @@ export default function ResourcesPage() {
     const loadData = async () => {
         setLoading(true);
         try {
-            const [policiesData, sopsData, objectivesData, identityData, historyData, kbData] = await Promise.all([
+            const [policiesData, sopsData, objectivesData, identityData, historyData, kbData, customFoldersData] = await Promise.all([
                 policyService.getPolicies().catch(() => []),
                 sopService.getSOPs().catch(() => []),
                 objectiveService.getObjectives().catch(() => []),
                 identityService.getIdentity().catch(() => null),
                 historyService.getHistory().catch(() => []),
                 knowledgeBaseService.getArticles().catch(() => []),
+                customResourceService.getFolders().catch(() => []),
             ]);
             
             setPolicies(policiesData);
@@ -62,6 +65,7 @@ export default function ResourcesPage() {
             setIdentity(identityData);
             setHistory(historyData);
             setKnowledgeBase(kbData);
+            setCustomFolders(customFoldersData);
         } catch (error) {
             console.error('Error loading resources:', error);
         } finally {
@@ -73,6 +77,19 @@ export default function ResourcesPage() {
     const canManage = user?.role && ['CEO', 'Admin', 'HR', 'Manager'].includes(user.role);
 
     const categories = [
+        {
+            id: 'custom',
+            name: 'Custom Resources',
+            icon: FolderOpen,
+            color: 'text-cyan-600',
+            count: customFolders.length,
+            href: '/resources/custom',
+            addHref: '/resources/custom',
+            showAdd: true,
+            description: customFolders.length > 0
+                ? 'Create and manage extra custom resource categories.'
+                : 'No custom categories yet. Create one to extend resources beyond default sections.',
+        },
         { id: 'policies', name: 'Policies & SOPs', icon: Shield, color: 'text-blue-600', count: policies.length + sops.length, href: '/resources/policies', description: 'Company policies and standard operating procedures' },
         { id: 'objectives', name: 'Company Objectives', icon: Target, color: 'text-purple-600', count: objectives.length, href: '/resources/objectives', description: 'Annual and quarterly company goals' },
         { id: 'identity', name: 'Company Identity', icon: Mission, color: 'text-orange-600', count: identity ? 1 : 0, href: '/resources/identity', description: 'Vision, mission, values, and brand guidelines' },
@@ -80,7 +97,7 @@ export default function ResourcesPage() {
         { id: 'knowledge', name: 'Knowledge Base', icon: BookOpen, color: 'text-green-600', count: knowledgeBase.length, href: '/resources/knowledge-base', description: 'Internal documentation and guides' },
     ];
 
-    const ResourceCard = ({ title, description, icon: Icon, count, href, color }: any) => (
+    const ResourceCard = ({ title, description, icon: Icon, count, href, addHref, color, showAdd }: any) => (
         <Card className="hover:shadow-lg transition-all duration-300 hover:scale-105 group border">
             <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
@@ -106,9 +123,9 @@ export default function ResourcesPage() {
                             View
                         </Link>
                     </Button>
-                    {canManage && (
+                    {canManage && showAdd && (
                         <Button asChild variant="outline" size="sm" className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3">
-                            <Link href={`${href}/new`}>
+                            <Link href={addHref || `${href}/new`}>
                                 <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
                                 <span className="hidden sm:inline ml-1">Add</span>
                             </Link>
@@ -209,6 +226,8 @@ export default function ResourcesPage() {
                         icon={category.icon}
                         count={category.count}
                         href={category.href}
+                        addHref={category.addHref}
+                        showAdd={category.showAdd}
                         color={category.color}
                     />
                 ))}

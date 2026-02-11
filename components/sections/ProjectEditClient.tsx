@@ -389,7 +389,7 @@ export default function ProjectEditClient({ initialProject, projectId }: Project
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="budget">Total Budget ($)</Label>
+                                        <Label htmlFor="budget">Total Budget (XAF)</Label>
                                         <Input
                                             id="budget"
                                             type="number"
@@ -612,7 +612,7 @@ export default function ProjectEditClient({ initialProject, projectId }: Project
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label>Amount ($)</Label>
+                                            <Label>Amount (XAF)</Label>
                                             <Input
                                                 type="number"
                                                 value={item.amount}

@@ -313,3 +313,34 @@ export interface Attachment {
     size: number;
     uploadedAt: string;
 }
+
+export interface CustomResourceFolder {
+    id: string;
+    name: string;
+    slug: string;
+    description?: string;
+    color?: string;
+    icon?: string;
+    created_by_id: string;
+    created_by_name?: string;
+    entry_count: number;
+    created_at: string;
+    updated_at?: string;
+}
+
+export interface CustomResourceEntry {
+    id: string;
+    folder_id: string;
+    title: string;
+    summary?: string;
+    content?: string;
+    tags: string[];
+    attachments: Record<string, any>[];
+    status: 'draft' | 'published' | 'archived';
+    created_by_id: string;
+    created_by_name?: string;
+    updated_by_id?: string;
+    updated_by_name?: string;
+    created_at: string;
+    updated_at?: string;
+}

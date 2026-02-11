@@ -154,7 +154,7 @@ export default function NewDepartmentPage() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="budget">Annual Budget ($)</Label>
+                                <Label htmlFor="budget">Annual Budget (XAF)</Label>
                                 <Input
                                     id="budget"
                                     type="number"

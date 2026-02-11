@@ -11,6 +11,8 @@ import {
     Stakeholder,
     CompanyHistory,
     CompanyStructure,
+    CustomResourceFolder,
+    CustomResourceEntry,
 } from '@/types/company-resources';
 
 const BASE_URL = '/resources';
@@ -216,6 +218,67 @@ export const knowledgeBaseService = {
     },
 };
 
+// Custom Resource Folders and Entries
+export const customResourceService = {
+    async getFolders(params?: { search?: string }): Promise<CustomResourceFolder[]> {
+        const queryString = buildQueryString(params);
+        return apiRequest<CustomResourceFolder[]>(`${BASE_URL}/custom-folders${queryString}`);
+    },
+
+    async getFolder(idOrSlug: string): Promise<CustomResourceFolder> {
+        return apiRequest<CustomResourceFolder>(`${BASE_URL}/custom-folders/${idOrSlug}`);
+    },
+
+    async createFolder(data: Partial<CustomResourceFolder>): Promise<CustomResourceFolder> {
+        return apiRequest<CustomResourceFolder>(`${BASE_URL}/custom-folders`, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+    },
+
+    async updateFolder(id: string, data: Partial<CustomResourceFolder>): Promise<CustomResourceFolder> {
+        return apiRequest<CustomResourceFolder>(`${BASE_URL}/custom-folders/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data)
+        });
+    },
+
+    async deleteFolder(id: string): Promise<void> {
+        return apiRequest<void>(`${BASE_URL}/custom-folders/${id}`, {
+            method: 'DELETE'
+        });
+    },
+
+    async getEntries(folderIdOrSlug: string, params?: { status?: string; search?: string }): Promise<CustomResourceEntry[]> {
+        const queryString = buildQueryString(params);
+        return apiRequest<CustomResourceEntry[]>(`${BASE_URL}/custom-folders/${folderIdOrSlug}/entries${queryString}`);
+    },
+
+    async getEntry(folderIdOrSlug: string, entryId: string): Promise<CustomResourceEntry> {
+        return apiRequest<CustomResourceEntry>(`${BASE_URL}/custom-folders/${folderIdOrSlug}/entries/${entryId}`);
+    },
+
+    async createEntry(folderId: string, data: Partial<CustomResourceEntry>): Promise<CustomResourceEntry> {
+        return apiRequest<CustomResourceEntry>(`${BASE_URL}/custom-folders/${folderId}/entries`, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+    },
+
+    async updateEntry(folderId: string, entryId: string, data: Partial<CustomResourceEntry>): Promise<CustomResourceEntry> {
+        return apiRequest<CustomResourceEntry>(`${BASE_URL}/custom-folders/${folderId}/entries/${entryId}`, {
+            method: 'PUT',
+            body: JSON.stringify(data)
+        });
+    },
+
+    async deleteEntry(folderId: string, entryId: string): Promise<void> {
+        return apiRequest<void>(`${BASE_URL}/custom-folders/${folderId}/entries/${entryId}`, {
+            method: 'DELETE'
+        });
+    },
+};
+
 // Export all services
 export const companyResourcesService = {
     policies: policyService,
@@ -224,6 +287,7 @@ export const companyResourcesService = {
     objectives: objectiveService,
     history: historyService,
     knowledgeBase: knowledgeBaseService,
+    customResources: customResourceService,
 };
 
 export default companyResourcesService;

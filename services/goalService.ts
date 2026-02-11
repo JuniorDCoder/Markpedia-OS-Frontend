@@ -66,7 +66,7 @@ class GoalService {
         // Annual Objectives
         {
             id: '2',
-            title: 'Achieve $20M GMV by Year End',
+            title: 'Achieve 20M XAF GMV by Year End',
             description: 'Drive gross merchandise value growth through customer acquisition and retention',
             type: 'annual',
             level: 'company',

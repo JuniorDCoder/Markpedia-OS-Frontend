@@ -143,7 +143,7 @@ export default function MoneyRequestsPage() {
                             </span>
                             <span className="flex items-center">
                                 <DollarSign className="h-3 w-3 mr-1 flex-shrink-0" />
-                                Amount: ${request.amount.toLocaleString()}
+                                Amount: {request.amount.toLocaleString()} XAF
                             </span>
                             <span className="flex items-center">
                                 <Clock className="h-3 w-3 mr-1 flex-shrink-0" />
@@ -152,7 +152,7 @@ export default function MoneyRequestsPage() {
                         </div>
                     </div>
                     <div className="text-right flex-shrink-0">
-                        <div className="text-xl md:text-2xl font-bold text-green-600">${request.amount.toLocaleString()}</div>
+                        <div className="text-xl md:text-2xl font-bold text-green-600">{request.amount.toLocaleString()} XAF</div>
                         <div className="text-xs md:text-sm text-muted-foreground mt-1 line-clamp-1">{request.budgetLine}</div>
 
                         {/* Action Buttons */}

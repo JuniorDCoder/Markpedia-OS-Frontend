@@ -132,7 +132,7 @@ export default function NewMoneyRequestPage() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="amount">Amount ($) *</Label>
+                                <Label htmlFor="amount">Amount (XAF) *</Label>
                                 <Input
                                     id="amount"
                                     type="number"
@@ -144,7 +144,7 @@ export default function NewMoneyRequestPage() {
                                 {requiresCEOApproval && (
                                     <div className="flex items-center gap-2 text-amber-600 text-sm">
                                         <AlertCircle className="h-4 w-4" />
-                                        Amount requires CEO approval (over $2,000)
+                                        Amount requires CEO approval (over 2,000 XAF)
                                     </div>
                                 )}
                             </div>
