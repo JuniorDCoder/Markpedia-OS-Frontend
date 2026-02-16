@@ -13,11 +13,14 @@ import { ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { InvoiceItem } from '@/types/invoice';
 import { TableSkeleton } from '@/components/ui/loading';
+import { useAuthStore } from '@/store/auth';
+import { canEditInvoiceTerms, DEFAULT_INVOICE_TERMS } from '@/lib/constants/invoice';
 
 export default function EditInvoicePage({ params }: { params: { id: string } }) {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const { user } = useAuthStore();
 
     // Form State
     const [clientName, setClientName] = useState('');
@@ -35,8 +38,10 @@ export default function EditInvoicePage({ params }: { params: { id: string } }) 
     const [taxRate, setTaxRate] = useState(19.25);
     const [discount, setDiscount] = useState(0);
     const [notes, setNotes] = useState('');
+    const [terms, setTerms] = useState(DEFAULT_INVOICE_TERMS);
     const [authorizedBy, setAuthorizedBy] = useState('');
     const [authorizedTitle, setAuthorizedTitle] = useState('Sales Manager');
+    const canManageTerms = canEditInvoiceTerms(user?.role);
 
     useEffect(() => {
         const loadInvoice = async () => {
@@ -61,6 +66,7 @@ export default function EditInvoicePage({ params }: { params: { id: string } }) 
                 setTaxRate(invoice.taxRate);
                 setDiscount(invoice.discountAmount);
                 setNotes(invoice.notes || '');
+                setTerms(invoice.terms || DEFAULT_INVOICE_TERMS);
                 setAuthorizedBy(invoice.authorizedBy || '');
                 setAuthorizedTitle(invoice.authorizedTitle || 'Sales Manager');
             } catch (error) {
@@ -70,7 +76,7 @@ export default function EditInvoicePage({ params }: { params: { id: string } }) 
             }
         };
         loadInvoice();
-    }, [params.id]);
+    }, [params.id, router]);
 
     // Calculations
     const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
@@ -129,7 +135,8 @@ export default function EditInvoicePage({ params }: { params: { id: string } }) 
                 taxAmount,
                 discountAmount: discount,
                 total,
-                notes,
+                notes: notes || undefined,
+                terms: terms.trim() || DEFAULT_INVOICE_TERMS,
                 authorizedBy: authorizedBy || undefined,
                 authorizedTitle: authorizedTitle || undefined
             });
@@ -283,13 +290,28 @@ export default function EditInvoicePage({ params }: { params: { id: string } }) 
                                 </div>
                             </div>
                             <div>
-                                <Label>Notes/Terms</Label>
+                                <Label>Notes</Label>
                                 <Textarea
-                                    placeholder="Payment terms, special instructions, etc."
+                                    placeholder="Additional notes (optional)"
                                     value={notes}
                                     onChange={e => setNotes(e.target.value)}
                                     rows={3}
                                 />
+                            </div>
+                            <div>
+                                <Label>Terms & Conditions</Label>
+                                <Textarea
+                                    placeholder="Invoice terms and conditions"
+                                    value={terms}
+                                    onChange={e => setTerms(e.target.value)}
+                                    rows={6}
+                                    disabled={!canManageTerms}
+                                />
+                                {!canManageTerms && (
+                                    <p className="text-xs text-muted-foreground mt-2">
+                                        Only CEO, Admin, CXO, and finance roles can edit terms.
+                                    </p>
+                                )}
                             </div>
                         </CardContent>
                     </Card>

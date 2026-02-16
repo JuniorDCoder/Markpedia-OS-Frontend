@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,10 +12,13 @@ import { invoiceService } from '@/lib/api/invoices';
 import { ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { InvoiceItem } from '@/types/invoice';
+import { useAuthStore } from '@/store/auth';
+import { canEditInvoiceTerms, DEFAULT_INVOICE_TERMS } from '@/lib/constants/invoice';
 
 export default function NewInvoicePage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const { user } = useAuthStore();
 
     // Form State
     const [clientName, setClientName] = useState('');
@@ -35,8 +38,10 @@ export default function NewInvoicePage() {
     const [taxRate, setTaxRate] = useState(19.25);
     const [discount, setDiscount] = useState(0);
     const [notes, setNotes] = useState('');
+    const [terms, setTerms] = useState(DEFAULT_INVOICE_TERMS);
     const [authorizedBy, setAuthorizedBy] = useState('');
     const [authorizedTitle, setAuthorizedTitle] = useState('Sales Manager');
+    const canManageTerms = canEditInvoiceTerms(user?.role);
 
     // Calculations
     const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
@@ -97,8 +102,8 @@ export default function NewInvoicePage() {
                 discountAmount: discount,
                 total,
                 status: 'Draft',
-                notes,
-                terms: notes || 'Net 14',
+                notes: notes || undefined,
+                terms: terms.trim() || DEFAULT_INVOICE_TERMS,
                 authorizedBy: authorizedBy || undefined,
                 authorizedTitle: authorizedTitle || undefined
             });
@@ -250,13 +255,28 @@ export default function NewInvoicePage() {
                                 </div>
                             </div>
                             <div>
-                                <Label>Notes/Terms</Label>
+                                <Label>Notes</Label>
                                 <Textarea
-                                    placeholder="Payment terms, special instructions, etc."
+                                    placeholder="Additional notes (optional)"
                                     value={notes}
                                     onChange={e => setNotes(e.target.value)}
                                     rows={3}
                                 />
+                            </div>
+                            <div>
+                                <Label>Terms & Conditions</Label>
+                                <Textarea
+                                    placeholder="Invoice terms and conditions"
+                                    value={terms}
+                                    onChange={e => setTerms(e.target.value)}
+                                    rows={6}
+                                    disabled={!canManageTerms}
+                                />
+                                {!canManageTerms && (
+                                    <p className="text-xs text-muted-foreground mt-2">
+                                        Only CEO, Admin, CXO, and finance roles can edit terms.
+                                    </p>
+                                )}
                             </div>
                         </CardContent>
                     </Card>

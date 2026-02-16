@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuthStore } from '@/store/auth';
 import { useAppStore } from '@/store/app';
 import Link from 'next/link';
@@ -23,6 +24,20 @@ export function Header() {
   const router = useRouter();
 
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  const getAvatarUrl = (avatar?: string) => {
+    if (!avatar) return undefined;
+    if (avatar.startsWith('http')) return avatar;
+    const rawBase = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+    const base = rawBase.replace(/\/api\/v1\/?$/, '').replace(/\/$/, '');
+    return `${base}${avatar.startsWith('/') ? avatar : `/${avatar}`}`;
+  };
+
+  const getInitials = () => {
+    const first = user?.firstName?.charAt(0) || '';
+    const last = user?.lastName?.charAt(0) || '';
+    return `${first}${last}`.toUpperCase() || 'U';
+  };
 
   const handleLogout = () => {
     logout();
@@ -94,9 +109,12 @@ export function Header() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center space-x-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
-                  {user.firstName[0]}{user.lastName[0]}
-                </div>
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={getAvatarUrl(user.avatar)} alt={`${user.firstName} ${user.lastName}`} />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
+                    {getInitials()}
+                  </AvatarFallback>
+                </Avatar>
                 <div className="hidden sm:block text-left">
                   <p className="text-sm font-medium">{user.firstName} {user.lastName}</p>
                   <p className="text-xs text-muted-foreground">{user.role}</p>

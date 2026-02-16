@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -14,17 +14,14 @@ import {
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { DEFAULT_INVOICE_TERMS } from '@/lib/constants/invoice';
 
 export default function InvoiceDetailsPage({ params }: { params: { id: string } }) {
     const router = useRouter();
     const [invoice, setInvoice] = useState<Invoice | null>(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        loadData();
-    }, [params.id]);
-
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         try {
             const data = await invoiceService.getInvoiceById(params.id);
             if (!data) {
@@ -38,7 +35,11 @@ export default function InvoiceDetailsPage({ params }: { params: { id: string } 
         } finally {
             setLoading(false);
         }
-    };
+    }, [params.id, router]);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
 
     const handlePayment = async () => {
         if (!invoice) return;
@@ -260,17 +261,7 @@ export default function InvoiceDetailsPage({ params }: { params: { id: string } 
                         <div>
                             <p className="font-semibold text-slate-800 mb-2">Terms & Conditions:</p>
                             <div className="text-xs text-slate-600 space-y-1">
-                                {invoice.terms ? (
-                                    <p>{invoice.terms}</p>
-                                ) : (
-                                    <>
-                                        <p>1. Payment must be completed before shipment</p>
-                                        <p>2. Goods are released only after full payment is received</p>
-                                        <p>3. All products are inspected before packaging</p>
-                                        <p>4. Markpedia is not responsible for damages during transport unless insurance is purchased</p>
-                                        <p>5. No returns or refunds after shipment. All quantities and product details have been confirmed by the buyer</p>
-                                    </>
-                                )}
+                                <p className="whitespace-pre-line">{(invoice.terms || DEFAULT_INVOICE_TERMS).trim()}</p>
                             </div>
                         </div>
                         <div className="text-right">

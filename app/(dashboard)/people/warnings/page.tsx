@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useAppStore } from "@/store/app";
+import { useAuthStore } from "@/store/auth";
 import { useEffect, useState } from "react";
 import type { Warning, PIP, WarningStats, WarningLevel } from "@/types/warnings";
 import { toast } from "react-hot-toast";
@@ -40,7 +41,8 @@ export default function WarningsListPage() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<{ type: 'warning' | 'pip'; id: string; label: string } | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
-    const { setCurrentModule, user } = useAppStore();
+    const { setCurrentModule } = useAppStore();
+    const { user } = useAuthStore();
 
     useEffect(() => {
         setCurrentModule("people");
@@ -125,11 +127,11 @@ export default function WarningsListPage() {
         );
     };
 
-    // Only HR, CEO, and Admin can create warnings - Employee, Manager, Team Lead can only receive
-    const canManageWarnings = user?.role && ['HR', 'CEO', 'Admin'].includes(user.role);
-    
-    // Check if current user can view all warnings or only their own
-    const canViewAllWarnings = user?.role && ['HR', 'CEO', 'Admin', 'Manager', 'CXO'].includes(user.role);
+    // Roles allowed to create/manage warning and PIP records
+    const canManageWarnings = Boolean(user?.role && ['HR', 'CEO', 'Admin', 'CXO'].includes(user.role));
+
+    // Roles that can view all warnings, otherwise users only see their own records
+    const canViewAllWarnings = Boolean(user?.role && ['HR', 'CEO', 'Admin', 'Manager', 'CXO'].includes(user.role));
 
     const handleDeleteWarning = (warning: Warning) => {
         setItemToDelete({ type: 'warning', id: warning.id, label: `${warning.employeeName} - ${warning.level}` });

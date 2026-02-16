@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
     Tooltip,
     TooltipContent,
@@ -292,6 +293,20 @@ export function Sidebar() {
 
     if (!user) return null;
 
+    const getAvatarUrl = (avatar?: string) => {
+        if (!avatar) return undefined;
+        if (avatar.startsWith('http')) return avatar;
+        const rawBase = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+        const base = rawBase.replace(/\/api\/v1\/?$/, '').replace(/\/$/, '');
+        return `${base}${avatar.startsWith('/') ? avatar : `/${avatar}`}`;
+    };
+
+    const getInitials = () => {
+        const first = user.firstName?.charAt(0) || '';
+        const last = user.lastName?.charAt(0) || '';
+        return `${first}${last}`.toUpperCase() || 'U';
+    };
+
     const filterItemsByRoleAndPhase = (items: typeof navigation.main) => {
         return items.filter(item => {
             // Check if user has explicit role access
@@ -511,9 +526,12 @@ export function Sidebar() {
                 <div className="border-t p-4">
                     <UserProfileWithTooltip>
                         <div className="flex items-center space-x-3">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
-                                {user.firstName[0]}{user.lastName[0]}
-                            </div>
+                            <Avatar className="h-8 w-8">
+                                <AvatarImage src={getAvatarUrl(user.avatar)} alt={`${user.firstName} ${user.lastName}`} />
+                                <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
+                                    {getInitials()}
+                                </AvatarFallback>
+                            </Avatar>
                             {!sidebarCollapsed && (
                                 <div className="flex-1">
                                     <p className="text-sm font-medium">{user.firstName} {user.lastName}</p>
