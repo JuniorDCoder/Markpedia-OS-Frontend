@@ -1,23 +1,33 @@
-import { redirect } from 'next/navigation';
-import { OrganigramSnapshot, User } from '@/types';
+'use client';
 
-const mockUser: User = {
-    createdAt: "", isActive: false, lastName: "",
-    id: '1',
-    firstName: 'Sarah Johnson',
-    email: 'sarah@company.com',
-    role: 'CEO'
-};
-
-function SnapshotNewClient(props: { user: User }) {
-    return null;
-}
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import SnapshotNewClient from '@/components/sections/organigram/snapshots/new/SnapshotNewClient';
+import { useAuthStore } from '@/store/auth';
+import { isAdminLikeRole } from '@/lib/roles';
+import { LoadingSpinner } from '@/components/ui/loading';
 
 export default function SnapshotNewPage() {
-    // Only CEOs, Admins, and CXOs can create snapshots
-    if (!['CEO', 'Admin', 'CXO'].includes(mockUser.role)) {
-        redirect('/strategy/organigram');
+    const { user } = useAuthStore();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (user && !isAdminLikeRole(user.role)) {
+            router.push('/strategy/organigram');
+        }
+    }, [user, router]);
+
+    if (!user) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <LoadingSpinner size="lg" />
+            </div>
+        );
     }
 
-    return <SnapshotNewClient user={mockUser} />;
+    if (!isAdminLikeRole(user.role)) {
+        return null;
+    }
+
+    return <SnapshotNewClient user={user} />;
 }

@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RefreshCw, ArrowLeft, Save, Plus, Minus } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { isAdminLikeRole } from '@/lib/roles';
 
 interface Props {
     jobDescriptionId: string;
@@ -49,10 +50,10 @@ export default function JobDescriptionEditClient({ jobDescriptionId, initialJobD
         status: 'Draft',
     });
 
-// Check if user is CEO
+// Only Admin / CEO / C-level can edit job descriptions.
 useEffect(() => {
-    if (user && user.role !== 'CEO') {
-        toast.error('Only CEO can edit job descriptions');
+    if (user && !isAdminLikeRole(user.role)) {
+        toast.error('Only Admin / CEO / C-level can edit job descriptions');
         router.push('/work/job-descriptions');
     }
 }, [user, router]);

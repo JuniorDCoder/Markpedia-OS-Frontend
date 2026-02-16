@@ -41,6 +41,7 @@ import {
 import { policyService, sopService } from '@/services/companyResourcesService';
 import type { Policy, SOP } from '@/types/company-resources';
 import { toast } from 'react-hot-toast';
+import { isAdminLikeRole } from '@/lib/roles';
 
 export default function PoliciesPage() {
     const { setCurrentModule } = useAppStore();
@@ -93,8 +94,8 @@ export default function PoliciesPage() {
         }
     };
 
-    // Role-based access
-    const canManage = user?.role && ['CEO', 'Admin', 'HR', 'Manager'].includes(user.role);
+    // Role-based access: only Admin / CEO / C-level can manage Policies/SOPs.
+    const canManage = isAdminLikeRole(user?.role);
 
     const handleDelete = (type: 'policy' | 'sop', id: string, title: string) => {
         setItemToDelete({ type, id, title });

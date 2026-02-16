@@ -32,6 +32,7 @@ import {
     AlertCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { isAdminLikeRole } from '@/lib/roles';
 
 export default function NewJobDescriptionPage() {
     const router = useRouter();
@@ -66,10 +67,10 @@ export default function NewJobDescriptionPage() {
         version: '1.0'
     });
 
-    // Check if user is CEO
+    // Only Admin / CEO / C-level can create job descriptions.
     useEffect(() => {
-        if (user && user.role !== 'CEO') {
-            toast.error('Only CEO can create job descriptions');
+        if (user && !isAdminLikeRole(user.role)) {
+            toast.error('Only Admin / CEO / C-level can create job descriptions');
             router.push('/work/job-descriptions');
         }
     }, [user, router]);

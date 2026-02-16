@@ -28,6 +28,7 @@ import {
 	Eye
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { isAdminLikeRole } from '@/lib/roles';
 
 interface JobDescriptionViewClientProps {
 	jobDescriptionId: string;
@@ -46,8 +47,8 @@ export default function JobDescriptionViewClient({
 	const [exporting, setExporting] = useState(false);
 	const [unauthorized, setUnauthorized] = useState(false);
 
-	// Only CEO can edit or create new versions
-	const isCEO = user?.role === 'CEO';
+	// Only Admin / CEO / C-level can edit or create new versions
+	const canManageJobDescriptions = isAdminLikeRole(user?.role);
 
 	useEffect(() => {
 		if (!initialJobDescription) loadJobDescription();
@@ -272,7 +273,7 @@ export default function JobDescriptionViewClient({
 					{/* Action Buttons */}
 					<div className="flex flex-col sm:flex-row lg:flex-col gap-3 lg:items-end lg:w-80">
 						<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 gap-2">
-							{isCEO && (
+							{canManageJobDescriptions && (
 								<Button
 									onClick={() => router.push(`/work/job-descriptions/${jobDescriptionId}/edit`)}
 									className="bg-blue-600 hover:bg-blue-700 w-full"
@@ -294,7 +295,7 @@ export default function JobDescriptionViewClient({
 								)}
 								Export PDF
 							</Button>
-							{isCEO && jobDescription.status === 'Approved' && (
+							{canManageJobDescriptions && jobDescription.status === 'Approved' && (
 								<Button
 									variant="outline"
 									onClick={createNewVersion}

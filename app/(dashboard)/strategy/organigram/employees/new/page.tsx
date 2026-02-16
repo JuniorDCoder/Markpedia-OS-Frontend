@@ -7,6 +7,7 @@ import EmployeeNewClient from "@/components/sections/organigram/employees/new/Em
 import { useAuthStore } from '@/store/auth';
 import { entityService, departmentService } from '@/services/api';
 import { LoadingSpinner } from '@/components/ui/loading';
+import { isAdminLikeRole } from '@/lib/roles';
 
 export default function EmployeeNewPage() {
     const { user } = useAuthStore();
@@ -16,8 +17,8 @@ export default function EmployeeNewPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Access Control: CEO, HR, Admin, CXO can create employees
-        if (user && !['CEO', 'HR', 'Admin', 'CXO'].includes(user.role)) {
+        // Access Control: only Admin / CEO / C-level can create employees in organigram flow
+        if (user && !isAdminLikeRole(user.role)) {
             router.push('/people/employees');
             return;
         }
@@ -52,7 +53,7 @@ export default function EmployeeNewPage() {
     }
 
     // Double-check access
-    if (!['CEO', 'HR', 'Admin', 'CXO'].includes(user.role)) {
+    if (!isAdminLikeRole(user.role)) {
         return null; // Will redirect via useEffect
     }
 

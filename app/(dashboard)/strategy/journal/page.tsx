@@ -1,19 +1,31 @@
-import { notFound } from 'next/navigation';
-import { User } from '@/types/journal';
-import JournalClient from "@/components/sections/JournalClient";
+'use client';
 
-// Mock user data
-const mockUser: User = {
-    id: '1',
-    firstName: 'Sarah',
-    lastName: 'Chen',
-    email: 'sarah@company.com',
-    role: 'Manager',
-    department: 'Customer Support',
-    createdAt: '2023-01-15T00:00:00Z',
-    isActive: true
-};
+import JournalClient from '@/components/sections/JournalClient';
+import { useAuthStore } from '@/store/auth';
+import { LoadingSpinner } from '@/components/ui/loading';
+import { User as JournalUser } from '@/types/journal';
 
-export default async function JournalPage() {
-    return <JournalClient user={mockUser} />;
+export default function JournalPage() {
+    const { user } = useAuthStore();
+
+    if (!user) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <LoadingSpinner size="lg" />
+            </div>
+        );
+    }
+
+    const journalUser: JournalUser = {
+        id: user.id,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email,
+        role: user.role,
+        department: user.department || '',
+        createdAt: user.createdAt || new Date().toISOString(),
+        isActive: user.isActive,
+    };
+
+    return <JournalClient user={journalUser} />;
 }

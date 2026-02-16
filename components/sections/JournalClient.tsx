@@ -15,6 +15,7 @@ import {
     FileText, Clock, User as UserIcon, Lock, Globe, Menu,
     TrendingUp, PieChart, Cloud, Heart, Link as LinkIcon
 } from 'lucide-react';
+import { isAdminLikeRole } from '@/lib/roles';
 
 interface JournalClientProps {
     user: User;
@@ -46,7 +47,13 @@ export default function JournalClient({ user }: JournalClientProps) {
                 JournalService.getQuickCaptures(),
                 JournalService.getStats()
             ]);
-            setEntries(entriesData);
+
+            // Normal users can only see their own journals.
+            const visibleEntries = isAdminLikeRole(user?.role)
+                ? entriesData
+                : entriesData.filter(entry => entry.createdBy === user.id);
+
+            setEntries(visibleEntries);
             setQuickCaptures(capturesData);
             setStats(statsData);
         } catch (error) {
@@ -132,7 +139,7 @@ export default function JournalClient({ user }: JournalClientProps) {
         }
     };
 
-    const canManage = user?.role === 'CEO' || user?.role === 'Admin' || user?.role === 'Manager';
+    const canManage = isAdminLikeRole(user?.role);
 
     if (loading) {
         return (

@@ -8,6 +8,7 @@ import { employeeApi } from '@/lib/api/employees';
 import { departmentsApi } from '@/lib/api/departments';
 import { snapshotApi } from '@/lib/api/snapshots';
 import { Loader2 } from 'lucide-react';
+import { isAdminLikeRole } from '@/lib/roles';
 
 export default function EditOrganigramPage() {
     const router = useRouter();
@@ -30,15 +31,9 @@ export default function EditOrganigramPage() {
                 setUser(parsedUser);
 
                 // Check permissions
-                if (!['CEO', 'Admin', 'CXO', 'Director', 'Manager'].includes(parsedUser.role)) { // Expanded roles for testing/usability, adjust as strictly needed
-                    // For now, let's keep it permissive or match the previous logic: if (!['CEO', 'Admin', 'CXO'].includes(mockUser.role))
-                    // The previous code had strict role check. Let's stick to strict but maybe allow more for demo if needed.
-                    // Actually, let's stick to the previous logic but using real user role.
-                    if (!['CEO', 'Admin', 'CXO', 'Manager', 'Hr'].includes(parsedUser.role)) {
-                        // Redirecting might be annoying if roles aren't perfectly set up in dev.
-                        // Keeping it open for now or just warning.
-                        // Let's redirect if strict requirement.
-                    }
+                if (!isAdminLikeRole(parsedUser.role)) {
+                    router.push('/strategy/organigram');
+                    return;
                 }
 
                 // Fetch real data

@@ -28,6 +28,7 @@ import {
     Award,
     Calendar
 } from 'lucide-react';
+import { isAdminLikeRole } from '@/lib/roles';
 
 interface ResourcesClientProps {
     resources: any;
@@ -49,7 +50,7 @@ export default function ResourcesClient({ resources, user }: ResourcesClientProp
         { id: 'structure', name: 'Legal Structure', icon: Building, color: 'text-gray-600', count: 1 }
     ];
 
-    const canManage = user?.role === 'CEO' || user?.role === 'Admin' || user?.role === 'CXO';
+    const canManage = isAdminLikeRole(user?.role);
 
     const ResourceCard = ({ title, description, icon: Icon, count, href, color }: any) => (
         <Card className="hover:shadow-lg transition-all duration-300 hover:scale-105 group border">

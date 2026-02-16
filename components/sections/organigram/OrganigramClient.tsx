@@ -39,6 +39,7 @@ import {
     Maximize,
     X
 } from 'lucide-react';
+import { isAdminLikeRole } from '@/lib/roles';
 
 interface OrganigramClientProps {
     employees: Employee[];
@@ -178,8 +179,8 @@ export default function OrganigramClient({
         return matchesSearch && matchesDepartment && matchesLevel;
     });
 
-    // Role-based access: CEO, Admin, CXO, HR, Manager can manage organigram
-    const canManage = user?.role && ['CEO', 'Admin', 'CXO', 'HR', 'Manager'].includes(user.role);
+    // Role-based access: only Admin / CEO / C-level can manage organigram structure
+    const canManage = isAdminLikeRole(user?.role);
 
     // Flatten tree for canvas view
     const flattenNodes = (nodes: OrganigramNode[]): OrganigramNode[] => {

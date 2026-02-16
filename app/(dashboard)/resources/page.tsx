@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { policyService, sopService, objectiveService, identityService, historyService, knowledgeBaseService, customResourceService } from '@/services/companyResourcesService';
 import type { Policy, SOP, CompanyObjective, CompanyIdentity, CompanyHistory, CustomResourceFolder } from '@/types/company-resources';
+import { isAdminLikeRole } from '@/lib/roles';
 
 export default function ResourcesPage() {
     const { setCurrentModule } = useAppStore();
@@ -73,8 +74,8 @@ export default function ResourcesPage() {
         }
     };
 
-    // Role-based access
-    const canManage = user?.role && ['CEO', 'Admin', 'HR', 'Manager'].includes(user.role);
+    // Role-based access: only Admin / CEO / C-level can manage resources.
+    const canManage = isAdminLikeRole(user?.role);
 
     const categories = [
         {

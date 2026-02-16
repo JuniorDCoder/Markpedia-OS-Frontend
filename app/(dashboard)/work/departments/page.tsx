@@ -38,6 +38,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import toast from 'react-hot-toast';
+import { isManagerRole } from '@/lib/roles';
 
 export default function DepartmentsPage() {
     const { user } = useAuthStore();
@@ -99,7 +100,14 @@ export default function DepartmentsPage() {
         }
     };
 
-    const filteredDepartments = departments.filter(dept =>
+    const visibleDepartments = isManagerRole(user?.role)
+        ? departments.filter(dept => {
+            const userDept = (user?.department || '').toLowerCase();
+            return userDept && (dept.name || '').toLowerCase() === userDept;
+        })
+        : departments;
+
+    const filteredDepartments = visibleDepartments.filter(dept =>
         dept.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         dept.description.toLowerCase().includes(searchTerm.toLowerCase())
     );

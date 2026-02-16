@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { isAdminLikeRole } from '@/lib/roles';
 
 export default function JobDescriptionsPage() {
     const { user } = useAuthStore();
@@ -44,8 +45,8 @@ export default function JobDescriptionsPage() {
     const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
 
-    // Roles that can create, edit, or delete job descriptions (not Employee or Cashier)
-    const canManageJobDescriptions = user?.role && ['CEO', 'Admin', 'Manager', 'CXO', 'HR', 'Team Lead'].includes(user.role);
+    // Only Admin / CEO / C-level can manage job descriptions.
+    const canManageJobDescriptions = isAdminLikeRole(user?.role);
 
     useEffect(() => {
         loadJobDescriptions();
