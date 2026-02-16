@@ -250,12 +250,16 @@ export const performanceService = {
   // New: export with filter via POST returning blob
   async exportPerformanceFiltered(filter: any = {}, format: string = 'csv') {
     // Use raw fetch because apiRequest may assume json; we want blob
-    const base = process.env.NEXT_PUBLIC_BACKEND_URL ? `${process.env.NEXT_PUBLIC_BACKEND_URL.replace(/\/+$/, '')}` : '';
+    const base = '/api/v1';
     const url = `${base}/people/performance/export/${encodeURIComponent(format)}`;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
 
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify(filter),
     });
 

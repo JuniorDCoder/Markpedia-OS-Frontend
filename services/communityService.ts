@@ -749,8 +749,9 @@ class WebSocketService {
         this.userId = userId;
 
         return new Promise((resolve, reject) => {
-            const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000';
-            this.ws = new WebSocket(`${wsUrl}/api/v1/community/chat/ws/${userId}`);
+            const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = process.env.NEXT_PUBLIC_WS_URL || (typeof window !== 'undefined' ? `${protocol}//${window.location.host}` : 'ws://localhost:8000');
+            this.ws = new WebSocket(`${host}/api/v1/community/chat/ws/${userId}`);
 
             this.ws.onopen = () => {
                 console.log('WebSocket connected');

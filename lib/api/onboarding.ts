@@ -129,11 +129,7 @@ export const onboardingApi = {
 
         // Note: For file uploads, we need to use a different content type
         const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-        const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL;
-
-        if (!baseUrl) {
-            throw new Error('FATAL: NEXT_PUBLIC_BACKEND_URL environment variable is not set!');
-        }
+        const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || '/api/v1';
 
         const response = await fetch(`${baseUrl}/people/onboarding/task/${taskId}/upload`, {
             method: 'POST',

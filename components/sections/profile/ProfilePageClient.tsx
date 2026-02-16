@@ -169,7 +169,8 @@ export default function ProfilePageClient({
     };
 
     const getApiUrl = () => {
-        return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        // Return empty string so avatar paths stay relative (served through proxy)
+        return '';
     };
 
     const getAvatarUrl = () => {

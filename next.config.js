@@ -23,6 +23,11 @@ const nextConfig = {
                 source: '/api/v1/:path*',
                 destination: `${backendUrl}/api/v1/:path*`,
             },
+            // Proxy avatar/upload files served by the backend
+            {
+                source: '/uploads/:path*',
+                destination: `${backendUrl}/uploads/:path*`,
+            },
         ];
     },
 };

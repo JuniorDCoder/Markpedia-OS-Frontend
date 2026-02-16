@@ -28,9 +28,8 @@ export function Header() {
   const getAvatarUrl = (avatar?: string) => {
     if (!avatar) return undefined;
     if (avatar.startsWith('http')) return avatar;
-    const rawBase = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
-    const base = rawBase.replace(/\/api\/v1\/?$/, '').replace(/\/$/, '');
-    return `${base}${avatar.startsWith('/') ? avatar : `/${avatar}`}`;
+    // Avatars are served from the backend - use relative path through proxy
+    return avatar.startsWith('/') ? avatar : `/${avatar}`;
   };
 
   const getInitials = () => {

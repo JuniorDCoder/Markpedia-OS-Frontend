@@ -85,7 +85,7 @@ api.interceptors.response.use(
             isRefreshing = true;
 
             try {
-                const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+                const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || '/api/v1';
                 const res = await axios.post(`${baseURL}/auth/refresh`, {
                     refresh_token: refreshToken,
                 });

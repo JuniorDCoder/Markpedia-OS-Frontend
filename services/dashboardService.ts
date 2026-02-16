@@ -1,7 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-const API_URL = `${API_BASE}/api/v1/dashboard`;
+const API_URL = '/api/v1/dashboard';
 
 // Create axios instance with auth
 const getAuthHeaders = () => {

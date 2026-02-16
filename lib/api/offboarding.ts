@@ -119,11 +119,7 @@ export const offboardingApi = {
         formData.append('file', file);
 
         const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-        const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL;
-
-        if (!baseUrl) {
-            throw new Error('FATAL: NEXT_PUBLIC_BACKEND_URL environment variable is not set!');
-        }
+        const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || '/api/v1';
 
         const response = await fetch(`${baseUrl}/people/offboarding/task/${taskId}/upload`, {
             method: 'POST',
