@@ -62,11 +62,7 @@ export type MfaVerifyResponse = {
 };
 
 function getBaseUrl() {
-  const base = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL; // support either name
-  if (!base) {
-    // In development we can default to the provided URL for convenience
-    throw new Error('FATAL: NEXT_PUBLIC_BACKEND_URL environment variable is not set!');
-  }
+  const base = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || '/api/v1';
   return base.replace(/\/$/, '');
 }
 

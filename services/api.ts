@@ -18,9 +18,7 @@ import {
 import { MeetingConfig } from '@/types';
 
 const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_BACKEND_URL
-        ? `${process.env.NEXT_PUBLIC_BACKEND_URL}`
-        : '/api',
+    baseURL: process.env.NEXT_PUBLIC_BACKEND_URL || '/api/v1',
     timeout: 30000,
     headers: {
         "Accept": "application/json",
