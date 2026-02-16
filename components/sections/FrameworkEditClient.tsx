@@ -6,12 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { departmentalFrameworkService } from '@/services/departmentalFrameworkService';
 import type { Framework, FrameworkSection, Department } from '@/types';
 import { ArrowLeft, Save, Plus, Minus, RefreshCw, Loader } from 'lucide-react';
 import toast from 'react-hot-toast';
+import RichTextEditor from '@/components/ui/rich-text-editor';
+import { isRichTextEmpty } from '@/lib/rich-text';
 
 interface Props {
     frameworkId: string;
@@ -73,6 +74,10 @@ export default function FrameworkEditClient({ frameworkId, initialFramework }: P
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!framework) return;
+        if (!framework.name || !framework.department || isRichTextEmpty(framework.description || '')) {
+            toast.error('Please fill framework name, department, and description');
+            return;
+        }
         try {
             setSaving(true);
             await departmentalFrameworkService.updateFramework(framework.id, framework);
@@ -161,7 +166,11 @@ export default function FrameworkEditClient({ frameworkId, initialFramework }: P
 
                         <div>
                             <Label>Description</Label>
-                            <Textarea value={framework.description} onChange={(e) => setFramework(prev => prev ? { ...prev, description: e.target.value } : prev)} rows={4} />
+                            <RichTextEditor
+                                value={framework.description}
+                                onChange={(value) => setFramework(prev => prev ? { ...prev, description: value } : prev)}
+                                minHeight={120}
+                            />
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -200,7 +209,11 @@ export default function FrameworkEditClient({ frameworkId, initialFramework }: P
                                     </div>
                                 </CardHeader>
                                 <CardContent>
-                                    <Textarea value={s.content} rows={6} onChange={(e) => handleSectionChange(s.id, 'content', e.target.value)} />
+                                    <RichTextEditor
+                                        value={s.content}
+                                        minHeight={180}
+                                        onChange={(value) => handleSectionChange(s.id, 'content', value)}
+                                    />
                                 </CardContent>
                             </Card>
                         ))}

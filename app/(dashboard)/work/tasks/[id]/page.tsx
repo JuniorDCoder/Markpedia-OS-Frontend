@@ -36,7 +36,7 @@ export default function TaskDetailPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
+            <div className="min-h-[50vh] flex items-center justify-center">
                 <LoadingSpinner size="lg" />
             </div>
         );
@@ -44,7 +44,7 @@ export default function TaskDetailPage() {
 
     if (error) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
+            <div className="min-h-[50vh] flex items-center justify-center">
                 <div className="text-center">
                     <h2 className="text-xl font-semibold text-red-600 mb-2">Error</h2>
                     <p className="text-muted-foreground">{error}</p>

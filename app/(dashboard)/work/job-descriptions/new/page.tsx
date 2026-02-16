@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import RichTextEditor from '@/components/ui/rich-text-editor';
 import { jobDescriptionService } from '@/services/jobDescriptionService';
 import { Department } from '@/types';
 import {
@@ -33,6 +34,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { isAdminLikeRole } from '@/lib/roles';
+import { isRichTextEmpty } from '@/lib/rich-text';
 
 export default function NewJobDescriptionPage() {
     const router = useRouter();
@@ -83,7 +85,7 @@ export default function NewJobDescriptionPage() {
     useEffect(() => {
         const progress = {
             basic: !!(jobDescription.title && jobDescription.department && jobDescription.summary),
-            details: !!(jobDescription.responsibilities[0] && jobDescription.responsibilities[0].trim()),
+            details: !!(jobDescription.responsibilities[0] && !isRichTextEmpty(jobDescription.responsibilities[0])),
             performance: !!(jobDescription.kpis[0] || jobDescription.okrs[0]),
             additional: !!(jobDescription.skills[0] && jobDescription.careerPath)
         };
@@ -413,12 +415,12 @@ export default function NewJobDescriptionPage() {
                                                     <div className="flex items-center justify-center h-6 w-6 rounded-full bg-purple-100 text-purple-700 text-xs font-medium flex-shrink-0 mt-1">
                                                         {index + 1}
                                                     </div>
-                                                    <Textarea
+                                                    <RichTextEditor
                                                         value={responsibility}
-                                                        onChange={(e) => updateField('responsibilities', index, e.target.value)}
+                                                        onChange={(value) => updateField('responsibilities', index, value)}
                                                         placeholder="Describe a key responsibility or duty..."
-                                                        rows={2}
-                                                        className="flex-1 text-sm sm:text-base resize-vertical min-h-[60px] border-purple-200"
+                                                        minHeight={120}
+                                                        className="flex-1"
                                                     />
                                                     {jobDescription.responsibilities.length > 1 && (
                                                         <Button

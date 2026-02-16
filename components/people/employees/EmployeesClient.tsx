@@ -30,18 +30,30 @@ import {
     DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
     MoreVertical,
     Search,
     Filter,
-    Download,
     Plus,
     FileDown,
     User,
     Mail,
-    Edit
+    Edit,
+    Trash2
 } from 'lucide-react';
 import { Employee } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { employeeApi } from '@/lib/api/employees';
+import { useToast } from '@/hooks/use-toast';
 
 import { useAuthStore } from '@/store/auth';
 
@@ -51,12 +63,52 @@ interface EmployeesClientProps {
 
 export default function EmployeesClient({ initialEmployees }: EmployeesClientProps) {
     const { user } = useAuthStore();
+    const { toast } = useToast();
     const canManage = user && ['CEO', 'HR', 'Admin', 'CXO'].includes(user.role);
 
     const [employees, setEmployees] = useState<Employee[]>(initialEmployees || []);
     const [searchTerm, setSearchTerm] = useState('');
     const [designationFilter, setDesignationFilter] = useState('All');
     const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
+
+    // Delete confirmation state
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
+    const [deleting, setDeleting] = useState(false);
+
+    const handleDeleteClick = (employee: Employee) => {
+        setEmployeeToDelete(employee);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!employeeToDelete) return;
+
+        try {
+            setDeleting(true);
+            await employeeApi.delete(employeeToDelete.id);
+            setEmployees(employees.filter((emp) => emp.id !== employeeToDelete.id));
+            toast({
+                title: 'Success',
+                description: 'Employee deleted successfully',
+            });
+        } catch (error) {
+            toast({
+                title: 'Error',
+                description: 'Failed to delete employee',
+                variant: 'destructive',
+            });
+        } finally {
+            setDeleting(false);
+            setDeleteDialogOpen(false);
+            setEmployeeToDelete(null);
+        }
+    };
+
+    const handleDeleteCancel = () => {
+        setDeleteDialogOpen(false);
+        setEmployeeToDelete(null);
+    };
 
     // Filter Logic
     const filteredEmployees = employees.filter(employee => {
@@ -99,8 +151,108 @@ export default function EmployeesClient({ initialEmployees }: EmployeesClientPro
         }
     };
 
+    const escapeCsv = (value: unknown) => {
+        const text = String(value ?? '');
+        if (text.includes(',') || text.includes('"') || text.includes('\n')) {
+            return `"${text.replace(/"/g, '""')}"`;
+        }
+        return text;
+    };
+
+    const handleExport = () => {
+        const rowsToExport = selectedEmployees.length > 0
+            ? filteredEmployees.filter((employee) => selectedEmployees.includes(employee.id))
+            : filteredEmployees;
+
+        if (rowsToExport.length === 0) {
+            toast({
+                title: 'Nothing to export',
+                description: 'No employees match your current selection/filter.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        const headers = [
+            'Employee ID',
+            'Name',
+            'Email',
+            'Department',
+            'Title',
+            'Role',
+            'Reports To',
+            'Status',
+            'Start Date',
+        ];
+
+        const csvRows = rowsToExport.map((employee) => [
+            employee.employeeId || employee.id,
+            employee.name,
+            employee.email,
+            employee.department || '',
+            employee.title || '',
+            employee.role || '',
+            employee.reportsTo || '',
+            employee.status || 'ACTIVE',
+            employee.startDate || '',
+        ].map(escapeCsv).join(','));
+
+        const csvContent = [headers.join(','), ...csvRows].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const date = new Date().toISOString().split('T')[0];
+        link.href = url;
+        link.download = `employees-export-${date}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        toast({
+            title: 'Export complete',
+            description: `${rowsToExport.length} employee(s) exported to CSV.`,
+        });
+    };
+
     return (
         <div className="space-y-6">
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the employee
+                            &quot;{employeeToDelete?.name}&quot; and all their associated data including
+                            onboarding records, performance records, leave requests, and warnings.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={handleDeleteCancel} disabled={deleting}>
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDeleteConfirm}
+                            disabled={deleting}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {deleting ? (
+                                <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                    Deleting...
+                                </>
+                            ) : (
+                                <>
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete Employee
+                                </>
+                            )}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Employees</h1>
@@ -146,7 +298,7 @@ export default function EmployeesClient({ initialEmployees }: EmployeesClientPro
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="h-9">
+                    <Button variant="outline" size="sm" className="h-9" onClick={handleExport}>
                         <FileDown className="h-4 w-4 mr-2" />
                         Export
                     </Button>
@@ -285,7 +437,11 @@ export default function EmployeesClient({ initialEmployees }: EmployeesClientPro
                                                     </>
                                                 )}
                                                 <DropdownMenuSeparator />
-                                                <DropdownMenuItem className="text-destructive">
+                                                <DropdownMenuItem
+                                                    className="text-destructive"
+                                                    onClick={() => handleDeleteClick(employee)}
+                                                >
+                                                    <Trash2 className="h-4 w-4 mr-2" />
                                                     Delete
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>

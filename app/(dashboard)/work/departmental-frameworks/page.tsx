@@ -24,6 +24,7 @@ import {
     Shield,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { stripHtml } from '@/lib/rich-text';
 
 export default function DepartmentalFrameworksPage() {
     const [frameworks, setFrameworks] = useState<Framework[]>([]);
@@ -229,7 +230,7 @@ export default function DepartmentalFrameworksPage() {
                                                 {framework.name}
                                             </Link>
                                         </CardTitle>
-                                        <CardDescription className="line-clamp-2">{framework.description}</CardDescription>
+                                        <CardDescription className="line-clamp-2">{stripHtml(framework.description)}</CardDescription>
                                         <div className="flex flex-wrap items-center gap-2">
                                             <Badge variant="secondary" className={getStatusColor(framework.status)}>
                                                 {framework.status}

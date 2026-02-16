@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -9,11 +9,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Department, User, Entity } from '@/types';
-import { ArrowLeft, Save, Upload, User as UserIcon } from 'lucide-react';
+import { Department, User, Entity, Employee } from '@/types';
+import { ArrowLeft, Save, User as UserIcon, Camera, Loader2, X } from 'lucide-react';
 import { PasswordGenerator } from '@/components/ui/password-generator';
 import toast from 'react-hot-toast';
 import { Role, rolesApi } from '@/lib/api/roles';
+import { isAdminLikeRole, isManagerRole } from '@/lib/roles';
 
 interface EmployeeNewClientProps {
     departments: Department[];
@@ -24,18 +25,35 @@ interface EmployeeNewClientProps {
 export default function EmployeeNewClient({ departments, entities = [], user }: EmployeeNewClientProps) {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
+    const [avatarUploading, setAvatarUploading] = useState(false);
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
+    const [avatarPreview, setAvatarPreview] = useState<string>('');
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [roles, setRoles] = useState<Role[]>([]);
+    const [reportingCandidates, setReportingCandidates] = useState<Employee[]>([]);
 
     useEffect(() => {
-        const loadRoles = async () => {
+        const loadInitialData = async () => {
             try {
-                const data = await rolesApi.getAll();
-                setRoles(data);
+                const [{ employeeApi }, rolesData] = await Promise.all([
+                    import('@/lib/api/employees'),
+                    rolesApi.getAll(),
+                ]);
+
+                const employees = await employeeApi.getAll();
+                const managersAndAbove = employees.filter((emp) => {
+                    const role = emp.role;
+                    return isManagerRole(role) || isAdminLikeRole(role);
+                });
+
+                setRoles(rolesData);
+                setReportingCandidates(managersAndAbove);
             } catch (error) {
-                console.error('Failed to load roles:', error);
+                console.error('Failed to load employee creation dependencies:', error);
             }
         };
-        loadRoles();
+
+        loadInitialData();
     }, []);
 
     const [formData, setFormData] = useState({
@@ -82,6 +100,74 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
+    const getInitials = () => {
+        const name = formData.name?.trim();
+        if (!name) return 'U';
+        return name.split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase();
+    };
+
+    const onAvatarPick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const onAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)) {
+            toast.error('Only JPEG, PNG, GIF, or WebP images are allowed');
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('Image must be 5MB or smaller');
+            return;
+        }
+
+        setAvatarFile(file);
+        setAvatarPreview(URL.createObjectURL(file));
+    };
+
+    const clearAvatarSelection = () => {
+        if (avatarPreview) {
+            URL.revokeObjectURL(avatarPreview);
+        }
+        setAvatarPreview('');
+        setAvatarFile(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
+    const getErrorMessage = (error: any): string => {
+        if (!error) return 'Unknown error while creating employee';
+
+        if (error?.data?.detail) {
+            const detail = error.data.detail;
+            if (typeof detail === 'string') return detail;
+            if (Array.isArray(detail)) {
+                return detail
+                    .map((d: any) => {
+                        if (typeof d === 'string') return d;
+                        const field = Array.isArray(d?.loc) ? d.loc[d.loc.length - 1] : 'field';
+                        const msg = d?.msg || 'Invalid value';
+                        return `${String(field)}: ${msg}`;
+                    })
+                    .join(' | ');
+            }
+        }
+
+        if (typeof error?.detail === 'string' && error.detail.trim()) {
+            return error.detail;
+        }
+
+        if (typeof error?.message === 'string' && error.message.trim()) {
+            return error.message;
+        }
+
+        return 'Failed to create employee. Please verify inputs and permissions, then try again.';
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
@@ -97,11 +183,11 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
             const { employeeApi } = await import('@/lib/api/employees');
 
 
-            await employeeApi.create({
+            const createdEmployee = await employeeApi.create({
                 name: formData.name,
                 email: formData.email,
                 password: formData.password, // Pass password
-                role: formData.role,
+                role: formData.role as any,
                 department: formData.department,
                 title: formData.designation, // Map designation to title
                 isActive: formData.loginAllowed, // Map loginAllowed to isActive
@@ -134,19 +220,31 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
                 entityId: formData.entityId || (entities.length > 0 ? entities[0].id : undefined)
             });
 
+            if (avatarFile && createdEmployee?.id) {
+                try {
+                    setAvatarUploading(true);
+                    await employeeApi.uploadAvatar(createdEmployee.id, avatarFile);
+                } catch (avatarError) {
+                    console.error('Avatar upload failed:', avatarError);
+                    toast.error('Employee was created, but avatar upload failed');
+                } finally {
+                    setAvatarUploading(false);
+                }
+            }
+
             toast.success('Employee created successfully');
             router.push('/people/employees');
             router.refresh();
         } catch (error) {
             console.error('Error creating employee:', error);
-            toast.error('Failed to create employee');
+            toast.error(getErrorMessage(error));
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <div className="space-y-6 max-w-5xl mx-auto pb-10">
+        <div className="space-y-6 max-w-5xl mx-auto pb-10 overflow-x-hidden">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
@@ -213,10 +311,47 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
                         </div>
                         <div className="space-y-2 md:col-span-2 row-span-2">
                             <label className="text-sm font-medium">Profile Picture</label>
-                            <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-muted-foreground cursor-pointer hover:bg-gray-50 transition-colors h-full">
-                                <Upload className="h-8 w-8 mb-2" />
-                                <span className="text-sm">Choose a file</span>
+                            <div className="flex items-center gap-4">
+                                <div className="relative">
+                                    <div className="h-24 w-24 rounded-full overflow-hidden border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center">
+                                        {avatarPreview ? (
+                                            <img src={avatarPreview} alt="Avatar preview" className="h-full w-full object-cover" />
+                                        ) : (
+                                            <span className="text-sm font-semibold text-muted-foreground">{getInitials()}</span>
+                                        )}
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        size="icon"
+                                        variant="secondary"
+                                        className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full"
+                                        onClick={onAvatarPick}
+                                        disabled={isLoading || avatarUploading}
+                                    >
+                                        {avatarUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                                    </Button>
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="text-xs text-muted-foreground">Round profile photo, max 5MB.</p>
+                                    <div className="flex gap-2">
+                                        <Button type="button" variant="outline" size="sm" onClick={onAvatarPick}>
+                                            Choose image
+                                        </Button>
+                                        {avatarPreview && (
+                                            <Button type="button" variant="ghost" size="sm" onClick={clearAvatarSelection}>
+                                                <X className="h-4 w-4 mr-1" /> Remove
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/jpeg,image/png,image/gif,image/webp"
+                                className="hidden"
+                                onChange={onAvatarFileChange}
+                            />
                         </div>
 
                         {/* Row 3 */}
@@ -300,12 +435,18 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Reporting To</label>
-                            <Select value={formData.reportsTo} onValueChange={(v) => handleInputChange('reportsTo', v)}>
+                            <Select
+                                value={formData.reportsTo || 'none'}
+                                onValueChange={(v) => handleInputChange('reportsTo', v === 'none' ? '' : v)}
+                            >
                                 <SelectTrigger><SelectValue placeholder="--" /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="none">None</SelectItem>
-                                    {/* Ideally populate with existing employees */}
-                                    <SelectItem value="manager">Manager (Placeholder)</SelectItem>
+                                    {reportingCandidates.map(candidate => (
+                                        <SelectItem key={candidate.id} value={candidate.id}>
+                                            {candidate.name} ({candidate.role})
+                                        </SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -437,7 +578,7 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
                             <label className="text-sm font-medium">Hourly Rate</label>
                             <div className="flex">
                                 <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">
-                                    USD
+                                    XAF
                                 </span>
                                 <Input
                                     className="rounded-l-none"
@@ -512,6 +653,7 @@ export default function EmployeeNewClient({ departments, entities = [], user }: 
                                     <SelectItem value="Part-time">Part-time</SelectItem>
                                     <SelectItem value="Contract">Contract</SelectItem>
                                     <SelectItem value="Internship">Internship</SelectItem>
+                                    <SelectItem value="Probation">Probation</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

@@ -297,6 +297,7 @@ export function Sidebar() {
         if (!avatar) return undefined;
         if (avatar.startsWith('http')) return avatar;
         // Avatars are served from the backend - use relative path through proxy
+        // Use avatar string as implicit cache key (changes on new upload since filename changes)
         return avatar.startsWith('/') ? avatar : `/${avatar}`;
     };
 

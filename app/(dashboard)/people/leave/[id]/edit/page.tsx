@@ -88,7 +88,7 @@ export default function EditLeaveRequestPage({ params }: PageProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[50vh]">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-3" />
           <p className="text-muted-foreground">Loading leave request data...</p>

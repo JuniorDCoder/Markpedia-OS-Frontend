@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { isAdminLikeRole } from '@/lib/roles';
+import { sanitizeRichText, normalizeRichTextValue } from '@/lib/rich-text';
 
 interface JobDescriptionViewClientProps {
 	jobDescriptionId: string;
@@ -398,7 +399,10 @@ export default function JobDescriptionViewClient({
 									{jobDescription.responsibilities.map((r, i) => (
 										<li key={i} className="flex items-start p-3 rounded-lg bg-green-50 border border-green-100 hover:border-green-300 transition-colors">
 											<span className="text-green-600 mr-3 mt-1 flex-shrink-0">•</span>
-											<span className="text-muted-foreground leading-relaxed">{r}</span>
+											<div
+												className="text-muted-foreground leading-relaxed [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:text-base [&_h2]:font-semibold [&_h3]:text-sm [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
+												dangerouslySetInnerHTML={{ __html: sanitizeRichText(normalizeRichTextValue(r)) }}
+											/>
 										</li>
 									))}
 								</ul>

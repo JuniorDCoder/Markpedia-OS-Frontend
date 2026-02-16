@@ -62,6 +62,7 @@ export default function ProfilePageClient({
     const [changingPassword, setChangingPassword] = useState(false);
     const [skills, setSkills] = useState<string[]>(profileData.skills || []);
     const [newSkill, setNewSkill] = useState('');
+    const [avatarCacheBuster, setAvatarCacheBuster] = useState(Date.now());
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleEdit = (section: string) => {
@@ -123,6 +124,7 @@ export default function ProfilePageClient({
             }
             setUploadingAvatar(true);
             await onAvatarUpload(file);
+            setAvatarCacheBuster(Date.now());
             setUploadingAvatar(false);
         }
         // Reset input
@@ -177,8 +179,8 @@ export default function ProfilePageClient({
         if (!profileData.avatar) return null;
         // If it's already a full URL, return as is
         if (profileData.avatar.startsWith('http')) return profileData.avatar;
-        // Otherwise, prepend the API URL
-        return `${getApiUrl()}${profileData.avatar}`;
+        // Otherwise, prepend the API URL and add cache-busting to force reload after upload
+        return `${getApiUrl()}${profileData.avatar}?t=${avatarCacheBuster}`;
     };
 
     return (

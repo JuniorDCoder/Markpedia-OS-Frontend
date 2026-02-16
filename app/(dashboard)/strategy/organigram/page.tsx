@@ -47,7 +47,7 @@ export default function OrganigramPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
+            <div className="flex items-center justify-center min-h-[50vh]">
                 <LoadingSpinner size="lg" />
             </div>
         );
@@ -55,7 +55,7 @@ export default function OrganigramPage() {
 
     if (error) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
+            <div className="flex items-center justify-center min-h-[50vh]">
                 <div className="text-center">
                     <h2 className="text-xl font-semibold text-red-600 mb-2">Error</h2>
                     <p className="text-muted-foreground">{error}</p>

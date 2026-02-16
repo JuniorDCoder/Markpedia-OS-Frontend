@@ -1,6 +1,7 @@
 import { Employee } from '@/types';
 import { apiRequest } from './client';
 import { adminApi, mapBackendUser } from './admin';
+import api from '@/services/api';
 
 
 
@@ -8,6 +9,7 @@ import { adminApi, mapBackendUser } from './admin';
 
 // Need to extend Employee to include optional password for creation
 type EmployeeCreationData = Partial<Employee> & { password?: string };
+type AvatarUploadResponse = { message: string; avatar_url: string; employee_id?: string };
 
 export const employeeApi = {
     async getAll(): Promise<Employee[]> {
@@ -88,13 +90,10 @@ export const employeeApi = {
     },
 
     async create(data: EmployeeCreationData): Promise<Employee> {
-        // Use admin-users for creation as requested
-        // Endpoint: /admin/users/
-
-        // Prepare payload - map Employee fields to backend fields (snake_case)
+        // Endpoint: POST /admin/users/ — creates User + auto-creates Employee + Onboarding
         const payload: Record<string, any> = {
             email: data.email,
-            password: data.password || 'password123', // Use provided password or fallback
+            password: data.password || 'password123',
             first_name: data.name?.split(' ')[0] || '',
             last_name: data.name?.split(' ').slice(1).join(' ') || '',
             role: data.role,
@@ -111,7 +110,7 @@ export const employeeApi = {
             country: data.country,
             address: data.address,
             about: data.about,
-            joining_date: data.startDate, // Map startDate to joining_date
+            joining_date: data.startDate,
             login_allowed: data.loginAllowed,
             email_notifications: data.emailNotifications,
             hourly_rate: data.hourlyRate,
@@ -140,18 +139,18 @@ export const employeeApi = {
         return {
             id: newUser.id,
             employeeId: newUser.employee_id || newUser.employeeId || null,
-            name: `${newUser.firstName} ${newUser.lastName}`.trim(),
+            name: newUser.name || `${newUser.first_name || newUser.firstName || ''} ${newUser.last_name || newUser.lastName || ''}`.trim(),
             email: newUser.email,
-            title: newUser.position || 'Employee',
+            title: newUser.position || newUser.title || 'Employee',
             role: newUser.role as any,
-            reportsTo: '',
+            reportsTo: newUser.reports_to || newUser.report_to || '',
             department: newUser.department || 'Unassigned',
             avatar: newUser.avatar,
-            startDate: newUser.createdAt,
-            isActive: newUser.isActive,
-            status: newUser.isActive ? 'ACTIVE' : 'INACTIVE',
-            entityId: '',
-            employmentType: 'Full-time'
+            startDate: newUser.start_date || newUser.joining_date || newUser.created_at || newUser.createdAt,
+            isActive: newUser.is_active !== undefined ? newUser.is_active : (newUser.isActive !== undefined ? newUser.isActive : true),
+            status: (newUser.status || (newUser.is_active ? 'ACTIVE' : 'INACTIVE')).toUpperCase(),
+            entityId: newUser.entity_id || newUser.entityId || '',
+            employmentType: newUser.employment_type || newUser.employmentType || 'Full-time'
         } as Employee;
     },
 
@@ -229,5 +228,18 @@ export const employeeApi = {
         await apiRequest(`/admin/employees/${id}`, {
             method: 'DELETE'
         });
+    },
+
+    async uploadAvatar(employeeId: string, file: File): Promise<AvatarUploadResponse> {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await api.post(`/admin/employees/${employeeId}/avatar`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+
+        return response.data;
     }
 };

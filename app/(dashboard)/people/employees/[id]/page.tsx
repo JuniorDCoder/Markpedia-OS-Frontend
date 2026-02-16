@@ -82,7 +82,7 @@ export default function EmployeeEditPage({ params }: PageProps) {
 
     if (loading) {
         return (
-            <div className="flex h-screen items-center justify-center">
+            <div className="flex min-h-[50vh] items-center justify-center">
                 <LoadingSpinner size="lg" />
             </div>
         );

@@ -1,57 +1,79 @@
-import { notFound, redirect } from 'next/navigation';
-import { Employee, Department, User } from '@/types';
-import EmployeeEditClient from "@/components/sections/organigram/employees/[id]/edit/EmployeeEditClient";
+'use client';
 
-const mockEmployee: Employee = {
-    id: '1',
-    name: 'Sarah Johnson',
-    email: 'sarah@company.com',
-    title: 'Chief Executive Officer',
-    role: 'CEO',
-    department: 'Executive',
-    avatar: '/avatars/sarah.jpg',
-    startDate: '2020-01-15',
-    isActive: true
-};
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+import { Employee, Department } from '@/types';
+import EmployeeEditClient from '@/components/sections/organigram/employees/[id]/edit/EmployeeEditClient';
+import { useAuthStore } from '@/store/auth';
+import { LoadingSpinner } from '@/components/ui/loading';
+import { Button } from '@/components/ui/button';
+import { isAdminLikeRole } from '@/lib/roles';
+import { departmentService } from '@/services/api';
 
-const mockDepartments: Department[] = [
-    { id: '1', name: 'Executive', color: '#8B5CF6', memberCount: 1 },
-    { id: '2', name: 'Technology', color: '#3B82F6', memberCount: 3 },
-    { id: '3', name: 'Marketing', color: '#10B981', memberCount: 2 },
-    { id: '4', name: 'Sales', color: '#F59E0B', memberCount: 0 },
-    { id: '5', name: 'HR', color: '#EF4444', memberCount: 0 }
-];
+export default function EmployeeEditPage() {
+    const params = useParams<{ id: string }>();
+    const employeeId = params?.id;
+    const router = useRouter();
+    const { user } = useAuthStore();
 
-const mockUser: User = {
-    id: '1',
-    firstName: 'Sarah Johnson',
-    email: 'sarah@company.com',
-    role: 'CEO'
-};
+    const [employee, setEmployee] = useState<Employee | null>(null);
+    const [departments, setDepartments] = useState<Department[]>([]);
+    const [loading, setLoading] = useState(true);
 
-async function getEmployee(id: string): Promise<Employee | null> {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve(id === '1' ? mockEmployee : null);
-        }, 100);
-    });
-}
+    useEffect(() => {
+        const fetchData = async () => {
+            if (!employeeId || !user) return;
 
-export async function generateStaticParams() {
-    return [{ id: '1' }];
-}
+            if (!isAdminLikeRole(user.role)) {
+                router.push('/strategy/organigram');
+                return;
+            }
 
-export default async function EmployeeEditPage({ params }: { params: { id: string } }) {
-    const employee = await getEmployee(params.id);
+            try {
+                const { employeeApi } = await import('@/lib/api/employees');
+                const [employeeData, departmentData] = await Promise.all([
+                    employeeApi.getById(employeeId),
+                    departmentService.list(),
+                ]);
+
+                setEmployee(employeeData || null);
+                setDepartments(departmentData || []);
+            } catch (error) {
+                console.error('Failed to load employee edit data:', error);
+                setEmployee(null);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [employeeId, user, router]);
+
+    if (!user || loading) {
+        return (
+            <div className="flex items-center justify-center min-h-[50vh]">
+                <LoadingSpinner size="lg" />
+            </div>
+        );
+    }
+
+    if (!isAdminLikeRole(user.role)) {
+        return null;
+    }
 
     if (!employee) {
-        notFound();
+        return (
+            <div className="flex min-h-[50vh] items-center justify-center">
+                <div className="text-center space-y-3">
+                    <p className="text-muted-foreground">Employee not found.</p>
+                    <Button asChild variant="outline">
+                        <Link href="/strategy/organigram">Back to Organigram</Link>
+                    </Button>
+                </div>
+            </div>
+        );
     }
 
-    // Only CEOs, Admins, and CXOs can edit
-    if (!['CEO', 'Admin', 'CXO'].includes(mockUser.role)) {
-        redirect('/strategy/organigram');
-    }
-
-    return <EmployeeEditClient employee={employee} departments={mockDepartments} user={mockUser} />;
+    return <EmployeeEditClient employee={employee} departments={departments} user={user} />;
 }

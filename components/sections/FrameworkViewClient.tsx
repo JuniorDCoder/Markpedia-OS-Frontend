@@ -12,6 +12,7 @@ import { departmentalFrameworkService } from '@/services/departmentalFrameworkSe
 import type { Framework, Department, FrameworkSection } from '@/types';
 import { ArrowLeft, Edit, Download, FileText, Target, Calendar, Plus, Trash2, AlertCircle, CheckCircle, Loader } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { sanitizeRichText, stripHtml, normalizeRichTextValue } from '@/lib/rich-text';
 
 interface Props {
     frameworkId: string;
@@ -237,14 +238,15 @@ export default function FrameworkViewClient({ frameworkId, initialFramework }: P
     const isApproved = framework.status === 'Approved';
 
     return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
         <div className="p-6 max-w-6xl mx-auto space-y-6">
             <div className="flex items-start gap-4">
                 <Button variant="ghost" size="icon" onClick={() => router.push('/work/departmental-frameworks')}>
                     <ArrowLeft />
                 </Button>
                 <div className="flex-1">
-                    <h1 className="text-2xl font-bold">{framework.name}</h1>
-                    <p className="text-sm text-muted-foreground mt-1">{framework.description}</p>
+                    <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">{framework.name}</h1>
+                    <p className="text-sm text-muted-foreground mt-1">{stripHtml(framework.description)}</p>
                     <div className="flex items-center gap-2 mt-3">
                         <Badge>{framework.status}</Badge>
                         <span className="text-sm text-muted-foreground">Version {framework.version}</span>
@@ -288,20 +290,23 @@ export default function FrameworkViewClient({ frameworkId, initialFramework }: P
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-4">
-                    <Card>
-                        <CardHeader>
+                    <Card className="border-blue-200 shadow-sm">
+                        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200">
                             <CardTitle className="flex items-center"><Target className="mr-2" /> Strategic Sections</CardTitle>
                             <CardDescription>Core sections of this departmental framework</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
                                 {framework.sections.map((s: FrameworkSection) => (
-                                    <Card key={s.id} className="border">
+                                    <Card key={s.id} className="border border-blue-100">
                                         <CardHeader>
                                             <CardTitle>{s.title}</CardTitle>
                                         </CardHeader>
                                         <CardContent>
-                                            <p className="whitespace-pre-wrap text-sm">{s.content || 'No content'}</p>
+                                            <div
+                                                className="text-sm text-muted-foreground leading-relaxed [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:text-base [&_h2]:font-semibold [&_h3]:text-sm [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
+                                                dangerouslySetInnerHTML={{ __html: sanitizeRichText(normalizeRichTextValue(s.content || '<p>No content</p>')) }}
+                                            />
                                         </CardContent>
                                     </Card>
                                 ))}
@@ -311,8 +316,8 @@ export default function FrameworkViewClient({ frameworkId, initialFramework }: P
                 </div>
 
                 <div className="space-y-4">
-                    <Card>
-                        <CardHeader>
+                    <Card className="border-gray-200 shadow-sm">
+                        <CardHeader className="bg-gradient-to-r from-gray-50 to-slate-50 border-b border-gray-200">
                             <CardTitle><Calendar className="mr-2" /> Metadata</CardTitle>
                         </CardHeader>
                         <CardContent>
@@ -417,6 +422,7 @@ export default function FrameworkViewClient({ frameworkId, initialFramework }: P
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+        </div>
         </div>
     );
 }

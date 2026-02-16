@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Department, FrameworkSection } from '@/types';
 import { ArrowLeft, Save, Plus, Minus, RefreshCw, Badge } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { departmentalFrameworkService as frameworkService } from '@/services/departmentalFrameworkService';
+import RichTextEditor from '@/components/ui/rich-text-editor';
+import { isRichTextEmpty, stripHtml } from '@/lib/rich-text';
 
 const defaultSections: FrameworkSection[] = [
     { id: '1', title: 'Strategic Objectives', content: '', order: 1 },
@@ -59,6 +60,13 @@ export default function NewFrameworkPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!frameworkData.name || !frameworkData.department || isRichTextEmpty(frameworkData.description)) {
+            toast.error('Please fill framework name, department, and description');
+            setActiveTab('basic');
+            return;
+        }
+
         setLoading(true);
         try {
             await frameworkService.createFramework(frameworkData);
@@ -171,13 +179,11 @@ export default function NewFrameworkPage() {
 
                                 <div className="space-y-2">
                                     <Label htmlFor="description">Description *</Label>
-                                    <Textarea
-                                        id="description"
+                                    <RichTextEditor
                                         value={frameworkData.description}
-                                        onChange={(e) => setFrameworkData(prev => ({ ...prev, description: e.target.value }))}
+                                        onChange={(value) => setFrameworkData(prev => ({ ...prev, description: value }))}
                                         placeholder="Comprehensive description of this departmental framework"
-                                        rows={3}
-                                        required
+                                        minHeight={120}
                                     />
                                 </div>
 
@@ -237,11 +243,11 @@ export default function NewFrameworkPage() {
                                                 )}
                                             </CardHeader>
                                             <CardContent>
-                                                <Textarea
+                                                <RichTextEditor
                                                     value={section.content}
-                                                    onChange={(e) => updateSectionContent(section.id, e.target.value)}
+                                                    onChange={(value) => updateSectionContent(section.id, value)}
                                                     placeholder={`Enter content for ${section.title}...`}
-                                                    rows={6}
+                                                    minHeight={180}
                                                     className="w-full"
                                                 />
                                             </CardContent>
@@ -288,7 +294,7 @@ export default function NewFrameworkPage() {
 
                                 <div>
                                     <h4 className="font-medium">Description</h4>
-                                    <p className="text-muted-foreground">{frameworkData.description || 'No description provided'}</p>
+                                    <p className="text-muted-foreground">{stripHtml(frameworkData.description) || 'No description provided'}</p>
                                 </div>
 
                                 <div className="space-y-2">

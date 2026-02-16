@@ -16,9 +16,10 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Employee, User } from '@/types';
-import { ArrowLeft, Edit, Mail, Calendar, Building, User as UserIcon, Trash2, AlertCircle, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, Edit, Mail, Calendar, Building, User as UserIcon, Trash2, AlertCircle, ShieldAlert, Phone, Globe, Languages, MapPin, BadgeCheck } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import toast from 'react-hot-toast';
+import { isAdminLikeRole } from '@/lib/roles';
 
 interface EmployeeViewClientProps {
     employee: Employee;
@@ -32,8 +33,7 @@ export default function EmployeeViewClient({ employee, user }: EmployeeViewClien
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [confirmText, setConfirmText] = useState('');
 
-    const canEdit = currentUser?.role === 'CEO' || currentUser?.role === 'Admin' ||
-        currentUser?.role === 'CXO';
+    const canEdit = isAdminLikeRole(currentUser?.role);
 
     const canDelete = currentUser?.role === 'CEO' || currentUser?.role === 'Admin';
 
@@ -49,6 +49,12 @@ export default function EmployeeViewClient({ employee, user }: EmployeeViewClien
 
     const getStatusColor = (isActive: boolean) => {
         return isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
+    };
+
+    const getAvatarUrl = () => {
+        if (!employee.avatar) return undefined;
+        if (employee.avatar.startsWith('http')) return employee.avatar;
+        return employee.avatar.startsWith('/') ? employee.avatar : `/${employee.avatar}`;
     };
 
     const openDeleteDialog = () => {
@@ -172,8 +178,12 @@ export default function EmployeeViewClient({ employee, user }: EmployeeViewClien
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="flex items-center gap-4">
-                                <div className="w-20 h-20 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold text-xl">
-                                    {employee.name.split(' ').map(n => n[0]).join('')}
+                                <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-white shadow bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center text-white font-semibold text-xl">
+                                    {getAvatarUrl() ? (
+                                        <img src={getAvatarUrl()} alt={employee.name} className="h-full w-full object-cover" />
+                                    ) : (
+                                        employee.name.split(' ').map(n => n[0]).join('')
+                                    )}
                                 </div>
                                 <div className="flex-1">
                                     <h2 className="text-2xl font-bold">{employee.name}</h2>
@@ -226,6 +236,42 @@ export default function EmployeeViewClient({ employee, user }: EmployeeViewClien
                                     </p>
                                 </div>
                             </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                                <div className="p-3 rounded-lg border bg-muted/20">
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1"><Phone className="h-4 w-4" />Mobile</div>
+                                    <p className="font-medium">{employee.mobile || 'Not provided'}</p>
+                                </div>
+                                <div className="p-3 rounded-lg border bg-muted/20">
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1"><Globe className="h-4 w-4" />Country</div>
+                                    <p className="font-medium">{employee.country || 'Not provided'}</p>
+                                </div>
+                                <div className="p-3 rounded-lg border bg-muted/20">
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1"><Languages className="h-4 w-4" />Language</div>
+                                    <p className="font-medium">{employee.language || 'English'}</p>
+                                </div>
+                                <div className="p-3 rounded-lg border bg-muted/20">
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1"><BadgeCheck className="h-4 w-4" />Employment</div>
+                                    <p className="font-medium">{employee.employmentType || 'Full-time'}</p>
+                                </div>
+                            </div>
+
+                            {(employee.about || employee.address) && (
+                                <div className="space-y-3 pt-2">
+                                    {employee.about && (
+                                        <div>
+                                            <h4 className="text-sm font-medium mb-1">About</h4>
+                                            <p className="text-sm text-muted-foreground leading-relaxed">{employee.about}</p>
+                                        </div>
+                                    )}
+                                    {employee.address && (
+                                        <div>
+                                            <h4 className="text-sm font-medium mb-1 flex items-center gap-2"><MapPin className="h-4 w-4" />Address</h4>
+                                            <p className="text-sm text-muted-foreground">{employee.address}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
 
@@ -327,6 +373,38 @@ export default function EmployeeViewClient({ employee, user }: EmployeeViewClien
                             </div>
                         </CardContent>
                     </Card>
+
+                    {(employee.skills?.length || employee.hourlyRate || employee.businessAddress) && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Additional Insights</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3 text-sm">
+                                {employee.skills && employee.skills.length > 0 && (
+                                    <div>
+                                        <p className="text-muted-foreground mb-2">Skills</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {employee.skills.map((skill) => (
+                                                <Badge key={skill} variant="secondary">{skill}</Badge>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                {employee.hourlyRate ? (
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Hourly Rate:</span>
+                                        <span className="font-medium">XAF {employee.hourlyRate}</span>
+                                    </div>
+                                ) : null}
+                                {employee.businessAddress ? (
+                                    <div>
+                                        <p className="text-muted-foreground mb-1">Business Address</p>
+                                        <p className="font-medium">{employee.businessAddress}</p>
+                                    </div>
+                                ) : null}
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
             </div>
         </div>

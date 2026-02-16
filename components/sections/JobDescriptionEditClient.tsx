@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import RichTextEditor from '@/components/ui/rich-text-editor';
 import { RefreshCw, ArrowLeft, Save, Plus, Minus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { isAdminLikeRole } from '@/lib/roles';
@@ -289,11 +290,11 @@ return (
                                 </div>
                                 <div className="space-y-3">
                                     {form.responsibilities?.map((responsibility, index) => (
-                                        <div key={index} className="flex items-center gap-2">
-                                            <Textarea
+                                        <div key={index} className="flex items-start gap-2">
+                                            <RichTextEditor
                                                 value={responsibility}
-                                                onChange={(e) => updateField('responsibilities', index, e.target.value)}
-                                                rows={2}
+                                                onChange={(value) => updateField('responsibilities', index, value)}
+                                                minHeight={120}
                                                 className="flex-1"
                                             />
                                             {form.responsibilities.length > 1 && (
