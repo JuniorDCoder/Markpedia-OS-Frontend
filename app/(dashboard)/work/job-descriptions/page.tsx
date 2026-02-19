@@ -9,8 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TableSkeleton } from '@/components/ui/loading';
-import { JobDescription } from '@/types';
+import { JobDescription, Department } from '@/types';
 import { jobDescriptionService } from '@/services/jobDescriptionService';
+import { useRouter } from 'next/navigation';
+import { sanitizeRichText, normalizeRichTextValue, stripHtml } from '@/lib/rich-text';
+import { isManagerRole } from '@/lib/roles';
 import {
     Plus,
     Search,
@@ -31,12 +34,15 @@ import {
 import toast from 'react-hot-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { isAdminLikeRole } from '@/lib/roles';
+import { exportJDToPDF } from '@/lib/export-pdf';
 
 export default function JobDescriptionsPage() {
     const { user } = useAuthStore();
+    const router = useRouter();
     const [jobDescriptions, setJobDescriptions] = useState<JobDescription[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [loading, setLoading] = useState(true);
+    const [redirecting, setRedirecting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [departmentFilter, setDepartmentFilter] = useState('all');
@@ -48,10 +54,41 @@ export default function JobDescriptionsPage() {
     // Only Admin / CEO / C-level can manage job descriptions.
     const canManageJobDescriptions = isAdminLikeRole(user?.role);
 
+    // Non-admin, non-CXO employees/managers: redirect to their own department's JD
+    const isRegularUser = user && !isAdminLikeRole(user.role);
+
     useEffect(() => {
         loadJobDescriptions();
         loadDepartments();
     }, []);
+
+    // Auto-redirect non-admin users to their department's JD
+    useEffect(() => {
+        if (!isRegularUser || loading || departments.length === 0 || jobDescriptions.length === 0) return;
+        const userDept = (user?.department || '').trim().toLowerCase();
+        if (!userDept) return;
+
+        // Find the department ID matching the user's department (could be name or ID)
+        const matchedDept = departments.find(d =>
+            d.name.toLowerCase() === userDept ||
+            d.id.toLowerCase() === userDept
+        );
+
+        // Find all JDs for that department, prefer Approved, then latest
+        const deptId = matchedDept?.id || user?.department;
+        const deptJds = jobDescriptions.filter(jd =>
+            jd.department === deptId ||
+            jd.department?.toLowerCase() === userDept
+        );
+
+        if (deptJds.length > 0) {
+            // Prefer an approved JD, otherwise take the first one
+            const approvedJd = deptJds.find(jd => jd.status === 'Approved');
+            const targetJd = approvedJd || deptJds[0];
+            setRedirecting(true);
+            router.replace(`/work/job-descriptions/${targetJd.id}`);
+        }
+    }, [isRegularUser, loading, departments, jobDescriptions, user, router]);
 
     const loadJobDescriptions = async () => {
         try {
@@ -76,37 +113,34 @@ export default function JobDescriptionsPage() {
 
     const exportToPDF = async (id: string) => {
         try {
-            const res = await jobDescriptionService.exportToPDF(id, { format: 'pdf', includeAllVersions: false });
-
-            if (typeof res === 'string' && res.startsWith('http')) {
-                const win = window.open(res, '_blank');
-                if (!win) {
-                    toast.success('Export ready — copy the link from your downloads');
-                } else {
-                    toast.success('Export opened in new tab');
-                }
-                return;
-            }
-
-            if (res && typeof res === 'object') {
-                const url = (res as any).url;
-                if (url && typeof url === 'string') {
-                    window.open(url, '_blank');
-                    toast.success('Export opened in new tab');
-                    return;
-                }
-            }
-
-            toast.success('Export completed');
+            const jd = jobDescriptions.find(j => j.id === id);
+            if (!jd) { toast.error('Job description not found'); return; }
+            const deptName = departments.find(d => d.id === jd.department)?.name || jd.department;
+            exportJDToPDF({
+                title: jd.title,
+                department: jd.department,
+                summary: jd.summary,
+                purpose: jd.purpose,
+                vision: jd.vision,
+                mission: jd.mission,
+                reportsTo: jd.reportsTo,
+                responsibilities: jd.responsibilities || [],
+                kpis: jd.kpis || [],
+                okrs: jd.okrs || [],
+                skills: jd.skills || [],
+                tools: jd.tools || [],
+                careerPath: jd.careerPath,
+                probationPeriod: jd.probationPeriod,
+                reviewCadence: jd.reviewCadence,
+                status: jd.status,
+                version: jd.version,
+                createdBy: jd.createdBy,
+                createdAt: jd.createdAt,
+                lastReviewed: jd.lastReviewed,
+                nextReview: jd.nextReview,
+            }, deptName);
+            toast.success('PDF downloaded successfully');
         } catch (err: any) {
-            const status = err?.status || err?.response?.status;
-            if (status === 422) {
-                const details = err?.data?.detail;
-                if (Array.isArray(details)) {
-                    toast.error(details.map((d: any) => d.msg || JSON.stringify(d)).join('\n'));
-                    return;
-                }
-            }
             toast.error('Failed to export PDF');
             console.error('Export error', err);
         }
@@ -189,7 +223,7 @@ export default function JobDescriptionsPage() {
         jd.nextReview && new Date(jd.nextReview) <= new Date()
     ).length;
 
-    if (loading) return <TableSkeleton />;
+    if (loading || redirecting) return <TableSkeleton />;
 
     return (
         <div className="space-y-6 p-4 sm:p-6">
@@ -404,7 +438,7 @@ export default function JobDescriptionsPage() {
                                         {jd.responsibilities.slice(0, 3).map((resp, index) => (
                                             <li key={index} className="flex items-start">
                                                 <span className="mr-2">•</span>
-                                                <span className="line-clamp-2">{resp}</span>
+                                                <span className="line-clamp-2">{stripHtml(normalizeRichTextValue(resp))}</span>
                                             </li>
                                         ))}
                                         {jd.responsibilities.length > 3 && (

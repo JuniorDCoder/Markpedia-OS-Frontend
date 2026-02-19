@@ -13,6 +13,9 @@ import type { Framework, Department, FrameworkSection } from '@/types';
 import { ArrowLeft, Edit, Download, FileText, Target, Calendar, Plus, Trash2, AlertCircle, CheckCircle, Loader } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { sanitizeRichText, stripHtml, normalizeRichTextValue } from '@/lib/rich-text';
+import { useAuthStore } from '@/store/auth';
+import { isAdminLikeRole } from '@/lib/roles';
+import { exportFrameworkToPDF } from '@/lib/export-pdf';
 
 interface Props {
     frameworkId: string;
@@ -21,6 +24,8 @@ interface Props {
 
 export default function FrameworkViewClient({ frameworkId, initialFramework }: Props) {
     const router = useRouter();
+    const { user } = useAuthStore();
+    const canManage = isAdminLikeRole(user?.role);
     const [framework, setFramework] = useState<Framework | null>(initialFramework || null);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [loading, setLoading] = useState(!initialFramework);
@@ -88,25 +93,22 @@ export default function FrameworkViewClient({ frameworkId, initialFramework }: P
         if (!framework) return;
         try {
             setExporting(true);
-            const res = await departmentalFrameworkService.exportFramework(framework.id, { format: 'pdf', include_all_versions: false });
-            if (typeof res === 'string' && res.startsWith('http')) {
-                window.open(res, '_blank');
-                toast.success('Export opened in new tab');
-                return;
-            }
-            if (res?.url) {
-                window.open(res.url, '_blank');
-                toast.success('Export opened in new tab');
-                return;
-            }
-            toast.success('Export request completed');
+            const deptName = departments.find(d => d.id === framework.department)?.name || framework.department;
+            exportFrameworkToPDF({
+                name: framework.name,
+                department: framework.department,
+                description: framework.description,
+                version: framework.version,
+                status: framework.status,
+                createdBy: framework.createdBy,
+                createdAt: framework.createdAt,
+                lastReviewed: framework.lastReviewed,
+                nextReview: framework.nextReview,
+                sections: framework.sections,
+            }, deptName);
+            toast.success('PDF downloaded successfully');
         } catch (err: any) {
-            const details = err?.data?.detail;
-            if (err?.status === 422 && Array.isArray(details)) {
-                toast.error(details.map((d: any) => d.msg || JSON.stringify(d)).join('\n'));
-            } else {
-                toast.error('Failed to export framework');
-            }
+            toast.error('Failed to export framework');
             console.error('export error', err);
         } finally {
             setExporting(false);
@@ -246,7 +248,10 @@ export default function FrameworkViewClient({ frameworkId, initialFramework }: P
                 </Button>
                 <div className="flex-1">
                     <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">{framework.name}</h1>
-                    <p className="text-sm text-muted-foreground mt-1">{stripHtml(framework.description)}</p>
+                    <div
+                        className="text-sm text-muted-foreground mt-1 leading-relaxed rich-text-content [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-1 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mt-2 [&_h3]:mb-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-2 [&_li]:mb-1 [&_p]:mb-2 [&_b]:font-semibold [&_strong]:font-semibold [&_br]:block"
+                        dangerouslySetInnerHTML={{ __html: sanitizeRichText(normalizeRichTextValue(framework.description)) }}
+                    />
                     <div className="flex items-center gap-2 mt-3">
                         <Badge>{framework.status}</Badge>
                         <span className="text-sm text-muted-foreground">Version {framework.version}</span>
@@ -255,21 +260,26 @@ export default function FrameworkViewClient({ frameworkId, initialFramework }: P
                 </div>
 
                 <div className="flex flex-col gap-2">
-                    <Button onClick={() => router.push(`/work/departmental-frameworks/${framework.id}/edit`)} className="w-40">
-                        <Edit className="mr-2" /> Edit
-                    </Button>
+                    {canManage && (
+                        <Button onClick={() => router.push(`/work/departmental-frameworks/${framework.id}/edit`)} className="w-40">
+                            <Edit className="mr-2" /> Edit
+                        </Button>
+                    )}
                     <Button variant="outline" onClick={handleExport} disabled={exporting} className="w-40">
                         <Download className="mr-2" /> {exporting ? 'Exporting...' : 'Export'}
                     </Button>
-                    <Button variant="ghost" onClick={handleNewVersion} className="w-40">
-                        <FileText className="mr-2" /> New Version
-                    </Button>
-                    <Button
-                        variant="secondary"
-                        onClick={handleApproveClick}
-                        disabled={approving || isApproved}
-                        className="w-40"
-                    >
+                    {canManage && (
+                        <Button variant="ghost" onClick={handleNewVersion} className="w-40">
+                            <FileText className="mr-2" /> New Version
+                        </Button>
+                    )}
+                    {canManage && (
+                        <Button
+                            variant="secondary"
+                            onClick={handleApproveClick}
+                            disabled={approving || isApproved}
+                            className="w-40"
+                        >
                         {approving ? (
                             <>
                                 <div className="animate-spin rounded-full h-4 w-4 mr-2 border-b-2 border-white"></div>
@@ -281,10 +291,13 @@ export default function FrameworkViewClient({ frameworkId, initialFramework }: P
                                 {isApproved ? 'Approved' : 'Approve'}
                             </>
                         )}
-                    </Button>
-                    <Button variant="destructive" onClick={() => openDelete(framework)} className="w-40">
-                        <Trash2 className="mr-2" /> Delete
-                    </Button>
+                        </Button>
+                    )}
+                    {canManage && (
+                        <Button variant="destructive" onClick={() => openDelete(framework)} className="w-40">
+                            <Trash2 className="mr-2" /> Delete
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -304,7 +317,7 @@ export default function FrameworkViewClient({ frameworkId, initialFramework }: P
                                         </CardHeader>
                                         <CardContent>
                                             <div
-                                                className="text-sm text-muted-foreground leading-relaxed [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:text-base [&_h2]:font-semibold [&_h3]:text-sm [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
+                                                className="text-sm text-muted-foreground leading-relaxed rich-text-content [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-1 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mt-2 [&_h3]:mb-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-2 [&_li]:mb-1 [&_p]:mb-2 [&_b]:font-semibold [&_strong]:font-semibold [&_br]:block [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:p-2 [&_th]:border [&_th]:p-2 [&_th]:bg-muted/50 [&_blockquote]:border-l-4 [&_blockquote]:border-primary/30 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:my-2"
                                                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(normalizeRichTextValue(s.content || '<p>No content</p>')) }}
                                             />
                                         </CardContent>

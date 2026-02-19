@@ -38,7 +38,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import toast from 'react-hot-toast';
-import { isManagerRole } from '@/lib/roles';
+import { isManagerRole, isAdminLikeRole } from '@/lib/roles';
 
 export default function DepartmentsPage() {
     const { user } = useAuthStore();
@@ -50,13 +50,51 @@ export default function DepartmentsPage() {
     const [deptToDelete, setDeptToDelete] = useState<Department | null>(null);
     const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
     const [deleting, setDeleting] = useState(false);
+    const [redirecting, setRedirecting] = useState(false);
 
     // Only CEO can manage departments
     const isCEO = user?.role === 'CEO';
+    const isRegularUser = user && !isAdminLikeRole(user.role);
 
     useEffect(() => {
         loadDepartments();
     }, []);
+
+    // Auto-redirect non-admin users to their own department
+    useEffect(() => {
+        if (!isRegularUser || !user?.department) return;
+        
+        const redirect = async () => {
+            setRedirecting(true);
+            try {
+                // Try direct getByName first (most reliable)
+                const dept = await departmentService.getByName(user.department!);
+                if (dept?.id) {
+                    router.replace(`/work/departments/${dept.id}`);
+                    return;
+                }
+            } catch {
+                // Fallback: search in loaded departments list
+            }
+
+            // Fallback: match from loaded departments
+            if (departments.length > 0) {
+                const userDept = (user.department || '').toLowerCase().trim();
+                const matchedDept = departments.find(
+                    d => d.name.toLowerCase().trim() === userDept || d.id === user.department
+                );
+                if (matchedDept) {
+                    router.replace(`/work/departments/${matchedDept.id}`);
+                    return;
+                }
+            }
+
+            // Nothing found — stop redirecting so user at least sees something
+            setRedirecting(false);
+        };
+
+        redirect();
+    }, [isRegularUser, user, departments, router]);
 
     const loadDepartments = async () => {
         try {
@@ -112,7 +150,7 @@ export default function DepartmentsPage() {
         dept.description.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    if (loading) {
+    if (loading || redirecting) {
         return <TableSkeleton />;
     }
 

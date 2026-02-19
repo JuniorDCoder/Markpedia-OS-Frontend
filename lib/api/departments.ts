@@ -41,6 +41,10 @@ export const departmentsApi = {
     return apiRequest<BackendDepartment>(`/work/departments/${id}`);
   },
 
+  async getByName(name: string): Promise<BackendDepartment> {
+    return apiRequest<BackendDepartment>(`/work/departments/name/${encodeURIComponent(name)}`);
+  },
+
   async create(data: Partial<BackendDepartment>): Promise<BackendDepartment> {
     return apiRequest<BackendDepartment>('/work/departments', {
       method: 'POST',

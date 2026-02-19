@@ -10,6 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TableSkeleton } from '@/components/ui/loading';
 import { departmentalFrameworkService } from '@/services/departmentalFrameworkService';
 import { Framework, Department } from '@/types';
+import { useAuthStore } from '@/store/auth';
+import { useRouter } from 'next/navigation';
+import { isAdminLikeRole } from '@/lib/roles';
 import {
     Plus,
     Search,
@@ -22,17 +25,27 @@ import {
     Calendar,
     Target,
     Shield,
+    MessageCircle,
+    AlertTriangle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { stripHtml } from '@/lib/rich-text';
+import { exportFrameworkToPDF } from '@/lib/export-pdf';
 
 export default function DepartmentalFrameworksPage() {
+    const { user } = useAuthStore();
+    const router = useRouter();
     const [frameworks, setFrameworks] = useState<Framework[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [loading, setLoading] = useState(true);
+    const [redirecting, setRedirecting] = useState(false);
+    const [noFrameworkForDept, setNoFrameworkForDept] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [departmentFilter, setDepartmentFilter] = useState('all');
+
+    const canManage = isAdminLikeRole(user?.role);
+    const isRegularUser = user && !isAdminLikeRole(user.role);
 
     useEffect(() => {
         loadFrameworks();
@@ -60,11 +73,43 @@ export default function DepartmentalFrameworksPage() {
         }
     };
 
+    // Auto-redirect non-admin users to their department's framework
+    useEffect(() => {
+        if (!isRegularUser || loading || departments.length === 0 || frameworks.length === 0) return;
+        const userDept = (user?.department || '').toLowerCase();
+        if (!userDept) return;
+
+        const matchedDept = departments.find(d => d.name.toLowerCase() === userDept || d.id === user?.department);
+        if (!matchedDept) return;
+
+        const myFramework = frameworks.find(fw => fw.department === matchedDept.id);
+        if (myFramework) {
+            setRedirecting(true);
+            router.replace(`/work/departmental-frameworks/${myFramework.id}`);
+        } else {
+            // No framework exists for this manager's department
+            setNoFrameworkForDept(true);
+        }
+    }, [isRegularUser, loading, departments, frameworks, user, router]);
+
     const exportToPDF = async (id: string) => {
         try {
-            const res = await departmentalFrameworkService.exportToPDF(id, { format: 'pdf', includeAllVersions: false });
-            if (typeof res === 'string' && res.startsWith('http')) window.open(res, '_blank');
-            toast.success('PDF exported successfully');
+            const fw = frameworks.find(f => f.id === id);
+            if (!fw) { toast.error('Framework not found'); return; }
+            const deptName = departments.find(d => d.id === fw.department)?.name || fw.department;
+            exportFrameworkToPDF({
+                name: fw.name,
+                department: fw.department,
+                description: fw.description,
+                version: fw.version,
+                status: fw.status,
+                createdBy: fw.createdBy,
+                createdAt: fw.createdAt,
+                lastReviewed: fw.lastReviewed,
+                nextReview: fw.nextReview,
+                sections: fw.sections,
+            }, deptName);
+            toast.success('PDF downloaded successfully');
         } catch (error) {
             toast.error('Failed to export PDF');
         }
@@ -104,8 +149,39 @@ export default function DepartmentalFrameworksPage() {
         return department?.name || departmentId;
     };
 
-    if (loading) {
+    if (loading || redirecting) {
         return <TableSkeleton />;
+    }
+
+    // Friendly empty state for managers/employees whose department has no framework
+    if (noFrameworkForDept && isRegularUser) {
+        return (
+            <div className="flex items-center justify-center min-h-[60vh] p-6">
+                <Card className="max-w-lg w-full border-amber-200 bg-amber-50/50">
+                    <CardContent className="pt-8 pb-8 text-center space-y-5">
+                        <div className="mx-auto w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center">
+                            <AlertTriangle className="h-8 w-8 text-amber-600" />
+                        </div>
+                        <div className="space-y-2">
+                            <h2 className="text-xl font-semibold text-foreground">
+                                No Framework Available
+                            </h2>
+                            <p className="text-muted-foreground leading-relaxed">
+                                There is no departmental framework set up for{' '}
+                                <span className="font-medium text-foreground">{user?.department || 'your department'}</span> yet.
+                                Please reach out to an administrator to have one created.
+                            </p>
+                        </div>
+                        <Button asChild className="gap-2">
+                            <Link href="/chats">
+                                <MessageCircle className="h-4 w-4" />
+                                Contact Admin
+                            </Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        );
     }
 
     return (
@@ -121,12 +197,14 @@ export default function DepartmentalFrameworksPage() {
                         Strategic objectives, goals, and operational frameworks for each department
                     </p>
                 </div>
-                <Button asChild className="w-full sm:w-auto">
-                    <Link href="/work/departmental-frameworks/new">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Create Framework
-                    </Link>
-                </Button>
+                {canManage && (
+                    <Button asChild className="w-full sm:w-auto">
+                        <Link href="/work/departmental-frameworks/new">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Create Framework
+                        </Link>
+                    </Button>
+                )}
             </div>
 
             {/* Info Card */}
@@ -280,20 +358,24 @@ export default function DepartmentalFrameworksPage() {
                                                 View
                                             </Link>
                                         </Button>
-                                        <Button asChild variant="ghost" size="sm">
-                                            <Link href={`/work/departmental-frameworks/${framework.id}/edit`}>
-                                                <Edit className="h-4 w-4 mr-1" />
-                                                Edit
-                                            </Link>
-                                        </Button>
+                                        {canManage && (
+                                            <Button asChild variant="ghost" size="sm">
+                                                <Link href={`/work/departmental-frameworks/${framework.id}/edit`}>
+                                                    <Edit className="h-4 w-4 mr-1" />
+                                                    Edit
+                                                </Link>
+                                            </Button>
+                                        )}
                                     </div>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => exportToPDF(framework.id)}
-                                    >
-                                        <Download className="h-4 w-4" />
-                                    </Button>
+                                    {canManage && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => exportToPDF(framework.id)}
+                                        >
+                                            <Download className="h-4 w-4" />
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
                         </Card>

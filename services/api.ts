@@ -1514,6 +1514,7 @@ export const departmentService = {
             ...d,
             headName: d.head,
             manager_name: d.head, // fallback
+            member_count: d.employee_count || 0,
         })) as unknown as Department[];
     },
     names: async (): Promise<string[]> => {
@@ -1527,6 +1528,16 @@ export const departmentService = {
         const mapped: any = { ...dept };
         mapped.headName = dept.head;
         mapped.manager_name = dept.head;
+        mapped.member_count = dept.employee_count || 0;
+        return mapped as Department;
+    },
+    getByName: async (name: string): Promise<Department> => {
+        const { departmentsApi } = await import('@/lib/api/departments');
+        const dept = await departmentsApi.getByName(name);
+        const mapped: any = { ...dept };
+        mapped.headName = dept.head;
+        mapped.manager_name = dept.head;
+        mapped.member_count = dept.employee_count || 0;
         return mapped as Department;
     },
     create: async (data: Partial<Department>): Promise<Department> => {

@@ -28,6 +28,7 @@ import {
 	Eye
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { exportJDToPDF } from '@/lib/export-pdf';
 import { isAdminLikeRole } from '@/lib/roles';
 import { sanitizeRichText, normalizeRichTextValue } from '@/lib/rich-text';
 
@@ -44,9 +45,13 @@ export default function JobDescriptionViewClient({
 	const { user } = useAuthStore();
 	const [jobDescription, setJobDescription] = useState<JobDescription | null>(initialJobDescription || null);
 	const [departments, setDepartments] = useState<Department[]>([]);
+	const [versions, setVersions] = useState<JobDescription[]>([]);
+	const [loadingVersions, setLoadingVersions] = useState(false);
 	const [loading, setLoading] = useState(!initialJobDescription);
 	const [exporting, setExporting] = useState(false);
 	const [unauthorized, setUnauthorized] = useState(false);
+
+	const isRegularUser = user && !isAdminLikeRole(user?.role);
 
 	// Only Admin / CEO / C-level can edit or create new versions
 	const canManageJobDescriptions = isAdminLikeRole(user?.role);
@@ -54,8 +59,23 @@ export default function JobDescriptionViewClient({
 	useEffect(() => {
 		if (!initialJobDescription) loadJobDescription();
 		loadDepartments();
+		loadVersions();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [jobDescriptionId]);
+
+	const loadVersions = async () => {
+		try {
+			setLoadingVersions(true);
+			const data = await jobDescriptionService.getVersions(jobDescriptionId);
+			setVersions(data);
+		} catch (err) {
+			// Versions endpoint may not exist or may fail — not critical
+			console.error('Failed to load versions', err);
+			setVersions([]);
+		} finally {
+			setLoadingVersions(false);
+		}
+	};
 
 	const loadJobDescription = async () => {
 		try {
@@ -90,47 +110,33 @@ export default function JobDescriptionViewClient({
 		if (!jobDescription) return;
 		try {
 			setExporting(true);
-			const res = await jobDescriptionService.exportToPDF(jobDescriptionId, { format: 'pdf', includeAllVersions: false });
-
-			// Backend may return a string (URL) or an object containing a url property.
-			if (typeof res === 'string') {
-				if (res.startsWith('http')) {
-					window.open(res, '_blank');
-					toast.success('Export ready — opened in a new tab');
-				} else {
-					toast.success('Export completed');
-				}
-				return;
-			}
-
-			if (res && typeof res === 'object') {
-				const url = (res as any).url ?? (Array.isArray(res) ? res[0] : undefined);
-				if (typeof url === 'string' && url.startsWith('http')) {
-					window.open(url, '_blank');
-					toast.success('Export ready — opened in a new tab');
-					return;
-				}
-				// fallback: success message with raw response
-				toast.success('Export completed');
-				return;
-			}
-
-			toast.success('Export completed');
+			const deptName = departments.find(d => d.id === jobDescription.department)?.name || jobDescription.department;
+			exportJDToPDF({
+				title: jobDescription.title,
+				department: jobDescription.department,
+				summary: jobDescription.summary,
+				purpose: jobDescription.purpose,
+				vision: jobDescription.vision,
+				mission: jobDescription.mission,
+				reportsTo: jobDescription.reportsTo,
+				responsibilities: jobDescription.responsibilities,
+				kpis: jobDescription.kpis,
+				okrs: jobDescription.okrs,
+				skills: jobDescription.skills,
+				tools: jobDescription.tools,
+				careerPath: jobDescription.careerPath,
+				probationPeriod: jobDescription.probationPeriod,
+				reviewCadence: jobDescription.reviewCadence,
+				status: jobDescription.status,
+				version: jobDescription.version,
+				createdBy: jobDescription.createdBy,
+				createdAt: jobDescription.createdAt,
+				lastReviewed: jobDescription.lastReviewed,
+				nextReview: jobDescription.nextReview,
+			}, deptName);
+			toast.success('PDF downloaded successfully');
 		} catch (err: any) {
-			const status = err?.status || err?.response?.status;
-			if (status === 401 || status === 403) {
-				setUnauthorized(true);
-				toast.error('Not authorized to export');
-				return;
-			}
-			// Show validation details when available (422)
-			const details = err?.data?.detail || err?.data || err?.message;
-			if (status === 422 && Array.isArray(details)) {
-				const messages = details.map((d: any) => d.msg || JSON.stringify(d)).join('\n');
-				toast.error(messages || 'Validation error while exporting');
-			} else {
-				toast.error('Failed to export PDF');
-			}
+			toast.error('Failed to export PDF');
 			console.error('Export error', err);
 		} finally {
 			setExporting(false);
@@ -231,14 +237,16 @@ export default function JobDescriptionViewClient({
 				<div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
 					<div className="flex-1">
 						<div className="flex items-start gap-3 mb-4">
-							<Button
-								variant="ghost"
-								size="icon"
-								onClick={() => router.push('/work/job-descriptions')}
-								className="h-10 w-10 border border-blue-200 bg-white hover:bg-blue-50 mt-1"
-							>
-								<ArrowLeft className="h-5 w-5 text-blue-600" />
-							</Button>
+							{!isRegularUser && (
+								<Button
+									variant="ghost"
+									size="icon"
+									onClick={() => router.push('/work/job-descriptions')}
+									className="h-10 w-10 border border-blue-200 bg-white hover:bg-blue-50 mt-1"
+								>
+									<ArrowLeft className="h-5 w-5 text-blue-600" />
+								</Button>
+							)}
 							<div className="flex-1 min-w-0">
 								<div className="flex flex-wrap items-center gap-2 mb-2">
 									<h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent break-words">
@@ -358,7 +366,10 @@ export default function JobDescriptionViewClient({
 												<Shield className="h-4 w-4 mr-2" />
 												Purpose
 											</h4>
-											<p className="text-muted-foreground leading-relaxed">{jobDescription.purpose}</p>
+											<div
+												className="text-muted-foreground leading-relaxed rich-text-content [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_b]:font-semibold [&_strong]:font-semibold"
+												dangerouslySetInnerHTML={{ __html: sanitizeRichText(normalizeRichTextValue(jobDescription.purpose)) }}
+											/>
 										</div>
 									)}
 									{jobDescription.mission && (
@@ -367,7 +378,10 @@ export default function JobDescriptionViewClient({
 												<Award className="h-4 w-4 mr-2" />
 												Mission
 											</h4>
-											<p className="text-muted-foreground leading-relaxed">{jobDescription.mission}</p>
+											<div
+												className="text-muted-foreground leading-relaxed rich-text-content [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_b]:font-semibold [&_strong]:font-semibold"
+												dangerouslySetInnerHTML={{ __html: sanitizeRichText(normalizeRichTextValue(jobDescription.mission)) }}
+											/>
 										</div>
 									)}
 									{jobDescription.vision && (
@@ -376,7 +390,10 @@ export default function JobDescriptionViewClient({
 												<Eye className="h-4 w-4 mr-2" />
 												Vision
 											</h4>
-											<p className="text-muted-foreground leading-relaxed">{jobDescription.vision}</p>
+											<div
+												className="text-muted-foreground leading-relaxed rich-text-content [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_b]:font-semibold [&_strong]:font-semibold"
+												dangerouslySetInnerHTML={{ __html: sanitizeRichText(normalizeRichTextValue(jobDescription.vision)) }}
+											/>
 										</div>
 									)}
 								</CardContent>
@@ -400,7 +417,7 @@ export default function JobDescriptionViewClient({
 										<li key={i} className="flex items-start p-3 rounded-lg bg-green-50 border border-green-100 hover:border-green-300 transition-colors">
 											<span className="text-green-600 mr-3 mt-1 flex-shrink-0">•</span>
 											<div
-												className="text-muted-foreground leading-relaxed [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:text-base [&_h2]:font-semibold [&_h3]:text-sm [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2"
+												className="text-muted-foreground leading-relaxed flex-1 rich-text-content [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mt-3 [&_h1]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-2 [&_h2]:mb-1 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mt-2 [&_h3]:mb-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-2 [&_li]:mb-1 [&_p]:mb-2 [&_b]:font-semibold [&_strong]:font-semibold [&_br]:block [&_.MsoNormal]:mb-1 [&_font]:font-inherit"
 												dangerouslySetInnerHTML={{ __html: sanitizeRichText(normalizeRichTextValue(r)) }}
 											/>
 										</li>
@@ -467,7 +484,10 @@ export default function JobDescriptionViewClient({
 								</CardHeader>
 								<CardContent className="pt-6">
 									<div className="p-3 bg-indigo-50 rounded-lg border border-indigo-100">
-										<p className="text-muted-foreground leading-relaxed">{jobDescription.careerPath}</p>
+										<div
+											className="text-muted-foreground leading-relaxed rich-text-content [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_b]:font-semibold [&_strong]:font-semibold"
+											dangerouslySetInnerHTML={{ __html: sanitizeRichText(normalizeRichTextValue(jobDescription.careerPath)) }}
+										/>
 									</div>
 								</CardContent>
 							</Card>
@@ -498,6 +518,76 @@ export default function JobDescriptionViewClient({
 						</Card>
 					</div>
 				</div>
+
+				{/* Version History */}
+				{versions.length > 1 && (
+					<Card className="border-amber-200 shadow-sm">
+						<CardHeader className="bg-gradient-to-r from-amber-50 to-yellow-50 border-b border-amber-200">
+							<CardTitle className="flex items-center text-amber-900">
+								<Clock className="h-5 w-5 mr-2" />
+								Version History
+							</CardTitle>
+							<CardDescription>
+								{versions.length} version{versions.length !== 1 ? 's' : ''} available for this job description
+							</CardDescription>
+						</CardHeader>
+						<CardContent className="pt-6">
+							<div className="space-y-3">
+								{versions
+									.sort((a, b) => Number(b.version || 0) - Number(a.version || 0))
+									.map((v) => {
+										const isCurrent = v.id === jobDescription.id;
+										return (
+											<div
+												key={v.id}
+												className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+													isCurrent
+														? 'bg-blue-50 border-blue-300'
+														: 'bg-gray-50 border-gray-200 hover:border-gray-300'
+												}`}
+											>
+												<div className="flex items-center gap-3">
+													<div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold ${
+														isCurrent ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
+													}`}>
+														v{v.version}
+													</div>
+													<div>
+														<div className="flex items-center gap-2">
+															<span className="text-sm font-medium">{v.title}</span>
+															<Badge className={`text-[10px] ${getStatusColor(v.status)}`}>
+																{v.status}
+															</Badge>
+															{isCurrent && (
+																<Badge variant="outline" className="text-[10px] border-blue-400 text-blue-700">
+																	Current
+																</Badge>
+															)}
+														</div>
+														<span className="text-xs text-muted-foreground">
+															{v.createdAt ? new Date(v.createdAt).toLocaleDateString() : ''}
+															{v.createdBy ? ` by ${v.createdBy}` : ''}
+														</span>
+													</div>
+												</div>
+												{!isCurrent && (
+													<Button
+														variant="ghost"
+														size="sm"
+														onClick={() => router.push(`/work/job-descriptions/${v.id}`)}
+														className="text-xs"
+													>
+														<Eye className="h-3 w-3 mr-1" />
+														View
+													</Button>
+												)}
+											</div>
+										);
+									})}
+							</div>
+						</CardContent>
+					</Card>
+				)}
 			</div>
 		</div>
 	);
@@ -536,7 +626,10 @@ function InfoListCard({ title, icon, items, color, bgColor }: {
 					{items.map((item, i) => (
 						<li key={i} className="flex items-start text-sm p-2 rounded hover:bg-gray-50 transition-colors">
 							<span className="text-blue-600 mr-2 mt-1 flex-shrink-0">•</span>
-							<span className="text-muted-foreground leading-relaxed">{item}</span>
+							<div
+								className="text-muted-foreground leading-relaxed flex-1 rich-text-content [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-1 [&_b]:font-semibold [&_strong]:font-semibold"
+								dangerouslySetInnerHTML={{ __html: sanitizeRichText(normalizeRichTextValue(item)) }}
+							/>
 						</li>
 					))}
 				</ul>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,7 @@ import {
     DialogTitle
 } from '@/components/ui/dialog';
 import { Department, User, Entity } from '@/types';
-import { ArrowLeft, Save, Upload, User as UserIcon, Trash2, AlertCircle, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, Save, Upload, User as UserIcon, Trash2, AlertCircle, ShieldAlert, Camera, Loader2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { LoadingSpinner } from '@/components/ui/loading';
 
@@ -33,11 +33,19 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
     const [isFetching, setIsFetching] = useState(true);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const canEdit = user && ['CEO', 'HR', 'Admin', 'CXO'].includes(user.role);
     const canDelete = user && ['CEO', 'Admin'].includes(user.role);
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [confirmText, setConfirmText] = useState('');
+
+    // Avatar state
+    const [avatarUploading, setAvatarUploading] = useState(false);
+    const [avatarPreview, setAvatarPreview] = useState<string>('');
+
+    // Reports-to candidates
+    const [reportingCandidates, setReportingCandidates] = useState<{ id: string; name: string }[]>([]);
 
     const [formData, setFormData] = useState({
         // Account Details
@@ -79,17 +87,71 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
         image: '',
     });
 
+    // Helper to get avatar display URL
+    const getAvatarUrl = (avatar?: string) => {
+        if (!avatar) return undefined;
+        if (avatar.startsWith('http')) return avatar;
+        if (avatar.startsWith('blob:')) return avatar;
+        return avatar.startsWith('/') ? avatar : `/${avatar}`;
+    };
+
+    const getInitials = () => {
+        const name = formData.name?.trim();
+        if (!name) return 'U';
+        return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+    };
+
+    const getErrorMessage = (error: any): string => {
+        if (!error) return 'Unknown error';
+
+        if (error?.data?.detail) {
+            const detail = error.data.detail;
+            if (typeof detail === 'string') return detail;
+            if (Array.isArray(detail)) {
+                return detail
+                    .map((d: any) => {
+                        if (typeof d === 'string') return d;
+                        const field = Array.isArray(d?.loc) ? d.loc[d.loc.length - 1] : 'field';
+                        const msg = d?.msg || 'Invalid value';
+                        return `${String(field)}: ${msg}`;
+                    })
+                    .join(' | ');
+            }
+        }
+
+        if (typeof error?.detail === 'string' && error.detail.trim()) {
+            return error.detail;
+        }
+
+        if (typeof error?.message === 'string' && error.message.trim()) {
+            return error.message;
+        }
+
+        return 'An unexpected error occurred. Please try again.';
+    };
+
     useEffect(() => {
         async function fetchEmployee() {
             try {
                 const { employeeApi } = await import('@/lib/api/employees');
-                const emp = await employeeApi.getById(employeeId);
+
+                // Fetch employee + all employees (for reports-to dropdown) in parallel
+                const [emp, allEmployees] = await Promise.all([
+                    employeeApi.getById(employeeId),
+                    employeeApi.getAll().catch(() => [] as any[]),
+                ]);
 
                 if (!emp) {
                     toast.error('Employee not found');
                     router.push('/people/employees');
                     return;
                 }
+
+                // Build reporting candidates (exclude self)
+                const candidates = allEmployees
+                    .filter((e: any) => e.id !== employeeId)
+                    .map((e: any) => ({ id: e.id, name: e.name || e.email }));
+                setReportingCandidates(candidates);
 
                 // Helper to format date for input (yyyy-MM-dd)
                 const formatDate = (dateString?: string) => {
@@ -157,20 +219,75 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
     // Check if current user can update the target user's role
     const canUpdateRole = () => {
         if (!user) return false;
-
-        // CEO can update anyone's role
         if (user.role === 'CEO') return true;
-
-        // Top admins (Admin, CXO, HR, CFO, CTO, etc.) can only update non-top-admin roles
         const topAdminRoles = ['Admin', 'CEO', 'CFO', 'CTO', 'COO', 'CIO', 'CMO', 'HR'];
         const isCurrentUserTopAdmin = topAdminRoles.includes(user.role);
         const isTargetUserTopAdmin = topAdminRoles.includes(originalRole);
+        if (isCurrentUserTopAdmin && !isTargetUserTopAdmin) return true;
+        return false;
+    };
 
-        if (isCurrentUserTopAdmin && !isTargetUserTopAdmin) {
-            return true;
+    // Avatar handlers
+    const onAvatarPick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const onAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)) {
+            toast.error('Only JPEG, PNG, GIF, or WebP images are allowed');
+            return;
         }
 
-        return false;
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('Image must be 5MB or smaller');
+            return;
+        }
+
+        // Show preview immediately
+        const previewUrl = URL.createObjectURL(file);
+        setAvatarPreview(previewUrl);
+
+        // Upload right away
+        setAvatarUploading(true);
+        try {
+            const { employeeApi } = await import('@/lib/api/employees');
+            const result = await employeeApi.uploadAvatar(employeeId, file);
+            setFormData(prev => ({ ...prev, image: result.avatar_url }));
+            URL.revokeObjectURL(previewUrl);
+            setAvatarPreview('');
+            toast.success('Avatar uploaded successfully');
+        } catch (error: any) {
+            console.error('Error uploading avatar:', error);
+            toast.error(getErrorMessage(error));
+            URL.revokeObjectURL(previewUrl);
+            setAvatarPreview('');
+        } finally {
+            setAvatarUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    const handleDeleteAvatar = async () => {
+        if (!formData.image) return;
+        setAvatarUploading(true);
+        try {
+            const { employeeApi } = await import('@/lib/api/employees');
+            await employeeApi.update(employeeId, { avatar: '' } as any);
+            setFormData(prev => ({ ...prev, image: '' }));
+            if (avatarPreview) {
+                URL.revokeObjectURL(avatarPreview);
+                setAvatarPreview('');
+            }
+            toast.success('Avatar removed');
+        } catch (error: any) {
+            console.error('Error deleting avatar:', error);
+            toast.error(getErrorMessage(error));
+        } finally {
+            setAvatarUploading(false);
+        }
     };
 
     const handleRoleUpdate = async () => {
@@ -178,12 +295,10 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
             toast.error('You do not have permission to update this user\'s role');
             return;
         }
-
         if (formData.role === originalRole) {
             toast.error('Role has not changed');
             return;
         }
-
         setIsUpdatingRole(true);
         try {
             const { adminApi } = await import('@/lib/api/admin');
@@ -192,12 +307,7 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
             toast.success('Role updated successfully');
         } catch (error: any) {
             console.error('Error updating role:', error);
-            if (error?.message?.includes('403')) {
-                toast.error('You do not have permission to update this role');
-            } else {
-                toast.error('Failed to update role');
-            }
-            // Revert to original role
+            toast.error(getErrorMessage(error));
             setFormData(prev => ({ ...prev, role: originalRole as any }));
         } finally {
             setIsUpdatingRole(false);
@@ -209,7 +319,6 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
         if (!canEdit) return;
         setIsLoading(true);
 
-        // Basic validation
         if (!formData.name || !formData.email || !formData.department) {
             toast.error('Please fill in all required fields marked with *');
             setIsLoading(false);
@@ -218,48 +327,42 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
 
         try {
             const { employeeApi } = await import('@/lib/api/employees');
-
             await employeeApi.update(employeeId, {
                 email: formData.email,
-                name: formData.name, // Pass full name, let API handle split
+                name: formData.name,
                 role: formData.role,
                 department: formData.department,
                 title: formData.designation,
                 isActive: formData.loginAllowed,
-
                 salutation: formData.salutation,
                 dateOfBirth: formData.dateOfBirth,
                 mobile: formData.mobile,
                 country: formData.country,
                 gender: formData.gender,
-                startDate: formData.joiningDate, // key mismatch fix: joiningDate -> startDate
+                startDate: formData.joiningDate,
                 language: formData.language,
-
                 address: formData.address,
                 about: formData.about,
                 businessAddress: formData.businessAddress,
-
                 loginAllowed: formData.loginAllowed,
                 emailNotifications: formData.emailNotifications,
                 hourlyRate: formData.hourlyRate ? Number(formData.hourlyRate) : undefined,
                 slackMemberId: formData.slackMemberId,
                 skills: formData.skills ? formData.skills.split(',').map((s: string) => s.trim()) : [],
-
                 probationEndDate: formData.probationEndDate,
                 noticePeriodStartDate: formData.noticePeriodStartDate,
                 noticePeriodEndDate: formData.noticePeriodEndDate,
                 employmentType: formData.employmentType,
                 maritalStatus: formData.maritalStatus,
-
                 entityId: formData.entityId,
+                reportsTo: formData.reportsTo,
             });
-
             toast.success('Employee updated successfully');
             router.push('/people/employees');
             router.refresh();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error updating employee:', error);
-            toast.error('Failed to update employee');
+            toast.error(getErrorMessage(error));
         } finally {
             setIsLoading(false);
         }
@@ -276,7 +379,6 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
             toast.error(`Please type "${expected}" to confirm deletion`);
             return;
         }
-
         setIsLoading(true);
         try {
             const { employeeApi } = await import('@/lib/api/employees');
@@ -287,14 +389,12 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
             router.refresh();
         } catch (error: any) {
             console.error('Error deleting employee:', error);
-            toast.error(error?.message || 'Failed to delete employee');
+            toast.error(getErrorMessage(error));
             setIsLoading(false);
         }
     };
 
     const [isEditing, setIsEditing] = useState(false);
-
-    // Cancel edit: revert to view mode
     const handleCancelEdit = () => setIsEditing(false);
 
     if (isFetching) {
@@ -305,6 +405,61 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
         );
     }
 
+    // Current display avatar: show preview if available, otherwise saved image
+    const displayAvatar = avatarPreview || getAvatarUrl(formData.image);
+
+    // Circular avatar component reused in both view and edit modes
+    const renderAvatarCircle = (size: 'sm' | 'lg' = 'lg', showControls = false) => {
+        const sizeClass = size === 'lg' ? 'h-28 w-28' : 'h-24 w-24';
+        const textClass = size === 'lg' ? 'text-3xl' : 'text-2xl';
+        return (
+            <div className="relative inline-block">
+                <div className={`${sizeClass} rounded-full overflow-hidden border-4 border-white shadow-lg bg-primary/10`}>
+                    {displayAvatar ? (
+                        <img src={displayAvatar} alt={formData.name} className="h-full w-full object-cover" />
+                    ) : (
+                        <div className={`h-full w-full flex items-center justify-center text-primary font-bold ${textClass} uppercase`}>
+                            {getInitials()}
+                        </div>
+                    )}
+                </div>
+                {showControls && (
+                    <>
+                        <Button
+                            type="button"
+                            size="icon"
+                            variant="secondary"
+                            className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full shadow-md"
+                            onClick={onAvatarPick}
+                            disabled={avatarUploading}
+                        >
+                            {avatarUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                        </Button>
+                        {formData.image && (
+                            <Button
+                                type="button"
+                                size="icon"
+                                variant="destructive"
+                                className="absolute -top-1 -right-1 h-6 w-6 rounded-full shadow-md"
+                                onClick={handleDeleteAvatar}
+                                disabled={avatarUploading}
+                            >
+                                <X className="h-3 w-3" />
+                            </Button>
+                        )}
+                    </>
+                )}
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    className="hidden"
+                    onChange={onAvatarFileChange}
+                />
+            </div>
+        );
+    };
+
     const renderViewMode = () => (
         <div className="space-y-6">
             {/* Account Details View */}
@@ -314,15 +469,7 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                 </CardHeader>
                 <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div className="md:col-span-1 flex justify-center md:justify-start">
-                        <div className="h-24 w-24 rounded-full overflow-hidden border-4 border-white shadow-lg bg-primary/10">
-                            {formData.image ? (
-                                <img src={formData.image} alt={formData.name} className="h-full w-full object-cover" />
-                            ) : (
-                                <div className="h-full w-full flex items-center justify-center text-primary font-bold text-2xl uppercase">
-                                    {formData.name.split(' ').map(n => n[0]).join('')}
-                                </div>
-                            )}
-                        </div>
+                        {renderAvatarCircle('lg', false)}
                     </div>
                     <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div>
@@ -331,9 +478,7 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                         </div>
                         <div>
                             <p className="text-sm font-medium text-muted-foreground">Name</p>
-                            <p className="font-medium">
-                                {formData.salutation} {formData.name}
-                            </p>
+                            <p className="font-medium">{formData.salutation} {formData.name}</p>
                         </div>
                         <div>
                             <p className="text-sm font-medium text-muted-foreground">Email</p>
@@ -374,13 +519,25 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                     </div>
                     <div>
                         <p className="text-sm font-medium text-muted-foreground">Reporting To</p>
-                        <p className="font-medium">{formData.reportsTo === 'none' ? 'None' : formData.reportsTo || '--'}</p>
+                        <p className="font-medium">
+                            {formData.reportsTo === 'none' ? 'None' : (
+                                reportingCandidates.find(c => c.id === formData.reportsTo)?.name || formData.reportsTo || '--'
+                            )}
+                        </p>
                     </div>
                     <div>
                         <p className="text-sm font-medium text-muted-foreground">Status</p>
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${formData.loginAllowed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                             {formData.loginAllowed ? 'Active' : 'Inactive'}
                         </span>
+                    </div>
+                    <div>
+                        <p className="text-sm font-medium text-muted-foreground">Country</p>
+                        <p className="font-medium">{formData.country || '--'}</p>
+                    </div>
+                    <div>
+                        <p className="text-sm font-medium text-muted-foreground">Language</p>
+                        <p className="font-medium">{formData.language || '--'}</p>
                     </div>
                     <div>
                         <p className="text-sm font-medium text-muted-foreground">Entity</p>
@@ -398,6 +555,10 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                     <div>
                         <p className="text-sm font-medium text-muted-foreground">Address</p>
                         <p className="font-medium whitespace-pre-wrap">{formData.address || '--'}</p>
+                    </div>
+                    <div>
+                        <p className="text-sm font-medium text-muted-foreground">Business Address</p>
+                        <p className="font-medium whitespace-pre-wrap">{formData.businessAddress || '--'}</p>
                     </div>
                     <div>
                         <p className="text-sm font-medium text-muted-foreground">About</p>
@@ -462,6 +623,10 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                     <div>
                         <p className="text-sm font-medium text-muted-foreground">Notice Starts</p>
                         <p className="font-medium">{formData.noticePeriodStartDate || '--'}</p>
+                    </div>
+                    <div>
+                        <p className="text-sm font-medium text-muted-foreground">Notice Ends</p>
+                        <p className="font-medium">{formData.noticePeriodEndDate || '--'}</p>
                     </div>
                 </CardContent>
             </Card>
@@ -528,7 +693,6 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    {/* Dynamic Title based on mode */}
                     <h1 className="text-2xl font-bold tracking-tight">
                         {isEditing ? 'Edit Profile' : 'Employee Profile'}
                     </h1>
@@ -539,7 +703,6 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                     </p>
                 </div>
                 <div className="flex gap-2">
-                    {/* View Mode Buttons */}
                     {!isEditing && canEdit && (
                         <>
                             {canDelete && (
@@ -554,8 +717,6 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                             </Button>
                         </>
                     )}
-
-                    {/* Common Cancel/Back */}
                     {!isEditing && (
                         <Button variant="outline" asChild>
                             <Link href="/people/employees">Back to List</Link>
@@ -567,15 +728,7 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
             {/* Content Switch */}
             {isEditing ? (
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Reuse existing fieldset but remove disabled={!canEdit} since we only show this if editing */}
                     <fieldset className="space-y-6">
-                        {/* ... Existing Card Structure for Editing ... */}
-                        {/* To avoid huge repetition in this prompt replacement, I will assume I can keep the existing JSX for form 
-                             but I need to wrap it. However, since I am replacing the WHOLE return, I must provide the form code again.
-                             I will copy the form code from the previous file view to ensure exactness.
-                             I will define 'renderEditForm' or just inline it.
-                             I will inline it to be safe.
-                         */}
                         <Card>
                             <CardHeader className="border-b bg-gray-50/50">
                                 <CardTitle className="text-base font-semibold">Account Details</CardTitle>
@@ -619,11 +772,32 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                                         required
                                     />
                                 </div>
+
+                                {/* Avatar Upload — Circular with Camera Icon (matches create page) */}
                                 <div className="space-y-2 md:col-span-2 row-span-2">
                                     <label className="text-sm font-medium">Profile Picture</label>
-                                    <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-muted-foreground transition-colors h-full cursor-pointer hover:bg-gray-50">
-                                        <Upload className="h-8 w-8 mb-2" />
-                                        <span className="text-sm">Choose a file</span>
+                                    <div className="flex items-center gap-4">
+                                        {renderAvatarCircle('sm', true)}
+                                        <div className="space-y-2">
+                                            <p className="text-xs text-muted-foreground">Round profile photo, max 5MB.</p>
+                                            <div className="flex gap-2">
+                                                <Button type="button" variant="outline" size="sm" onClick={onAvatarPick} disabled={avatarUploading}>
+                                                    {avatarUploading ? (
+                                                        <>
+                                                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                                            Uploading...
+                                                        </>
+                                                    ) : (
+                                                        'Choose image'
+                                                    )}
+                                                </Button>
+                                                {formData.image && (
+                                                    <Button type="button" variant="ghost" size="sm" onClick={handleDeleteAvatar} disabled={avatarUploading}>
+                                                        <X className="h-4 w-4 mr-1" /> Remove
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -698,11 +872,13 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Reporting To</label>
-                                    <Select value={formData.reportsTo} onValueChange={(v) => handleInputChange('reportsTo', v)}>
+                                    <Select value={formData.reportsTo || 'none'} onValueChange={(v) => handleInputChange('reportsTo', v === 'none' ? '' : v)}>
                                         <SelectTrigger><SelectValue placeholder="--" /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="none">None</SelectItem>
-                                            <SelectItem value="manager">Manager (Placeholder)</SelectItem>
+                                            {reportingCandidates.map(c => (
+                                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -762,12 +938,12 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                                     )}
                                     {formData.role !== originalRole && canUpdateRole() && (
                                         <p className="text-xs text-amber-600">
-                                            Role has been changed. Click "Update Role" to save this change.
+                                            Role has been changed. Click &quot;Update Role&quot; to save this change.
                                         </p>
                                     )}
                                 </div>
 
-                                {/* Hidden Entity ID for legacy */}
+                                {/* Entity */}
                                 {entities.length > 0 && (
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">Entity</label>
@@ -798,6 +974,14 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                                     />
                                 </div>
                                 <div className="space-y-2">
+                                    <label className="text-sm font-medium">Business Address</label>
+                                    <Input
+                                        value={formData.businessAddress}
+                                        onChange={(e) => handleInputChange('businessAddress', e.target.value)}
+                                        placeholder="e.g. Head Office"
+                                    />
+                                </div>
+                                <div className="space-y-2">
                                     <label className="text-sm font-medium">About</label>
                                     <Textarea
                                         placeholder="Write something about the employee..."
@@ -818,19 +1002,11 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                                     <label className="text-sm font-medium block">Login Allowed?</label>
                                     <div className="flex items-center gap-4">
                                         <div className="flex items-center space-x-2">
-                                            <Checkbox
-                                                id="login-yes"
-                                                checked={formData.loginAllowed}
-                                                onCheckedChange={() => handleInputChange('loginAllowed', true)}
-                                            />
+                                            <Checkbox id="login-yes" checked={formData.loginAllowed} onCheckedChange={() => handleInputChange('loginAllowed', true)} />
                                             <label htmlFor="login-yes" className="text-sm">Yes</label>
                                         </div>
                                         <div className="flex items-center space-x-2">
-                                            <Checkbox
-                                                id="login-no"
-                                                checked={!formData.loginAllowed}
-                                                onCheckedChange={() => handleInputChange('loginAllowed', false)}
-                                            />
+                                            <Checkbox id="login-no" checked={!formData.loginAllowed} onCheckedChange={() => handleInputChange('loginAllowed', false)} />
                                             <label htmlFor="login-no" className="text-sm">No</label>
                                         </div>
                                     </div>
@@ -840,19 +1016,11 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                                     <label className="text-sm font-medium block">Receive email notifications?</label>
                                     <div className="flex items-center gap-4">
                                         <div className="flex items-center space-x-2">
-                                            <Checkbox
-                                                id="notify-yes"
-                                                checked={formData.emailNotifications}
-                                                onCheckedChange={() => handleInputChange('emailNotifications', true)}
-                                            />
+                                            <Checkbox id="notify-yes" checked={formData.emailNotifications} onCheckedChange={() => handleInputChange('emailNotifications', true)} />
                                             <label htmlFor="notify-yes" className="text-sm">Yes</label>
                                         </div>
                                         <div className="flex items-center space-x-2">
-                                            <Checkbox
-                                                id="notify-no"
-                                                checked={!formData.emailNotifications}
-                                                onCheckedChange={() => handleInputChange('emailNotifications', false)}
-                                            />
+                                            <Checkbox id="notify-no" checked={!formData.emailNotifications} onCheckedChange={() => handleInputChange('emailNotifications', false)} />
                                             <label htmlFor="notify-no" className="text-sm">No</label>
                                         </div>
                                     </div>
@@ -861,29 +1029,16 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Hourly Rate</label>
                                     <div className="flex">
-                                        <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">
-                                            USD
-                                        </span>
-                                        <Input
-                                            className="rounded-l-none"
-                                            type="number"
-                                            value={formData.hourlyRate}
-                                            onChange={(e) => handleInputChange('hourlyRate', e.target.value)}
-                                        />
+                                        <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">USD</span>
+                                        <Input className="rounded-l-none" type="number" value={formData.hourlyRate} onChange={(e) => handleInputChange('hourlyRate', e.target.value)} />
                                     </div>
                                 </div>
 
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Slack Member ID</label>
                                     <div className="flex">
-                                        <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">
-                                            @
-                                        </span>
-                                        <Input
-                                            className="rounded-l-none"
-                                            value={formData.slackMemberId}
-                                            onChange={(e) => handleInputChange('slackMemberId', e.target.value)}
-                                        />
+                                        <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">@</span>
+                                        <Input className="rounded-l-none" value={formData.slackMemberId} onChange={(e) => handleInputChange('slackMemberId', e.target.value)} />
                                     </div>
                                 </div>
 
@@ -905,27 +1060,15 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                             <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-4 gap-6">
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Probation End Date</label>
-                                    <Input
-                                        type="date"
-                                        value={formData.probationEndDate}
-                                        onChange={(e) => handleInputChange('probationEndDate', e.target.value)}
-                                    />
+                                    <Input type="date" value={formData.probationEndDate} onChange={(e) => handleInputChange('probationEndDate', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Notice Period Start Date</label>
-                                    <Input
-                                        type="date"
-                                        value={formData.noticePeriodStartDate}
-                                        onChange={(e) => handleInputChange('noticePeriodStartDate', e.target.value)}
-                                    />
+                                    <Input type="date" value={formData.noticePeriodStartDate} onChange={(e) => handleInputChange('noticePeriodStartDate', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Notice Period End Date</label>
-                                    <Input
-                                        type="date"
-                                        value={formData.noticePeriodEndDate}
-                                        onChange={(e) => handleInputChange('noticePeriodEndDate', e.target.value)}
-                                    />
+                                    <Input type="date" value={formData.noticePeriodEndDate} onChange={(e) => handleInputChange('noticePeriodEndDate', e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Employment Type</label>
@@ -951,15 +1094,6 @@ export default function EmployeeEditClient({ employeeId, departments, entities =
                                             <SelectItem value="Widowed">Widowed</SelectItem>
                                         </SelectContent>
                                     </Select>
-                                </div>
-
-                                <div className="space-y-2 md:col-span-2">
-                                    <label className="text-sm font-medium">Business Address</label>
-                                    <Input
-                                        value={formData.businessAddress}
-                                        onChange={(e) => handleInputChange('businessAddress', e.target.value)}
-                                        placeholder="e.g. Head Office"
-                                    />
                                 </div>
                             </CardContent>
                         </Card>

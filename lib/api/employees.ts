@@ -55,7 +55,7 @@ export const employeeApi = {
                 role: e.role,
                 department: e.department || 'Unassigned',
                 avatar: e.avatar,
-                startDate: e.joining_date || e.created_at,
+                startDate: e.start_date || e.joining_date || e.created_at,
                 isActive: e.is_active,
                 status: e.is_active ? 'ACTIVE' : 'INACTIVE',
                 entityId: e.entity_id || '',
@@ -68,7 +68,7 @@ export const employeeApi = {
                 country: e.country || '',
                 address: e.address || '',
                 about: e.about || '',
-                joiningDate: e.joining_date || e.created_at,
+                joiningDate: e.start_date || e.joining_date || e.created_at,
                 loginAllowed: e.login_allowed !== false, // Default to true if unavail?
                 emailNotifications: e.email_notifications !== false,
                 hourlyRate: e.hourly_rate || 0,
@@ -81,7 +81,7 @@ export const employeeApi = {
                 maritalStatus: e.marital_status || 'Single',
                 language: e.language || 'English',
                 businessAddress: e.business_address || '',
-                reportsTo: e.report_to || ''
+                reportsTo: e.reports_to || e.report_to || ''
             } as Employee;
         } catch (error) {
             console.warn(`Failed to fetch employee ${id} from admin API`, error);
@@ -135,9 +135,10 @@ export const employeeApi = {
             body: JSON.stringify(payload)
         });
 
-        // Return as Employee
+        // Return as Employee — use employee_uuid from the backend response
+        // so avatar upload targets the correct Employee record, not the User record.
         return {
-            id: newUser.id,
+            id: newUser.employee_uuid || newUser.id,
             employeeId: newUser.employee_id || newUser.employeeId || null,
             name: newUser.name || `${newUser.first_name || newUser.firstName || ''} ${newUser.last_name || newUser.lastName || ''}`.trim(),
             email: newUser.email,
@@ -179,7 +180,7 @@ export const employeeApi = {
             country: data.country,
             address: data.address,
             about: data.about,
-            joining_date: data.startDate, // Map startDate to joining_date
+            start_date: data.startDate, // Map startDate to start_date (Employee schema)
             login_allowed: data.loginAllowed,
             email_notifications: data.emailNotifications,
             hourly_rate: data.hourlyRate,
@@ -214,14 +215,40 @@ export const employeeApi = {
             role: res.role,
             department: res.department || res.department_name || '',
             avatar: res.avatar,
-            startDate: res.startDate || res.joining_date || res.created_at || new Date().toISOString(),
+            startDate: res.start_date || res.startDate || res.joining_date || res.created_at || new Date().toISOString(),
             isActive: res.is_active !== undefined ? res.is_active : (res.isActive !== undefined ? res.isActive : true),
             status: (res.status || (res.is_active ? 'ACTIVE' : 'INACTIVE')).toUpperCase(),
             // Map extended fields
             entityId: res.entityId || res.entity_id || '',
-            reportsTo: res.reportsTo || res.report_to || '',
+            reportsTo: res.reports_to || res.reportsTo || res.report_to || '',
             employmentType: res.employmentType || res.employment_type || 'Full-time'
         } as Employee;
+    },
+
+    async getByDepartment(department: string): Promise<Employee[]> {
+        try {
+            const response = await apiRequest<any>(`/admin/employees/?department=${encodeURIComponent(department)}`);
+            const employeesList = Array.isArray(response) ? response : (response.employees || response.items || response.data || []);
+            return employeesList.map((e: any) => ({
+                id: e.id,
+                employeeId: e.employee_id || e.employeeId || null,
+                name: e.name || `${e.first_name || ''} ${e.last_name || ''}`.trim(),
+                email: e.email,
+                title: e.title || e.position || 'Employee',
+                role: e.role,
+                department: e.department || e.department_name || 'Unassigned',
+                avatar: e.avatar,
+                startDate: e.startDate || e.joining_date || e.created_at,
+                isActive: e.is_active !== undefined ? e.is_active : (e.isActive !== undefined ? e.isActive : true),
+                status: (e.status || (e.is_active ? 'ACTIVE' : 'INACTIVE')).toUpperCase(),
+                entityId: e.entityId || e.entity_id || '',
+                reportsTo: e.reportsTo || e.report_to || '',
+                employmentType: e.employmentType || e.employment_type || 'Full-time'
+            }));
+        } catch (error) {
+            console.error('Failed to fetch employees by department', error);
+            return [];
+        }
     },
 
     async delete(id: string): Promise<void> {
