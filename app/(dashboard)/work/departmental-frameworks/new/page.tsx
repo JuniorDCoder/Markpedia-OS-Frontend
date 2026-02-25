@@ -8,26 +8,87 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { Department, FrameworkSection } from '@/types';
-import { ArrowLeft, Save, Plus, Minus, RefreshCw, Badge } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Minus, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { departmentalFrameworkService as frameworkService } from '@/services/departmentalFrameworkService';
 import RichTextEditor from '@/components/ui/rich-text-editor';
 import { isRichTextEmpty, stripHtml } from '@/lib/rich-text';
 
 const defaultSections: FrameworkSection[] = [
-    { id: '1', title: 'Strategic Objectives', content: '', order: 1 },
-    { id: '2', title: 'Purpose', content: '', order: 2 },
-    { id: '3', title: 'Vision', content: '', order: 3 },
-    { id: '4', title: 'Mission', content: '', order: 4 },
-    { id: '5', title: 'Strategic Initiatives', content: '', order: 5 },
-    { id: '6', title: '3-5 Year Goals', content: '', order: 6 },
-    { id: '7', title: '12 Month Goals', content: '', order: 7 },
-    { id: '8', title: 'Quarterly OKRs', content: '', order: 8 },
-    { id: '9', title: 'KPIs & Sources', content: '', order: 9 },
-    { id: '10', title: 'Processes & Policies', content: '', order: 10 },
-    { id: '11', title: 'Automation Plan', content: '', order: 11 },
-    { id: '12', title: 'Risks & Mitigations', content: '', order: 12 },
+    {
+        id: '1',
+        title: 'Department Overview',
+        content: '<p>Describe what this department governs and what it explicitly does <strong>not</strong> execute.</p><ul><li>Primary mandate</li><li>Strategic boundaries</li><li>Why this structure is lean</li></ul>',
+        order: 1,
+    },
+    {
+        id: '2',
+        title: 'Purpose & Mission',
+        content: '<p>Define the economic and strategic purpose of the department.</p><ul><li>Annual target intent</li><li>Capital discipline approach</li><li>Investor-readiness objective</li></ul>',
+        order: 2,
+    },
+    {
+        id: '3',
+        title: 'Structural Design (Lean Year 1)',
+        content: '<p>Keep only essential roles to avoid bureaucracy.</p><ul><li>Core roles and reporting logic</li><li>Optional roles introduced by complexity only</li><li>Roles removed/reduced in Year 1</li></ul>',
+        order: 3,
+    },
+    {
+        id: '4',
+        title: 'Role Architecture',
+        content: '<p>For each role, define strategic accountability and decision authority.</p><ul><li>Role scope</li><li>Strategic responsibilities</li><li>Evaluation metrics</li></ul>',
+        order: 4,
+    },
+    {
+        id: '5',
+        title: 'Core Strategic Pillars',
+        content: '<p>List the pillar model used by this department.</p><ul><li>Revenue architecture</li><li>Capital allocation</li><li>Performance governance</li><li>Risk management</li><li>Investor readiness</li><li>Partnership leverage</li></ul>',
+        order: 5,
+    },
+    {
+        id: '6',
+        title: 'KPI Framework (Figure-Based)',
+        content: '<p><strong>Use measurable thresholds only.</strong> Pattern inspired by role-based JDs (Digital Marketing format).</p><ul><li><strong>Volume KPIs</strong>: define monthly/quarterly output ranges</li><li><strong>Efficiency KPIs</strong>: define target, danger zone, hard ceiling</li><li><strong>Attribution KPIs</strong>: define traceable revenue/impact minimum</li><li><strong>Reliability KPIs</strong>: define uptime/compliance/quality thresholds</li></ul>',
+        order: 6,
+    },
+    {
+        id: '7',
+        title: 'OKR Framework (Year 1)',
+        content: '<p><strong>OKRs should describe transformation, not just monitoring.</strong></p><ul><li><strong>Objective 1</strong>: core strategic outcome</li><li><strong>Key Results</strong>: 3-5 measurable outcomes with timeline</li><li><strong>Objective 2</strong>: efficiency/scale improvement</li><li><strong>Key Results</strong>: clear movement from baseline to target</li></ul>',
+        order: 7,
+    },
+    {
+        id: '8',
+        title: 'KPI vs OKR Comparison (Add/Reduce)',
+        content: '<table><thead><tr><th>Dimension</th><th>KPI (Keep)</th><th>OKR (Add)</th><th>Reduce</th></tr></thead><tbody><tr><td>Purpose</td><td>Track health and control risk</td><td>Drive strategic change</td><td>Vague statements</td></tr><tr><td>Format</td><td>Thresholds and ceilings</td><td>Objective + measurable KRs</td><td>Non-measurable goals</td></tr><tr><td>Cadence</td><td>Weekly/Monthly monitoring</td><td>Quarterly execution cycles</td><td>Ad-hoc reviews</td></tr><tr><td>Output</td><td>Performance visibility</td><td>Strategic progress proof</td><td>Duplicate dashboards</td></tr></tbody></table>',
+        order: 8,
+    },
+    {
+        id: '9',
+        title: 'Success Metrics & Failure Indicators',
+        content: '<p>Define explicit pass/fail indicators using the JD pattern.</p><ul><li><strong>Success:</strong> green conditions that validate strategy</li><li><strong>Failure:</strong> red conditions that trigger intervention</li></ul>',
+        order: 9,
+    },
+    {
+        id: '10',
+        title: 'Governance Boundaries',
+        content: '<p>Clarify what this department must <em>not</em> do.</p><ul><li>Execution tasks to delegate</li><li>Expansion actions to defer</li><li>Complexity to avoid</li></ul>',
+        order: 10,
+    },
+    {
+        id: '11',
+        title: 'Operating Rhythm',
+        content: '<p>Define weekly, monthly, and quarterly rhythm.</p><ul><li>Weekly dashboard review</li><li>Monthly allocation and margin checks</li><li>Quarterly strategic resets</li></ul>',
+        order: 11,
+    },
+    {
+        id: '12',
+        title: 'Organizational Positioning',
+        content: '<p>State command-vs-execution model clearly.</p><p><strong>Operations execute. Strategy governs.</strong></p>',
+        order: 12,
+    },
 ];
 
 export default function NewFrameworkPage() {
@@ -110,6 +171,14 @@ export default function NewFrameworkPage() {
             ...prev,
             sections: prev.sections.filter(sec => sec.id !== id),
         }));
+    };
+
+    const applyExecutiveTemplate = () => {
+        setFrameworkData(prev => ({
+            ...prev,
+            sections: defaultSections.map(section => ({ ...section })),
+        }));
+        toast.success('Executive & Strategy template applied');
     };
 
     return (
@@ -222,9 +291,14 @@ export default function NewFrameworkPage() {
                             <CardContent className="space-y-6">
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                                     <h3 className="text-base sm:text-lg font-medium">Sections</h3>
-                                    <Button type="button" variant="outline" onClick={addCustomSection} className="w-full sm:w-auto">
-                                        <Plus className="h-4 w-4 mr-2" /> Add Custom Section
-                                    </Button>
+                                    <div className="flex w-full sm:w-auto flex-col sm:flex-row gap-2">
+                                        <Button type="button" variant="outline" onClick={applyExecutiveTemplate} className="w-full sm:w-auto">
+                                            Reset to Executive Template
+                                        </Button>
+                                        <Button type="button" variant="outline" onClick={addCustomSection} className="w-full sm:w-auto">
+                                            <Plus className="h-4 w-4 mr-2" /> Add Custom Section
+                                        </Button>
+                                    </div>
                                 </div>
 
                                 <div className="space-y-6 max-h-[70vh] overflow-y-auto">

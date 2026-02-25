@@ -8,10 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { User } from '@/types';
-import { ArrowLeft, Save, Plus, FileText, Shield, Calendar, Users } from 'lucide-react';
+import { ArrowLeft, Save, Plus, FileText, Shield, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
+import RichTextEditor from '@/components/ui/rich-text-editor';
+import { isRichTextEmpty } from '@/lib/rich-text';
+import { policyService } from '@/services/companyResourcesService';
 
 export default function PolicyNewClient({ user }: { user: User }) {
     const router = useRouter();
@@ -35,11 +37,27 @@ export default function PolicyNewClient({ user }: { user: User }) {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!formData.title || !formData.description || !formData.category || isRichTextEmpty(formData.content)) {
+            toast.error('Please fill title, description, category, and policy content');
+            return;
+        }
+
         setIsLoading(true);
 
         try {
-            // qpi call to create policy
-
+            await policyService.createPolicy({
+                title: formData.title,
+                description: formData.description,
+                content: formData.content,
+                category: formData.category,
+                version: formData.version,
+                effectiveDate: formData.effectiveDate,
+                reviewDate: formData.reviewDate,
+                status: formData.status,
+                ownerId: user.id,
+                ownerName: `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.email,
+            });
 
             toast.success('Policy created successfully');
             router.push(`/resources/policies`);
@@ -128,13 +146,11 @@ export default function PolicyNewClient({ user }: { user: User }) {
                                 <CardDescription>Detailed policy rules and guidelines</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <Textarea
+                                <RichTextEditor
                                     value={formData.content}
-                                    onChange={(e) => handleInputChange('content', e.target.value)}
-                                    placeholder="Write the full policy content here... Use markdown for formatting."
-                                    rows={12}
-                                    className="font-mono text-sm"
-                                    required
+                                    onChange={(value) => handleInputChange('content', value)}
+                                    placeholder="Paste policy text and use toolbar to apply bold, italic, larger fonts, colors, and images."
+                                    minHeight={360}
                                 />
                             </CardContent>
                         </Card>

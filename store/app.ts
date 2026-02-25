@@ -10,6 +10,7 @@ interface AppState {
     type: 'info' | 'success' | 'warning' | 'error';
     timestamp: string;
     read: boolean;
+    href?: string;
   }>;
 }
 

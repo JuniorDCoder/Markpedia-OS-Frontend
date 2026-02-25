@@ -524,6 +524,14 @@ export const chatService = {
         return response.data;
     },
 
+    async markMessagesRead(params: {
+        channel_id?: string;
+        group_id?: string;
+        dm_id?: string;
+    }): Promise<void> {
+        await api.post(`${API_BASE}/chat/messages/read`, null, { params });
+    },
+
     // Users
     async getOnlineUsers(): Promise<UserBasic[]> {
         const response = await api.get(`${API_BASE}/chat/online-users`);

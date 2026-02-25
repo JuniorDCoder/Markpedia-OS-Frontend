@@ -26,6 +26,8 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import RichTextEditor from '@/components/ui/rich-text-editor';
+import { isRichTextEmpty } from '@/lib/rich-text';
 import {
     FileText,
     ClipboardList,
@@ -159,25 +161,46 @@ export default function PoliciesPage() {
             return;
         }
 
+        if (createType === 'policy' && isRichTextEmpty(formData.content)) {
+            toast.error('Policy content is required');
+            return;
+        }
+
         setIsSaving(true);
         try {
             if (createType === 'policy') {
+                const policyPayload = {
+                    title: formData.title,
+                    description: formData.description,
+                    content: formData.content,
+                    category: formData.category,
+                    status: formData.status as 'draft' | 'active' | 'archived',
+                };
+
                 if (editingItem) {
-                    const updated = await policyService.updatePolicy(editingItem.id, formData);
+                    const updated = await policyService.updatePolicy(editingItem.id, policyPayload);
                     setPolicies(policies.map(p => p.id === editingItem.id ? updated : p));
                     toast.success('Policy updated successfully');
                 } else {
-                    const created = await policyService.createPolicy(formData);
+                    const created = await policyService.createPolicy(policyPayload);
                     setPolicies([created, ...policies]);
                     toast.success('Policy created successfully');
                 }
             } else {
+                const sopPayload = {
+                    title: formData.title,
+                    description: formData.description,
+                    category: formData.category,
+                    department: formData.department,
+                    status: formData.status as 'draft' | 'active' | 'archived',
+                };
+
                 if (editingItem) {
-                    const updated = await sopService.updateSOP(editingItem.id, formData);
+                    const updated = await sopService.updateSOP(editingItem.id, sopPayload);
                     setSOPs(sops.map(s => s.id === editingItem.id ? updated : s));
                     toast.success('SOP updated successfully');
                 } else {
-                    const created = await sopService.createSOP(formData);
+                    const created = await sopService.createSOP(sopPayload);
                     setSOPs([created, ...sops]);
                     toast.success('SOP created successfully');
                 }
@@ -429,7 +452,7 @@ export default function PoliciesPage() {
 
             {/* Create/Edit Dialog */}
             <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>
                             {editingItem ? 'Edit' : 'Create'} {createType === 'policy' ? 'Policy' : 'SOP'}
@@ -464,13 +487,15 @@ export default function PoliciesPage() {
                         {createType === 'policy' && (
                             <div className="space-y-2">
                                 <Label htmlFor="content">Content</Label>
-                                <Textarea
-                                    id="content"
+                                <RichTextEditor
                                     value={formData.content}
-                                    onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                                    placeholder="Full policy content"
-                                    rows={6}
+                                    onChange={(value) => setFormData({ ...formData, content: value })}
+                                    placeholder="Paste full policy content here. Use toolbar to apply bold, italic, colors, font styles, and images."
+                                    minHeight={320}
                                 />
+                                <p className="text-xs text-muted-foreground">
+                                    Tip: You can copy/paste from docs and adjust typography directly in the editor.
+                                </p>
                             </div>
                         )}
                         <div className="grid grid-cols-2 gap-4">

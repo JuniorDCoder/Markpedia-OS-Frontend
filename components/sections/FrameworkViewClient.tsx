@@ -249,7 +249,7 @@ export default function FrameworkViewClient({ frameworkId, initialFramework }: P
                 <div className="flex-1">
                     <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">{framework.name}</h1>
                     <div
-                        className="text-sm text-muted-foreground mt-1 leading-relaxed rich-text-content [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-1 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mt-2 [&_h3]:mb-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-2 [&_li]:mb-1 [&_p]:mb-2 [&_b]:font-semibold [&_strong]:font-semibold [&_br]:block"
+                        className="mt-2 max-w-4xl text-[15px] leading-8 text-foreground rich-text-content [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mt-8 [&_h1]:mb-3 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:mt-7 [&_h2]:mb-3 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:mt-6 [&_h3]:mb-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-4 [&_li]:mb-2 [&_p]:mb-4 [&_b]:font-semibold [&_strong]:font-semibold [&_br]:block"
                         dangerouslySetInnerHTML={{ __html: sanitizeRichText(normalizeRichTextValue(framework.description)) }}
                     />
                     <div className="flex items-center gap-2 mt-3">
@@ -309,7 +309,7 @@ export default function FrameworkViewClient({ frameworkId, initialFramework }: P
                             <CardDescription>Core sections of this departmental framework</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-4">
+                            <div className="space-y-6">
                                 {framework.sections.map((s: FrameworkSection) => (
                                     <Card key={s.id} className="border border-blue-100">
                                         <CardHeader>
@@ -317,7 +317,7 @@ export default function FrameworkViewClient({ frameworkId, initialFramework }: P
                                         </CardHeader>
                                         <CardContent>
                                             <div
-                                                className="text-sm text-muted-foreground leading-relaxed rich-text-content [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-1 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mt-2 [&_h3]:mb-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-2 [&_li]:mb-1 [&_p]:mb-2 [&_b]:font-semibold [&_strong]:font-semibold [&_br]:block [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:p-2 [&_th]:border [&_th]:p-2 [&_th]:bg-muted/50 [&_blockquote]:border-l-4 [&_blockquote]:border-primary/30 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:my-2"
+                                                className="mx-auto max-w-4xl text-[15px] leading-8 text-foreground rich-text-content [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mt-8 [&_h1]:mb-3 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:mt-7 [&_h2]:mb-3 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:mt-6 [&_h3]:mb-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-4 [&_li]:mb-2 [&_p]:mb-4 [&_b]:font-semibold [&_strong]:font-semibold [&_br]:block [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-md [&_img]:my-4 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:p-2 [&_th]:border [&_th]:p-2 [&_th]:bg-muted/50 [&_blockquote]:border-l-4 [&_blockquote]:border-primary/30 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:my-4"
                                                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(normalizeRichTextValue(s.content || '<p>No content</p>')) }}
                                             />
                                         </CardContent>

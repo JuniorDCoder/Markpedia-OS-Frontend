@@ -20,7 +20,7 @@ import { useRouter } from 'next/navigation';
 
 export function Header() {
   const { user, logout } = useAuthStore();
-  const { notifications } = useAppStore();
+  const { notifications, markNotificationRead } = useAppStore();
   const router = useRouter();
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -41,6 +41,11 @@ export function Header() {
   const handleLogout = () => {
     logout();
     router.push('/auth/login');
+  };
+
+  const handleNotificationClick = (notification: { id: string; href?: string }) => {
+    markNotificationRead(notification.id);
+    router.push(notification.href || '/notifications');
   };
 
   if (!user) return null;
@@ -79,7 +84,11 @@ export function Header() {
                 </div>
               ) : (
                 notifications.slice(0, 5).map(notification => (
-                  <DropdownMenuItem key={notification.id} className="flex-col items-start p-4">
+                  <DropdownMenuItem
+                    key={notification.id}
+                    className="flex-col items-start p-4 cursor-pointer"
+                    onSelect={() => handleNotificationClick(notification)}
+                  >
                     <div className="flex items-center justify-between w-full">
                       <span className="font-medium">{notification.title}</span>
                       {!notification.read && (
