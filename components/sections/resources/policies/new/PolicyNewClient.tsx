@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -14,10 +14,16 @@ import toast from 'react-hot-toast';
 import RichTextEditor from '@/components/ui/rich-text-editor';
 import { isRichTextEmpty } from '@/lib/rich-text';
 import { policyService } from '@/services/companyResourcesService';
+import { departmentsApi } from '@/lib/api/departments';
 
 export default function PolicyNewClient({ user }: { user: User }) {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
+    const [departmentNames, setDepartmentNames] = useState<string[]>([]);
+
+    useEffect(() => {
+        departmentsApi.getNames().then(setDepartmentNames).catch(() => {});
+    }, []);
 
     const [formData, setFormData] = useState({
         title: '',
@@ -118,12 +124,17 @@ export default function PolicyNewClient({ user }: { user: User }) {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium mb-2">Category *</label>
-                                        <Input
-                                            value={formData.category}
-                                            onChange={(e) => handleInputChange('category', e.target.value)}
-                                            placeholder="e.g., HR, Security, Operations"
-                                            required
-                                        />
+                                        <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select category" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="All">All (Everyone)</SelectItem>
+                                                {departmentNames.map(name => (
+                                                    <SelectItem key={name} value={name}>{name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium mb-2">Version *</label>

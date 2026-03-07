@@ -1,17 +1,95 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Policy, User } from '@/types';
-import { ArrowLeft, Edit, Download, Users, Calendar, FileText, History, Shield } from 'lucide-react';
-import { normalizeRichTextValue, sanitizeRichText } from '@/lib/rich-text';
+import { ArrowLeft, Edit, Download, Users, Calendar, FileText, History, Shield, Save, Globe } from 'lucide-react';
+import { normalizeRichTextValue, sanitizeRichText, isRichTextEmpty } from '@/lib/rich-text';
+import RichTextEditor from '@/components/ui/rich-text-editor';
+import { policyService } from '@/services/companyResourcesService';
+import { departmentsApi } from '@/lib/api/departments';
+import toast from 'react-hot-toast';
 
-export default function PolicyViewClient({ policy, user }: { policy: Policy; user: User }) {
+export default function PolicyViewClient({ policy: initialPolicy, user }: { policy: Policy; user: User }) {
+    const router = useRouter();
+    const [policy, setPolicy] = useState(initialPolicy);
     const [activeTab, setActiveTab] = useState<'content' | 'acknowledgments' | 'history'>('content');
+    const [editOpen, setEditOpen] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [departmentNames, setDepartmentNames] = useState<string[]>([]);
     const canManage = ['CEO', 'Admin', 'CXO'].includes(user.role);
+
+    useEffect(() => {
+        departmentsApi.getNames().then(setDepartmentNames).catch(() => {});
+    }, []);
+
+    const [formData, setFormData] = useState({
+        title: policy.title,
+        description: policy.description,
+        content: policy.content || '',
+        category: policy.category,
+        version: policy.version,
+        effectiveDate: policy.effectiveDate ? new Date(policy.effectiveDate).toISOString().split('T')[0] : '',
+        reviewDate: policy.reviewDate ? new Date(policy.reviewDate).toISOString().split('T')[0] : '',
+        status: policy.status as 'draft' | 'active' | 'archived',
+    });
+
+    const handleInputChange = (field: string, value: any) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const openEditModal = () => {
+        setFormData({
+            title: policy.title,
+            description: policy.description,
+            content: policy.content || '',
+            category: policy.category,
+            version: policy.version,
+            effectiveDate: policy.effectiveDate ? new Date(policy.effectiveDate).toISOString().split('T')[0] : '',
+            reviewDate: policy.reviewDate ? new Date(policy.reviewDate).toISOString().split('T')[0] : '',
+            status: policy.status as 'draft' | 'active' | 'archived',
+        });
+        setEditOpen(true);
+    };
+
+    const handleSave = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!formData.title || !formData.description || !formData.category || isRichTextEmpty(formData.content)) {
+            toast.error('Please fill title, description, category, and policy content');
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            const updated = await policyService.updatePolicy(policy.id, {
+                title: formData.title,
+                description: formData.description,
+                content: formData.content,
+                category: formData.category,
+                version: formData.version,
+                effectiveDate: formData.effectiveDate,
+                reviewDate: formData.reviewDate,
+                status: formData.status,
+            });
+            setPolicy(updated);
+            setEditOpen(false);
+            toast.success('Policy updated successfully');
+            router.refresh();
+        } catch (error) {
+            toast.error('Failed to update policy');
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -29,11 +107,9 @@ export default function PolicyViewClient({ policy, user }: { policy: Policy; use
                 </div>
                 <div className="flex gap-2">
                     {canManage && (
-                        <Button asChild>
-                            <Link href={`/resources/policies/${policy.id}/edit`}>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                            </Link>
+                        <Button onClick={openEditModal}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
                         </Button>
                     )}
                     <Button variant="outline">
@@ -141,7 +217,13 @@ export default function PolicyViewClient({ policy, user }: { policy: Policy; use
                             </div>
                             <div>
                                 <div className="text-sm font-medium mb-1">Category</div>
-                                <div className="text-sm text-muted-foreground">{policy.category}</div>
+                                {policy.category === 'All' ? (
+                                    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                                        <Globe className="h-3 w-3 mr-1" />Everyone
+                                    </Badge>
+                                ) : (
+                                    <div className="text-sm text-muted-foreground">{policy.category}</div>
+                                )}
                             </div>
                             <div>
                                 <div className="text-sm font-medium mb-1">Version</div>
@@ -182,17 +264,118 @@ export default function PolicyViewClient({ policy, user }: { policy: Policy; use
                                 Download PDF
                             </Button>
                             {canManage && (
-                                <Button variant="outline" className="w-full justify-start" asChild>
-                                    <Link href={`/resources/policies/${policy.id}/edit`}>
-                                        <Edit className="h-4 w-4 mr-2" />
-                                        Edit Policy
-                                    </Link>
+                                <Button variant="outline" className="w-full justify-start" onClick={openEditModal}>
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit Policy
                                 </Button>
                             )}
                         </CardContent>
                     </Card>
                 </div>
             </div>
+
+            {/* Edit Policy Modal */}
+            <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Edit Policy</DialogTitle>
+                        <DialogDescription>Update policy details and content</DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleSave} className="space-y-6">
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Title *</label>
+                                <Input
+                                    value={formData.title}
+                                    onChange={(e) => handleInputChange('title', e.target.value)}
+                                    placeholder="Policy title"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Description *</label>
+                                <Textarea
+                                    value={formData.description}
+                                    onChange={(e) => handleInputChange('description', e.target.value)}
+                                    placeholder="Brief description of the policy"
+                                    rows={3}
+                                    required
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">Category *</label>
+                                    <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select category" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="All">All (Everyone)</SelectItem>
+                                            {departmentNames.map(name => (
+                                                <SelectItem key={name} value={name}>{name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">Version</label>
+                                    <Input
+                                        value={formData.version}
+                                        onChange={(e) => handleInputChange('version', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">Status</label>
+                                    <Select value={formData.status} onValueChange={(value: any) => handleInputChange('status', value)}>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="draft">Draft</SelectItem>
+                                            <SelectItem value="active">Active</SelectItem>
+                                            <SelectItem value="archived">Archived</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">Effective Date</label>
+                                    <Input
+                                        type="date"
+                                        value={formData.effectiveDate}
+                                        onChange={(e) => handleInputChange('effectiveDate', e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">Review Date</label>
+                                    <Input
+                                        type="date"
+                                        value={formData.reviewDate}
+                                        onChange={(e) => handleInputChange('reviewDate', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Policy Content</label>
+                                <RichTextEditor
+                                    value={formData.content}
+                                    onChange={(value) => handleInputChange('content', value)}
+                                    placeholder="Policy content..."
+                                    minHeight={250}
+                                />
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3 pt-4 border-t">
+                            <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button type="submit" disabled={isSaving}>
+                                <Save className="h-4 w-4 mr-2" />
+                                {isSaving ? 'Saving...' : 'Save Changes'}
+                            </Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

@@ -303,25 +303,21 @@ export default function FrameworkViewClient({ frameworkId, initialFramework }: P
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-4">
-                    <Card className="border-blue-200 shadow-sm">
-                        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200">
+                    <Card className="shadow-sm">
+                        <CardHeader>
                             <CardTitle className="flex items-center"><Target className="mr-2" /> Strategic Sections</CardTitle>
                             <CardDescription>Core sections of this departmental framework</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-6">
                                 {framework.sections.map((s: FrameworkSection) => (
-                                    <Card key={s.id} className="border border-blue-100">
-                                        <CardHeader>
-                                            <CardTitle>{s.title}</CardTitle>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div
-                                                className="mx-auto max-w-4xl text-[15px] leading-8 text-foreground rich-text-content [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mt-8 [&_h1]:mb-3 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:mt-7 [&_h2]:mb-3 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:mt-6 [&_h3]:mb-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-4 [&_li]:mb-2 [&_p]:mb-4 [&_b]:font-semibold [&_strong]:font-semibold [&_br]:block [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-md [&_img]:my-4 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:p-2 [&_th]:border [&_th]:p-2 [&_th]:bg-muted/50 [&_blockquote]:border-l-4 [&_blockquote]:border-primary/30 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:my-4"
-                                                dangerouslySetInnerHTML={{ __html: sanitizeRichText(normalizeRichTextValue(s.content || '<p>No content</p>')) }}
-                                            />
-                                        </CardContent>
-                                    </Card>
+                                    <div key={s.id}>
+                                        <h3 className="text-lg font-semibold mb-3">{s.title}</h3>
+                                        <div
+                                            className="mx-auto max-w-4xl text-[15px] leading-8 text-foreground rich-text-content [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mt-8 [&_h1]:mb-3 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:mt-7 [&_h2]:mb-3 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:mt-6 [&_h3]:mb-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-4 [&_li]:mb-2 [&_p]:mb-4 [&_b]:font-semibold [&_strong]:font-semibold [&_br]:block [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-md [&_img]:my-4 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:p-2 [&_th]:border [&_th]:p-2 [&_th]:bg-muted/50 [&_blockquote]:border-l-4 [&_blockquote]:border-primary/30 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:my-4"
+                                            dangerouslySetInnerHTML={{ __html: sanitizeRichText(normalizeRichTextValue(s.content || '<p>No content</p>')) }}
+                                        />
+                                    </div>
                                 ))}
                             </div>
                         </CardContent>
@@ -329,8 +325,8 @@ export default function FrameworkViewClient({ frameworkId, initialFramework }: P
                 </div>
 
                 <div className="space-y-4">
-                    <Card className="border-gray-200 shadow-sm">
-                        <CardHeader className="bg-gradient-to-r from-gray-50 to-slate-50 border-b border-gray-200">
+                    <Card className="shadow-sm">
+                        <CardHeader>
                             <CardTitle><Calendar className="mr-2" /> Metadata</CardTitle>
                         </CardHeader>
                         <CardContent>

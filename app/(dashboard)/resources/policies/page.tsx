@@ -44,6 +44,8 @@ import { policyService, sopService } from '@/services/companyResourcesService';
 import type { Policy, SOP } from '@/types/company-resources';
 import { toast } from 'react-hot-toast';
 import { isAdminLikeRole } from '@/lib/roles';
+import { departmentsApi } from '@/lib/api/departments';
+
 
 export default function PoliciesPage() {
     const { setCurrentModule } = useAppStore();
@@ -74,6 +76,7 @@ export default function PoliciesPage() {
         status: 'draft',
     });
     const [isSaving, setIsSaving] = useState(false);
+    const [departmentNames, setDepartmentNames] = useState<string[]>([]);
 
     useEffect(() => {
         setCurrentModule('resources');
@@ -98,6 +101,12 @@ export default function PoliciesPage() {
 
     // Role-based access: only Admin / CEO / C-level can manage Policies/SOPs.
     const canManage = isAdminLikeRole(user?.role);
+
+    useEffect(() => {
+        if (canManage) {
+            departmentsApi.getNames().then(setDepartmentNames).catch(() => {});
+        }
+    }, [canManage]);
 
     const handleDelete = (type: 'policy' | 'sop', id: string, title: string) => {
         setItemToDelete({ type, id, title });
@@ -509,12 +518,10 @@ export default function PoliciesPage() {
                                         <SelectValue placeholder="Select category" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="HR">HR</SelectItem>
-                                        <SelectItem value="Finance">Finance</SelectItem>
-                                        <SelectItem value="Operations">Operations</SelectItem>
-                                        <SelectItem value="IT">IT</SelectItem>
-                                        <SelectItem value="Legal">Legal</SelectItem>
-                                        <SelectItem value="Safety">Safety</SelectItem>
+                                        <SelectItem value="All">All (Everyone)</SelectItem>
+                                        {departmentNames.map(name => (
+                                            <SelectItem key={name} value={name}>{name}</SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                             </div>
