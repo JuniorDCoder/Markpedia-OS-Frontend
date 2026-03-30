@@ -22,6 +22,7 @@ import {
     Eye,
     BookOpen,
     FolderOpen,
+    Sparkles,
 } from 'lucide-react';
 import { policyService, sopService, objectiveService, identityService, historyService, knowledgeBaseService, customResourceService } from '@/services/companyResourcesService';
 import type { Policy, SOP, CompanyObjective, CompanyIdentity, CompanyHistory, CustomResourceFolder } from '@/types/company-resources';
@@ -296,6 +297,48 @@ export default function ResourcesPage() {
                         <Button variant="outline" className="w-full mt-4" asChild>
                             <Link href="/resources/sops">View All SOPs</Link>
                         </Button>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Brand Pillars */}
+            {identity && identity.brandPillars && identity.brandPillars.length > 0 && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center">
+                            <Sparkles className="h-5 w-5 mr-2" />
+                            Brand Pillars
+                        </CardTitle>
+                        <CardDescription>Foundations of our brand identity</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {identity.brandPillars.slice(0, 6).map((pillar: any) => (
+                                <div key={pillar.id} className="p-3 border rounded-lg hover:bg-accent/5 transition-colors">
+                                    <h4 className="font-medium text-sm mb-1">{pillar.name}</h4>
+                                    <p className="text-xs text-muted-foreground leading-relaxed">{pillar.description}</p>
+                                    {pillar.proofPoints && pillar.proofPoints.length > 0 && (
+                                        <div className="mt-2 flex flex-wrap gap-1">
+                                            {pillar.proofPoints.slice(0, 2).map((point: string, i: number) => (
+                                                <Badge key={i} variant="secondary" className="text-xs">
+                                                    {point}
+                                                </Badge>
+                                            ))}
+                                            {pillar.proofPoints.length > 2 && (
+                                                <Badge variant="secondary" className="text-xs">
+                                                    +{pillar.proofPoints.length - 2} more
+                                                </Badge>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                        {identity.brandPillars.length > 6 && (
+                            <Button variant="outline" className="w-full mt-4" asChild>
+                                <Link href="/resources/identity">View All Brand Pillars</Link>
+                            </Button>
+                        )}
                     </CardContent>
                 </Card>
             )}

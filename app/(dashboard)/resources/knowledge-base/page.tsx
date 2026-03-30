@@ -26,6 +26,8 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import RichTextEditor from '@/components/ui/rich-text-editor';
+import { isRichTextEmpty } from '@/lib/rich-text';
 import {
     BookOpen,
     Search,
@@ -512,13 +514,15 @@ export default function KnowledgeBasePage() {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="content">Content</Label>
-                            <Textarea
-                                id="content"
+                            <RichTextEditor
                                 value={formData.content}
-                                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                                placeholder="Write the article content..."
-                                rows={10}
+                                onChange={(value) => setFormData({ ...formData, content: value })}
+                                placeholder="Write the article content here. Use toolbar to apply bold, italic, colors, font styles, and images."
+                                minHeight={320}
                             />
+                            <p className="text-xs text-muted-foreground">
+                                Tip: You can copy/paste from docs and adjust typography directly in the editor.
+                            </p>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">

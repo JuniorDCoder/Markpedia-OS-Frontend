@@ -294,93 +294,73 @@ export default function DepartmentalFrameworksPage() {
                     </CardContent>
                 </Card>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {filteredFrameworks.map(framework => (
-                        <Card key={framework.id} className="hover:shadow-md transition-shadow flex flex-col h-full">
-                            <CardHeader className="pb-3">
-                                <div className="flex items-start justify-between">
-                                    <div className="space-y-2 flex-1">
-                                        <CardTitle className="text-lg break-words">
-                                            <Link
-                                                href={`/work/departmental-frameworks/${framework.id}`}
-                                                className="hover:underline"
-                                            >
-                                                {framework.name}
-                                            </Link>
-                                        </CardTitle>
-                                        <CardDescription className="line-clamp-2">{stripHtml(framework.description)}</CardDescription>
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <Badge variant="secondary" className={getStatusColor(framework.status)}>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Departmental Frameworks</CardTitle>
+                        <CardDescription>Strategic frameworks and operational guidelines by department</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-3">
+                            {filteredFrameworks.map((framework) => (
+                                <div key={framework.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/5 transition-colors">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h3 className="font-medium">{framework.name}</h3>
+                                            <Badge variant={framework.status === 'Approved' ? 'default' : 'secondary'} className={getStatusColor(framework.status)}>
                                                 {framework.status}
                                             </Badge>
                                             <Badge variant="outline" className={getDepartmentColor(framework.department)}>
                                                 {getDepartmentName(framework.department)}
                                             </Badge>
                                         </div>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="flex-1">
-                                <div className="space-y-3">
-                                    <div className="flex items-center text-sm text-muted-foreground">
-                                        <FileText className="h-4 w-4 mr-2" />
-                                        Version: {framework.version}
-                                    </div>
-                                    {framework.lastReviewed && (
-                                        <div className="flex items-center text-sm text-muted-foreground">
-                                            <Calendar className="h-4 w-4 mr-2" />
-                                            Last reviewed: {new Date(framework.lastReviewed).toLocaleDateString()}
-                                        </div>
-                                    )}
-                                    <div className="pt-4 border-t">
-                                        <h4 className="font-medium text-sm mb-2">Strategic Elements</h4>
-                                        <div className="flex flex-wrap gap-1">
-                                            {framework.sections.slice(0, 3).map(section => (
-                                                <Badge key={section.id} variant="outline" className="text-xs">
-                                                    {section.title}
-                                                </Badge>
-                                            ))}
-                                            {framework.sections.length > 3 && (
-                                                <Badge variant="outline" className="text-xs">
-                                                    +{framework.sections.length - 3} more
-                                                </Badge>
+                                        <p className="text-sm text-muted-foreground mb-2 line-clamp-1">{stripHtml(framework.description)}</p>
+                                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                            <span>Version: {framework.version}</span>
+                                            {framework.lastReviewed && (
+                                                <span>Last reviewed: {new Date(framework.lastReviewed).toLocaleDateString()}</span>
                                             )}
+                                            <div className="flex flex-wrap gap-1">
+                                                {framework.sections.slice(0, 2).map(section => (
+                                                    <Badge key={section.id} variant="outline" className="text-xs">
+                                                        {section.title}
+                                                    </Badge>
+                                                ))}
+                                                {framework.sections.length > 2 && (
+                                                    <Badge variant="outline" className="text-xs">
+                                                        +{framework.sections.length - 2} more
+                                                    </Badge>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </CardContent>
-                            <div className="p-4 border-t mt-auto">
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <div className="flex items-center space-x-2">
+                                    <div className="flex items-center gap-2 ml-4">
                                         <Button asChild variant="ghost" size="sm">
                                             <Link href={`/work/departmental-frameworks/${framework.id}`}>
-                                                <Eye className="h-4 w-4 mr-1" />
-                                                View
+                                                <Eye className="h-4 w-4" />
                                             </Link>
                                         </Button>
                                         {canManage && (
-                                            <Button asChild variant="ghost" size="sm">
-                                                <Link href={`/work/departmental-frameworks/${framework.id}/edit`}>
-                                                    <Edit className="h-4 w-4 mr-1" />
-                                                    Edit
-                                                </Link>
-                                            </Button>
+                                            <>
+                                                <Button asChild variant="ghost" size="sm">
+                                                    <Link href={`/work/departmental-frameworks/${framework.id}/edit`}>
+                                                        <Edit className="h-4 w-4" />
+                                                    </Link>
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => exportToPDF(framework.id)}
+                                                >
+                                                    <Download className="h-4 w-4" />
+                                                </Button>
+                                            </>
                                         )}
                                     </div>
-                                    {canManage && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => exportToPDF(framework.id)}
-                                        >
-                                            <Download className="h-4 w-4" />
-                                        </Button>
-                                    )}
                                 </div>
-                            </div>
-                        </Card>
-                    ))}
-                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
             )}
         </div>
     );

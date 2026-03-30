@@ -7,57 +7,72 @@ export interface Role {
     createdAt: string;
 }
 
-// Temporary mock data until backend endpoint is ready
-let mockRoles: Role[] = [
-    { id: '1', name: 'Software Engineer', description: 'Writes code and builds software', createdAt: '2024-01-01' },
-    { id: '2', name: 'Accountant', description: 'Manages financial records', createdAt: '2024-01-01' },
-    { id: '3', name: 'HR Manager', description: 'Manages human resources', createdAt: '2024-01-01' },
-];
-
 export const rolesApi = {
     async getAll(): Promise<Role[]> {
-        // Simulating API call
-        // const response = await apiRequest<Role[]>('/admin/roles');
-        // return response;
-        return new Promise((resolve) => {
-            setTimeout(() => resolve([...mockRoles]), 500);
-        });
+        try {
+            const response = await apiRequest<any[]>('/work/job-roles');
+            return (response || []).map((role: any) => ({
+                id: role.id,
+                name: role.name,
+                description: role.description || '',
+                createdAt: role.created_at || new Date().toISOString(),
+            }));
+        } catch (error) {
+            console.error('Failed to fetch roles', error);
+            return [];
+        }
     },
 
     async create(data: Omit<Role, 'id' | 'createdAt'>): Promise<Role> {
-        // const response = await apiRequest<Role>('/admin/roles', {
-        //     method: 'POST',
-        //     body: JSON.stringify(data)
-        // });
-        // return response;
-
-        return new Promise((resolve) => {
-            const newRole: Role = {
-                id: Math.random().toString(36).substr(2, 9),
-                createdAt: new Date().toISOString().split('T')[0],
-                ...data
+        try {
+            const response = await apiRequest<any>('/work/job-roles', {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: data.name,
+                    description: data.description || null,
+                })
+            });
+            return {
+                id: response.id,
+                name: response.name,
+                description: response.description || '',
+                createdAt: response.created_at || new Date().toISOString(),
             };
-            mockRoles.push(newRole);
-            setTimeout(() => resolve(newRole), 500);
-        });
+        } catch (error) {
+            console.error('Failed to create role', error);
+            throw error;
+        }
     },
 
     async update(id: string, data: Partial<Role>): Promise<Role> {
-        return new Promise((resolve, reject) => {
-            const index = mockRoles.findIndex(r => r.id === id);
-            if (index === -1) {
-                reject(new Error('Role not found'));
-                return;
-            }
-            mockRoles[index] = { ...mockRoles[index], ...data };
-            setTimeout(() => resolve(mockRoles[index]), 500);
-        });
+        try {
+            const response = await apiRequest<any>(`/work/job-roles/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    name: data.name || undefined,
+                    description: data.description || undefined,
+                })
+            });
+            return {
+                id: response.id,
+                name: response.name,
+                description: response.description || '',
+                createdAt: response.created_at || new Date().toISOString(),
+            };
+        } catch (error) {
+            console.error('Failed to update role', error);
+            throw error;
+        }
     },
 
     async delete(id: string): Promise<void> {
-        return new Promise((resolve) => {
-            mockRoles = mockRoles.filter(r => r.id !== id);
-            setTimeout(() => resolve(), 500);
-        });
+        try {
+            await apiRequest(`/work/job-roles/${id}`, {
+                method: 'DELETE'
+            });
+        } catch (error) {
+            console.error('Failed to delete role', error);
+            throw error;
+        }
     }
 };

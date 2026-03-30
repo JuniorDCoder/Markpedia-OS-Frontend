@@ -41,6 +41,8 @@ import {
 import { customResourceService } from '@/services/companyResourcesService';
 import type { CustomResourceEntry, CustomResourceFolder } from '@/types/company-resources';
 import { toast } from 'react-hot-toast';
+import RichTextEditor from '@/components/ui/rich-text-editor';
+import { isRichTextEmpty } from '@/lib/rich-text';
 
 type EntryFormData = {
     title: string;
@@ -148,6 +150,11 @@ export default function CustomResourceEntriesPage() {
     const handleSave = async () => {
         if (!folder || !formData.title.trim()) {
             toast.error('Title is required');
+            return;
+        }
+
+        if (isRichTextEmpty(formData.content)) {
+            toast.error('Content is required');
             return;
         }
 
@@ -385,14 +392,16 @@ export default function CustomResourceEntriesPage() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="content">Content</Label>
-                            <Textarea
-                                id="content"
+                            <Label htmlFor="content">Content *</Label>
+                            <RichTextEditor
                                 value={formData.content}
-                                onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                                placeholder="Detailed content"
-                                rows={8}
+                                onChange={(value) => setFormData(prev => ({ ...prev, content: value }))}
+                                placeholder="Paste full content here. Use toolbar to apply bold, italic, colors, font styles, and images."
+                                minHeight={320}
                             />
+                            <p className="text-xs text-muted-foreground">
+                                Tip: You can copy/paste from docs and adjust typography directly in the editor.
+                            </p>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
